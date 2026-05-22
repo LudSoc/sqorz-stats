@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Résultats Sqorz — Historique pilote</title>
+<style>
+  :root{
+    /* Slate palette anchored on #4c606b (acier doux) */
+    --bg:#eef2f4;
+    --bg-overlay:linear-gradient(180deg, rgba(76,96,107,.78) 0%, rgba(76,96,107,.55) 100%);
+    --card:#ffffff; --card-soft:#f6f8fa;
+    --ink:#2a363e; --ink-2:#4c606b; --muted:#7a8a95;
+    --line:#dde4e8; --line-strong:#c3cdd4;
+    --accent:#4c606b;        /* slate principal */
+    --accent-hi:#3a4a54;
+    --accent-soft:#cbd5dc;
+    --accent-ink:#fff;
+    --good:#7fa890;          /* sauge */
+    --bad:#c97b7b;           /* corail doux */
+    --warn:#c9a574;          /* sable chaud */
+    --gold:#c9a574;
+    --silver:#b8c0c8;
+    --bronze:#b88862;
+    --shadow:0 1px 2px rgba(76,96,107,.10), 0 8px 24px rgba(76,96,107,.12);
+    --radius:16px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#1f262b; --card:#2a333a; --card-soft:#252d33;
+      --ink:#e6ecef; --ink-2:#c5cdd2; --muted:#8d98a0;
+      --line:#3a4047; --line-strong:#4a5057;
+      --accent:#8aa0ac; --accent-hi:#a0b5c1; --accent-soft:#3a4a54;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0; padding:0}
+  body{
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); background:var(--bg);
+    -webkit-font-smoothing:antialiased;
+  }
+  .topbar{
+    position:relative; overflow:hidden;
+    color:#fff; padding:38px 24px 110px;
+    background:linear-gradient(135deg,#2a363e 0%,#4c606b 55%,#7a8a95 100%);
+  }
+  .topbar::after{
+    /* subtle radial light, top-right */
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(circle at 85% 0%, rgba(255,255,255,.18), transparent 55%);
+  }
+  .topbar-inner{
+    max-width:1180px; margin:0 auto; position:relative; z-index:1;
+  }
+  .brand{display:flex; align-items:center; gap:12px; font-weight:600; letter-spacing:.2px; color:#fff}
+  .brand .logo{
+    width:40px; height:40px; border-radius:12px;
+    background:rgba(255,255,255,.18); color:#fff;
+    display:grid; place-items:center; font-weight:800; font-size:14px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  }
+  .topbar h1{margin:18px 0 6px; font-size:30px; font-weight:700; letter-spacing:-.5px; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.35)}
+  .topbar p{margin:0; font-size:14.5px; max-width:560px; color:#e9eef1; text-shadow:0 1px 4px rgba(0,0,0,.25)}
+
+  main{max-width:1180px; margin:-70px auto 40px; padding:0 24px 32px; position:relative; z-index:2;}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px; box-shadow:var(--shadow); margin-bottom:18px;
+  }
+  .filters{padding:20px}
+  .grid{display:grid; gap:14px}
+  .filters .grid{grid-template-columns:repeat(12,1fr)}
+  .field{display:flex; flex-direction:column; min-width:0}
+  .field.col-clubs{grid-column:span 6}
+  .field.col-name{grid-column:span 4}
+  .field.col-btn{grid-column:span 2; align-items:stretch}
+  @media (max-width:880px){
+    .field.col-clubs,.field.col-name,.field.col-btn{grid-column:span 12}
+  }
+
+  /* Results filter bar */
+  .results-filters{padding:14px 18px; display:flex; gap:18px; flex-wrap:wrap; align-items:flex-end}
+  .results-filters .field{flex:1 1 180px; max-width:260px}
+  .results-filters .summary-info{
+    flex:1 1 100%; font-size:12px; color:var(--muted);
+    border-top:1px solid var(--line); padding-top:10px; margin-top:2px;
+  }
+  @media (max-width:640px){
+    .results-filters .field{max-width:none}
+  }
+  label{font-size:11px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px}
+  .control{
+    font:inherit; padding:10px 12px; border:1px solid var(--line);
+    border-radius:9px; background:var(--card); color:var(--ink);
+    transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  .control:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%, transparent)}
+  .control:disabled{background:var(--card-soft); color:var(--muted); cursor:not-allowed}
+  select.control,input.control{width:100%}
+  .btn{
+    font:inherit; font-weight:600; padding:11px 18px; border:none; border-radius:9px;
+    background:var(--accent); color:var(--accent-ink); cursor:pointer;
+    transition:background .15s, transform .05s;
+  }
+  .btn:hover:not(:disabled){background:var(--accent-hi)}
+  .btn:active:not(:disabled){transform:translateY(1px)}
+  .btn:disabled{background:var(--line-strong); color:var(--card); cursor:not-allowed}
+  .btn-ghost{background:transparent; color:var(--accent); padding:4px 6px; font-size:12px}
+  .btn-ghost:hover:not(:disabled){background:color-mix(in srgb,var(--accent) 10%, transparent)}
+  .hint{font-size:12px; color:var(--muted); margin-top:6px}
+  .status{font-size:13px; color:var(--muted); margin-top:14px; min-height:18px}
+  .status.error{color:var(--bad)}
+  .progress{
+    height:6px; background:var(--card-soft); border:1px solid var(--line);
+    border-radius:99px; overflow:hidden; margin-top:10px;
+  }
+  .progress > div{height:100%; background:linear-gradient(90deg,var(--accent-hi),var(--accent)); width:0; transition:width .2s}
+
+  /* Club picker */
+  .club-picker{display:flex; flex-direction:column; gap:8px}
+  .club-picker .list{
+    max-height:180px; overflow:auto; border:1px solid var(--line); border-radius:9px;
+    background:var(--card-soft); padding:4px;
+  }
+  .club-picker .list label{
+    display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:6px;
+    cursor:pointer; color:var(--ink); font-size:13px; font-weight:500; text-transform:none; letter-spacing:0;
+  }
+  .club-picker .list label:hover{background:color-mix(in srgb,var(--accent) 8%, transparent)}
+  .club-picker .list input[type=checkbox]{margin:0; accent-color:var(--accent)}
+  .club-picker .list .empty{padding:10px; font-size:12px; color:var(--muted); text-transform:none; letter-spacing:0}
+  .picker-toolbar{display:flex; gap:4px; font-size:12px}
+  .chips{display:flex; gap:6px; flex-wrap:wrap}
+  .chip{
+    background:color-mix(in srgb,var(--accent) 14%, transparent);
+    color:var(--accent-hi); padding:3px 4px 3px 10px; border-radius:99px;
+    font-size:12px; font-weight:500; display:inline-flex; gap:2px; align-items:center;
+  }
+  .chip button{
+    background:none; border:none; color:inherit; padding:2px 6px;
+    font-size:14px; line-height:1; cursor:pointer; border-radius:99px;
+  }
+  .chip button:hover{background:color-mix(in srgb,var(--accent) 25%, transparent)}
+
+  /* Stats */
+  .stats{display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px; margin-bottom:20px}
+  .stat{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px; box-shadow:var(--shadow); position:relative; overflow:hidden;
+  }
+  .stat::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+    background:var(--accent); opacity:.7;
+  }
+  .stat.gold::before{background:var(--gold)}
+  .stat.silver::before{background:var(--silver)}
+  .stat.bronze::before{background:var(--bronze)}
+  .stat.good::before{background:var(--mint)}
+  .stat.peach::before{background:var(--peach)}
+  .stat .k{font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:600; letter-spacing:.5px}
+  .stat .v{font-size:24px; font-weight:700; color:var(--ink); margin-top:2px; line-height:1.1}
+  .stat .sub{font-size:12px; color:var(--muted); margin-top:2px}
+
+  /* Section title */
+  .section-title{
+    display:flex; align-items:baseline; gap:10px; margin:8px 0 12px;
+    font-size:14px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.6px;
+  }
+  .section-title .meta{font-weight:400; text-transform:none; letter-spacing:0; font-size:12px}
+
+  /* Event card */
+  .event{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    margin-bottom:12px; overflow:hidden; box-shadow:var(--shadow);
+  }
+  .event-head{
+    padding:14px 16px; background:var(--card-soft); border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center;
+  }
+  .event-head .left{display:flex; flex-direction:column; gap:4px; min-width:0}
+  .event-head .name{font-weight:600; font-size:15px; color:var(--ink)}
+  .sqorz-link{color:inherit; text-decoration:none; border-bottom:1px solid transparent; transition:border-color .15s, color .15s}
+  .sqorz-link:hover{color:var(--accent-hi); border-bottom-color:color-mix(in srgb,var(--accent) 40%, transparent)}
+  .sqorz-link::after{
+    content:"↗"; font-size:.75em; margin-left:4px; color:var(--muted);
+    transition:color .15s; vertical-align:baseline;
+  }
+  .sqorz-link:hover::after{color:var(--accent-hi)}
+  .event-head .right{display:flex; flex-direction:column; align-items:flex-end; gap:4px}
+  .event-head .date{
+    font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums;
+    background:var(--card); padding:3px 8px; border-radius:99px; border:1px solid var(--line);
+  }
+  .org-badge{
+    display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:500;
+    padding:3px 9px; border-radius:99px;
+    background:color-mix(in srgb,var(--accent) 14%, transparent); color:var(--accent-hi);
+  }
+  .event-body{padding:6px 16px 12px}
+  .class-line{
+    display:flex; gap:14px; padding:10px 0; border-bottom:1px dashed var(--line);
+    align-items:center; justify-content:space-between; flex-wrap:wrap;
+  }
+  .class-line:last-child{border-bottom:none}
+  .cl-info{flex:1; min-width:0}
+  .class-name{font-weight:600; font-size:14px; color:var(--ink)}
+  .meta{font-size:12px; color:var(--muted)}
+  .phases{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+  .phase{
+    background:var(--card-soft); border:1px solid var(--line); padding:3px 9px;
+    border-radius:99px; font-size:12px; display:inline-flex; gap:6px; align-items:baseline;
+    color:var(--muted);
+  }
+  .phase b{color:var(--ink); font-weight:600}
+  .phase .gate{opacity:.65; font-size:11px}
+  .phase.pos-1 b{color:var(--gold)}
+  .phase.pos-2 b{color:var(--silver)}
+  .phase.pos-3 b{color:var(--bronze)}
+  a.phase{text-decoration:none; cursor:pointer; transition:border-color .15s, background .15s}
+  a.phase:hover{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 8%, transparent)}
+
+  .rank-pill{
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:42px; height:42px; border-radius:50%; font-weight:700; font-size:16px;
+    background:var(--card-soft); border:2px solid var(--line); color:var(--ink);
+    font-variant-numeric:tabular-nums;
+  }
+  .rank-pill.r1{background:linear-gradient(135deg,#f6e5c4,#c9a574); border-color:var(--gold); color:#5a4218}
+  .rank-pill.r2{background:linear-gradient(135deg,#eef1f3,#b8c0c8); border-color:var(--silver); color:#3a4248}
+  .rank-pill.r3{background:linear-gradient(135deg,#ecd6c1,#b88862); border-color:var(--bronze); color:#5c3a1f}
+  .rank-pill.r8{background:#dfe6ea; border-color:var(--accent); color:var(--accent-hi)}
+  .cl-right{display:flex; align-items:center; gap:12px}
+  .cl-meta-r{display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-size:12px; color:var(--muted)}
+  .cl-meta-r .lbl{text-transform:uppercase; letter-spacing:.5px; font-size:10px; font-weight:600}
+  .top-pct{
+    display:inline-block; font-size:11px; font-weight:600;
+    padding:1px 8px; border-radius:99px; margin-top:2px;
+    background:color-mix(in srgb,var(--accent) 14%, transparent); color:var(--accent-hi);
+  }
+  .top-pct.elite{background:color-mix(in srgb,var(--gold) 20%, transparent); color:#78350f}
+  .top-pct.good{background:color-mix(in srgb,var(--good) 18%, transparent); color:#14532d}
+
+  .empty{padding:36px; text-align:center; color:var(--muted)}
+  .summary{font-size:13px; color:var(--muted); margin:0 0 12px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><span class="logo">SQ</span> Sqorz Stats</div>
+    <h1>Historique d'un pilote BMX</h1>
+    <p>Tous les résultats d'un pilote BMX français depuis our.sqorz.com, classés du plus récent au plus ancien, avec statistiques détaillées.</p>
+  </div>
+</div>
+
+<main>
+  <div class="card filters">
+    <div class="grid">
+      <div class="field col-clubs">
+        <label>Clubs français <span id="clubCount" style="color:var(--muted); font-weight:400; text-transform:none; letter-spacing:0"></span></label>
+        <div class="club-picker">
+          <input type="text" class="control" id="clubFilter" placeholder="Filtrer la liste…" disabled>
+          <div class="list" id="clubList"><div class="empty">Chargement des clubs français…</div></div>
+          <div class="picker-toolbar">
+            <button type="button" class="btn btn-ghost" id="clubAll" disabled>Tout cocher (visibles)</button>
+            <button type="button" class="btn btn-ghost" id="clubNone" disabled>Tout décocher</button>
+          </div>
+          <div class="chips" id="clubChips"></div>
+        </div>
+      </div>
+      <div class="field col-name">
+        <label for="nameInp">Nom du pilote</label>
+        <input id="nameInp" class="control" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off" disabled>
+        <span class="hint">Insensible à la casse et aux accents.</span>
+      </div>
+      <div class="field col-btn">
+        <label>&nbsp;</label>
+        <button id="searchBtn" class="btn" disabled>Chercher</button>
+      </div>
+    </div>
+    <div class="progress" id="progressWrap" hidden><div id="progressBar"></div></div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="card results-filters" id="resultsFilters" hidden>
+    <div class="field">
+      <label for="yearSel">Année</label>
+      <select id="yearSel" class="control">
+        <option value="">Toutes les années</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="sortSel">Trier par</label>
+      <select id="sortSel" class="control">
+        <option value="date-desc">Date (plus récent → plus ancien)</option>
+        <option value="date-asc">Date (plus ancien → plus récent)</option>
+        <option value="rank-asc">Rang final (meilleur → moins bon)</option>
+        <option value="rank-desc">Rang final (moins bon → meilleur)</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="results"></div>
+</main>
+
+<script>
+(() => {
+  const API_BASE = 'https://our.sqorz.com';
+
+  const PROXIES = [
+    u => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  ];
+
+  async function fetchJson(path) {
+    const target = API_BASE + path;
+    let lastErr;
+    for (const buildUrl of PROXIES) {
+      try {
+        const r = await fetch(buildUrl(target));
+        if (!r.ok) { lastErr = new Error(`HTTP ${r.status}`); continue; }
+        const text = await r.text();
+        try { return JSON.parse(text); }
+        catch { lastErr = new Error('JSON parse failed'); }
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error('Tous les proxys ont échoué');
+  }
+
+  const norm = s => (s || '')
+    .toString()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+
+  function matchPilot(firstName, lastName, queryTokens) {
+    const hay = norm(firstName + ' ' + lastName);
+    if (!hay) return false;
+    return queryTokens.every(t => hay.includes(t));
+  }
+
+  const FIXED_REGION = 'FR';
+  const clubFilter = document.getElementById('clubFilter');
+  const clubList = document.getElementById('clubList');
+  const clubChips = document.getElementById('clubChips');
+  const clubCount = document.getElementById('clubCount');
+  const clubAllBtn = document.getElementById('clubAll');
+  const clubNoneBtn = document.getElementById('clubNone');
+  const yearSel = document.getElementById('yearSel');
+  const sortSel = document.getElementById('sortSel');
+  const resultsFiltersEl = document.getElementById('resultsFilters');
+  const nameInp = document.getElementById('nameInp');
+  const searchBtn = document.getElementById('searchBtn');
+  const statusEl = document.getElementById('status');
+  const resultsEl = document.getElementById('results');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressBar = document.getElementById('progressBar');
+
+  let accounts = [];
+  const selectedCodes = new Set();
+
+  function setStatus(msg, isError = false) {
+    statusEl.textContent = msg || '';
+    statusEl.classList.toggle('error', isError);
+  }
+
+  function setProgress(done, total) {
+    if (!total) { progressWrap.hidden = true; return; }
+    progressWrap.hidden = false;
+    progressBar.style.width = Math.round(100 * done / total) + '%';
+  }
+
+  const escape = s => String(s ?? '').replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+
+  function updateSearchEnabled() {
+    searchBtn.disabled = !(selectedCodes.size > 0 && nameInp.value.trim().length >= 2);
+  }
+
+  function renderClubList() {
+    const q = norm(clubFilter.value);
+    const filtered = accounts.filter(a => !q || norm(a.accountName).includes(q));
+    if (!filtered.length) {
+      clubList.innerHTML = '<div class="empty">Aucun club ne correspond.</div>';
+      return;
+    }
+    clubList.innerHTML = filtered.map(a => `
+      <label>
+        <input type="checkbox" value="${escape(a.accountCode)}" data-name="${escape(a.accountName)}" ${selectedCodes.has(a.accountCode) ? 'checked' : ''}>
+        ${escape(a.accountName)}
+      </label>
+    `).join('');
+  }
+
+  function renderChips() {
+    const items = accounts.filter(a => selectedCodes.has(a.accountCode));
+    clubCount.textContent = items.length ? `(${items.length} sélectionné${items.length>1?'s':''})` : '';
+    clubChips.innerHTML = items.map(a => `
+      <span class="chip">${escape(a.accountName)} <button type="button" data-code="${escape(a.accountCode)}" title="Retirer">×</button></span>
+    `).join('');
+  }
+
+  async function loadClubs(regionCode) {
+    clubFilter.disabled = true;
+    nameInp.disabled = true;
+    clubAllBtn.disabled = true;
+    clubNoneBtn.disabled = true;
+    accounts = [];
+    selectedCodes.clear();
+    clubList.innerHTML = '<div class="empty">Chargement…</div>';
+    renderChips();
+    setStatus('Chargement des clubs de ' + regionCode + '…');
+    try {
+      const data = await fetchJson('/json/region/' + encodeURIComponent(regionCode));
+      accounts = (data.accounts || []).slice().sort((a,b) => a.accountName.localeCompare(b.accountName));
+      if (!accounts.length) {
+        clubList.innerHTML = '<div class="empty">Aucun club.</div>';
+        setStatus('');
+        return;
+      }
+      renderClubList();
+      clubFilter.disabled = false;
+      nameInp.disabled = false;
+      clubAllBtn.disabled = false;
+      clubNoneBtn.disabled = false;
+      setStatus('');
+    } catch (e) {
+      setStatus('Impossible de charger les clubs : ' + e.message, true);
+    }
+  }
+
+  async function searchSelected() {
+    resultsEl.innerHTML = '';
+    setStatus('Récupération des événements…');
+    setProgress(0, 0);
+
+    const query = nameInp.value.trim();
+    const queryTokens = norm(query).split(' ').filter(Boolean);
+    if (!queryTokens.length) { setStatus('Saisir un nom à chercher.', true); return; }
+
+    const targets = accounts.filter(a => selectedCodes.has(a.accountCode));
+
+    const orgEvents = [];
+    let orgErrors = 0;
+    for (const a of targets) {
+      try {
+        const orgData = await fetchJson('/json/org/' + encodeURIComponent(a.accountCode));
+        const events = (orgData.events || []).filter(e => e.publish !== false);
+        orgEvents.push({ account: a, events });
+      } catch (e) {
+        orgErrors++;
+      }
+    }
+
+    const allEvents = [];
+    for (const oe of orgEvents) for (const ev of oe.events) allEvents.push({ account: oe.account, event: ev });
+    if (!allEvents.length) {
+      setStatus(`Aucun événement publié dans les ${targets.length} club(s) sélectionné(s).`);
+      return;
+    }
+
+    setStatus(`Analyse de ${allEvents.length} événement(s) sur ${targets.length} club(s)…`);
+    let done = 0;
+    setProgress(0, allEvents.length);
+
+    const CONCURRENCY = 5;
+    const matches = [];
+    const queue = allEvents.slice();
+    const eventErrors = [];
+
+    async function worker() {
+      while (queue.length) {
+        const item = queue.shift();
+        try {
+          const detail = await fetchJson('/json/event/' + encodeURIComponent(item.event.eventId));
+          const classRanks = detail.classRanks || [];
+          for (const cls of classRanks) {
+            const summaries = cls.competitorRankSummaries || [];
+            const totalParticipants = summaries.length;
+            for (const c of summaries) {
+              if (matchPilot(c.firstName, c.lastName, queryTokens)) {
+                matches.push({ account: item.account, event: item.event, cls, competitor: c, totalParticipants });
+              }
+            }
+          }
+        } catch (e) {
+          eventErrors.push({ event: item.event, error: e.message });
+        } finally {
+          done++;
+          setProgress(done, allEvents.length);
+        }
+      }
+    }
+
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, allEvents.length) }, worker));
+
+    setProgress(0, 0);
+    const errMsg = (orgErrors || eventErrors.length)
+      ? ` — ${orgErrors} club(s) et ${eventErrors.length} événement(s) en erreur`
+      : '';
+    setStatus(`${matches.length} résultat(s) trouvé(s)${errMsg}.`);
+    lastMatches = matches;
+    resultsFiltersEl.hidden = matches.length === 0;
+    renderFiltered();
+  }
+
+  let lastMatches = [];
+  function renderFiltered() {
+    const y = yearSel.value;
+    const filtered = !y ? lastMatches : lastMatches.filter(m => {
+      const d = m.event.eventDate || m.event.eventEndDate || '';
+      return d.startsWith(y + '-');
+    });
+    render(filtered, sortSel.value);
+  }
+
+  function ordFr(n){ return n === 1 ? '1er' : `${n}e`; }
+
+  function percentile(rank, total){
+    if (!total || total < 2 || typeof rank !== 'number') return null;
+    const p = 100 * rank / total;
+    return Math.max(1, Math.round(p));
+  }
+
+  function isFinalPhase(d) {
+    const n = (d.phaseName || '').toLowerCase();
+    return /final/.test(n) && !/semi|quarter|1\/|eighth|repech/.test(n);
+  }
+  function isMotoPhase(d) {
+    return /^moto/i.test(d.phaseName || '');
+  }
+
+  function frPhaseName(raw) {
+    return (raw || '').replace(/\bMoto\b/gi, 'Manche');
+  }
+
+  function phaseTag(d, ctx) {
+    const pos = d.result;
+    const gate = d.racePosition;
+    const label = escape(frPhaseName(d.phaseName || d.phaseCode || ''));
+    const posClass = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : '';
+    const posTxt = pos != null ? `<b>${ordFr(pos)}</b>` : '<b>—</b>';
+    const gateTxt = gate != null ? `<span class="gate">gr.${gate}</span>` : '';
+    const url = ctx ? raceUrl(ctx.accountCode, ctx.eventId, ctx.perpetualClassCode, d.phaseBlockCode, d.phaseCode, d.raceName) : null;
+    const inner = `${label} ${posTxt} ${gateTxt}`;
+    if (url) {
+      return `<a class="phase ${posClass}" href="${escape(url)}" target="_blank" rel="noopener noreferrer" title="${label} — ouvrir sur Sqorz">${inner}</a>`;
+    }
+    return `<span class="phase ${posClass}" title="${label}">${inner}</span>`;
+  }
+
+  function computeStats(matches) {
+    const s = {
+      entries: matches.length,
+      events: new Set(),
+      orgs: new Set(),
+      pilots: new Set(),
+      wins: 0, podiums: 0, top8: 0,
+      finalsReached: 0, finalWins: 0, finalPodiums: 0,
+      motosRaced: 0, motoWins: 0,
+      bestRank: null,
+      rankSum: 0, rankCount: 0,
+      pctSum: 0, pctCount: 0, bestPct: null,
+      topTen: 0, topQuarter: 0, topHalf: 0,
+      totalParticipantsSum: 0,
+      firstDate: null, lastDate: null,
+      byClass: {},
+    };
+    for (const m of matches) {
+      const c = m.competitor;
+      const ev = m.event;
+      s.events.add(ev.eventId);
+      s.orgs.add(m.account.accountName);
+      s.pilots.add(`${c.firstName} ${c.lastName}`);
+
+      if (typeof c.rank === 'number') {
+        if (c.rank === 1) s.wins++;
+        if (c.rank <= 3) s.podiums++;
+        if (c.rank <= 8) s.top8++;
+        if (s.bestRank == null || c.rank < s.bestRank) s.bestRank = c.rank;
+        s.rankSum += c.rank;
+        s.rankCount++;
+      }
+
+      const pct = percentile(c.rank, m.totalParticipants);
+      if (pct != null) {
+        s.pctSum += pct;
+        s.pctCount++;
+        if (s.bestPct == null || pct < s.bestPct) s.bestPct = pct;
+        if (pct <= 10) s.topTen++;
+        if (pct <= 25) s.topQuarter++;
+        if (pct <= 50) s.topHalf++;
+      }
+      if (m.totalParticipants) s.totalParticipantsSum += m.totalParticipants;
+
+      const details = c.competitorRankDetails || [];
+      const finalPh = details.find(isFinalPhase);
+      if (finalPh && finalPh.result != null) {
+        s.finalsReached++;
+        if (finalPh.result === 1) s.finalWins++;
+        if (finalPh.result <= 3) s.finalPodiums++;
+      }
+      for (const d of details) {
+        if (isMotoPhase(d) && d.result != null) {
+          s.motosRaced++;
+          if (d.result === 1) s.motoWins++;
+        }
+      }
+
+      const d = ev.eventDate;
+      if (d) {
+        if (!s.firstDate || d < s.firstDate) s.firstDate = d;
+        if (!s.lastDate || d > s.lastDate) s.lastDate = d;
+      }
+
+      const cn = m.cls.className;
+      if (!s.byClass[cn]) s.byClass[cn] = { entries: 0, bestRank: null };
+      s.byClass[cn].entries++;
+      if (typeof c.rank === 'number' && (s.byClass[cn].bestRank == null || c.rank < s.byClass[cn].bestRank))
+        s.byClass[cn].bestRank = c.rank;
+    }
+    s.avgRank = s.rankCount ? (s.rankSum / s.rankCount) : null;
+    s.avgPct = s.pctCount ? (s.pctSum / s.pctCount) : null;
+    s.avgField = s.pctCount ? (s.totalParticipantsSum / s.pctCount) : null;
+    return s;
+  }
+
+  const SQORZ_WEB_BASE = 'https://our.sqorz.com';
+  function eventUrl(accountCode, eventId) {
+    if (!accountCode || !eventId) return null;
+    return `${SQORZ_WEB_BASE}/org/${encodeURIComponent(accountCode)}/event/${encodeURIComponent(eventId)}`;
+  }
+  function classUrl(accountCode, eventId, perpetualClassCode) {
+    const base = eventUrl(accountCode, eventId);
+    if (!base || !perpetualClassCode) return null;
+    return `${base}/class/${encodeURIComponent(perpetualClassCode)}`;
+  }
+  function raceUrl(accountCode, eventId, perpetualClassCode, phaseBlockCode, phaseCode, raceName) {
+    const ev = eventUrl(accountCode, eventId);
+    if (!ev) return null;
+    if (raceName != null && raceName !== '' && phaseCode) {
+      const raceId = `${raceName}%${phaseCode}`;
+      const qs = perpetualClassCode ? `?perpetualClassCode=${encodeURIComponent(perpetualClassCode)}` : '';
+      return `${ev}/race/${encodeURIComponent(raceId)}${qs}`;
+    }
+    if (phaseBlockCode) {
+      return `${ev}/phase/${encodeURIComponent(phaseBlockCode)}`;
+    }
+    return classUrl(accountCode, eventId, perpetualClassCode);
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return iso;
+    return `${m[3]}/${m[2]}/${m[1]}`;
+  }
+
+  function renderStats(s) {
+    const podiumRate = s.entries ? Math.round(100 * s.podiums / s.entries) : 0;
+    const winRate = s.entries ? Math.round(100 * s.wins / s.entries) : 0;
+    const motoRate = s.motosRaced ? Math.round(100 * s.motoWins / s.motosRaced) : 0;
+    const topTenRate = s.pctCount ? Math.round(100 * s.topTen / s.pctCount) : 0;
+    const topQuarterRate = s.pctCount ? Math.round(100 * s.topQuarter / s.pctCount) : 0;
+    const dateRange = s.firstDate
+      ? (s.firstDate === s.lastDate ? fmtDate(s.firstDate) : `${fmtDate(s.firstDate)} → ${fmtDate(s.lastDate)}`)
+      : '—';
+    return `
+      <div class="stats">
+        <div class="stat"><div class="k">Événements</div><div class="v">${s.events.size}</div><div class="sub">${s.entries} engagement(s)</div></div>
+        <div class="stat gold"><div class="k">Victoires</div><div class="v">${s.wins}</div><div class="sub">${winRate}% des engagements</div></div>
+        <div class="stat silver"><div class="k">Podiums</div><div class="v">${s.podiums}</div><div class="sub">${podiumRate}% des engagements</div></div>
+        <div class="stat bronze"><div class="k">Top 8</div><div class="v">${s.top8}</div><div class="sub">classement de classe</div></div>
+        <div class="stat good"><div class="k">Top 10%</div><div class="v">${s.topTen}</div><div class="sub">${topTenRate}% des engagements</div></div>
+        <div class="stat"><div class="k">Top 25%</div><div class="v">${s.topQuarter}</div><div class="sub">${topQuarterRate}% des engagements</div></div>
+        <div class="stat"><div class="k">Percentile moyen</div><div class="v">${s.avgPct != null ? 'top ' + s.avgPct.toFixed(0) + '%' : '—'}</div><div class="sub">meilleur&nbsp;: ${s.bestPct != null ? 'top ' + s.bestPct + '%' : '—'}</div></div>
+        <div class="stat"><div class="k">Finales</div><div class="v">${s.finalsReached}</div><div class="sub">${s.finalWins} gagnée(s), ${s.finalPodiums} podium(s)</div></div>
+        <div class="stat"><div class="k">Manches</div><div class="v">${s.motoWins}/${s.motosRaced}</div><div class="sub">${motoRate}% de manches gagnées</div></div>
+        <div class="stat"><div class="k">Meilleur classement</div><div class="v">${s.bestRank ?? '—'}</div><div class="sub">moyenne&nbsp;${s.avgRank != null ? s.avgRank.toFixed(1) : '—'}${s.avgField != null ? ' · ' + Math.round(s.avgField) + ' pilotes/classe' : ''}</div></div>
+        <div class="stat"><div class="k">Période</div><div class="v" style="font-size:14px; padding-top:6px">${dateRange}</div><div class="sub">${s.orgs.size} organisation(s)${s.pilots.size > 1 ? ` · ${s.pilots.size} pilotes` : ''}</div></div>
+      </div>
+    `;
+  }
+
+  function render(matches, sortMode = 'date-desc') {
+    if (!matches.length) {
+      resultsEl.innerHTML = '<div class="card empty">Aucun pilote ne correspond à cette recherche.</div>';
+      return;
+    }
+
+    const stats = computeStats(matches);
+
+    const eventGroups = new Map();
+    for (const m of matches) {
+      const k = m.event.eventId;
+      if (!eventGroups.has(k)) eventGroups.set(k, { event: m.event, account: m.account, items: [] });
+      eventGroups.get(k).items.push(m);
+    }
+
+    const bestRankOf = g => {
+      let best = null;
+      for (const m of g.items) {
+        const r = m.competitor && typeof m.competitor.rank === 'number' ? m.competitor.rank : null;
+        if (r != null && (best == null || r < best)) best = r;
+      }
+      return best;
+    };
+
+    const sortedEvents = [...eventGroups.values()];
+    let sortLabel;
+    switch (sortMode) {
+      case 'date-asc':
+        sortedEvents.sort((a,b) => (a.event.eventDate || '').localeCompare(b.event.eventDate || ''));
+        sortLabel = 'du plus ancien au plus récent';
+        break;
+      case 'rank-asc':
+      case 'rank-desc': {
+        const dir = sortMode === 'rank-asc' ? 1 : -1;
+        sortedEvents.sort((a,b) => {
+          const ra = bestRankOf(a);
+          const rb = bestRankOf(b);
+          if (ra == null && rb == null) return 0;
+          if (ra == null) return 1;
+          if (rb == null) return -1;
+          if (ra !== rb) return (ra - rb) * dir;
+          return (b.event.eventDate || '').localeCompare(a.event.eventDate || '');
+        });
+        sortLabel = sortMode === 'rank-asc'
+          ? 'meilleur rang final en premier'
+          : 'moins bon rang final en premier';
+        break;
+      }
+      case 'date-desc':
+      default:
+        sortedEvents.sort((a,b) => (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
+        sortLabel = 'du plus récent au plus ancien';
+        break;
+    }
+
+    const html = [renderStats(stats)];
+    html.push(`<div class="section-title">Historique <span class="meta">${sortedEvents.length} événement(s), ${sortLabel}</span></div>`);
+
+    for (const { event, account, items } of sortedEvents) {
+      const evUrl = eventUrl(account.accountCode, event.eventId);
+      const evName = escape(event.eventName);
+      const evNameHtml = evUrl
+        ? `<a class="sqorz-link" href="${escape(evUrl)}" target="_blank" rel="noopener noreferrer" title="Ouvrir sur Sqorz">${evName}</a>`
+        : evName;
+      html.push(`<div class="event">`);
+      html.push(`<div class="event-head">
+        <div class="left">
+          <div class="name">${evNameHtml}</div>
+          <div><span class="org-badge" title="Organisateur">${escape(account.accountName)}</span></div>
+        </div>
+        <div class="right">
+          <div class="date">${escape(fmtDate(event.eventDate))}${event.eventEndDate && event.eventEndDate !== event.eventDate ? ' → ' + escape(fmtDate(event.eventEndDate)) : ''}</div>
+        </div>
+      </div>`);
+      html.push(`<div class="event-body">`);
+
+      for (const m of items) {
+        const c = m.competitor;
+        const cls = m.cls;
+        const total = m.totalParticipants;
+        const rk = c.rank;
+        const pillClass = rk === 1 ? 'r1' : rk === 2 ? 'r2' : rk === 3 ? 'r3' : (rk && rk <= 8 ? 'r8' : '');
+        const pct = percentile(rk, total);
+        const totalTxt = total ? `<div>sur ${total} pilotes</div>` : '';
+        const pctClass = pct == null ? '' : (pct <= 10 ? 'elite' : pct <= 25 ? 'good' : '');
+        const pctTxt = pct != null ? `<div><span class="top-pct ${pctClass}">top ${pct}%</span></div>` : '';
+        const phaseCtx = { accountCode: m.account.accountCode, eventId: m.event.eventId, perpetualClassCode: cls.perpetualClassCode };
+        const phases = (c.competitorRankDetails || []).map(d => phaseTag(d, phaseCtx)).join('');
+        const finalPh = (c.competitorRankDetails || []).find(isFinalPhase);
+        const finalTxt = finalPh && finalPh.result != null
+          ? `<div><span class="lbl">Finale</span> ${ordFr(finalPh.result)}</div>`
+          : '';
+        const clUrl = classUrl(m.account.accountCode, m.event.eventId, cls.perpetualClassCode);
+        const clName = escape(cls.className);
+        const clNameHtml = clUrl
+          ? `<a class="sqorz-link" href="${escape(clUrl)}" target="_blank" rel="noopener noreferrer" title="Ouvrir la classe sur Sqorz">${clName}</a>`
+          : clName;
+        html.push(`
+          <div class="class-line">
+            <div class="cl-info">
+              <div><span class="class-name">${clNameHtml}</span></div>
+              <div class="meta">${escape(c.firstName)} ${escape(c.lastName)}${c.plate ? ` · #${escape(c.plate)}` : ''}${c.groupName ? ` · ${escape(c.groupName)}` : ''}</div>
+              ${phases ? `<div class="phases">${phases}</div>` : ''}
+            </div>
+            <div class="cl-right">
+              <div class="cl-meta-r">
+                <div><span class="lbl">Classement</span></div>
+                ${totalTxt}
+                ${pctTxt}
+                ${finalTxt}
+              </div>
+              <div class="rank-pill ${pillClass}" title="Classement final de la classe">${rk ?? '—'}</div>
+            </div>
+          </div>
+        `);
+      }
+
+      html.push(`</div></div>`);
+    }
+    resultsEl.innerHTML = html.join('');
+  }
+
+  clubFilter.addEventListener('input', renderClubList);
+  clubList.addEventListener('change', e => {
+    const cb = e.target;
+    if (cb.tagName !== 'INPUT' || cb.type !== 'checkbox') return;
+    if (cb.checked) selectedCodes.add(cb.value);
+    else selectedCodes.delete(cb.value);
+    renderChips();
+    updateSearchEnabled();
+  });
+  clubChips.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-code]');
+    if (!btn) return;
+    selectedCodes.delete(btn.dataset.code);
+    renderClubList();
+    renderChips();
+    updateSearchEnabled();
+  });
+  clubAllBtn.addEventListener('click', () => {
+    const q = norm(clubFilter.value);
+    for (const a of accounts) {
+      if (!q || norm(a.accountName).includes(q)) selectedCodes.add(a.accountCode);
+    }
+    renderClubList();
+    renderChips();
+    updateSearchEnabled();
+  });
+  clubNoneBtn.addEventListener('click', () => {
+    selectedCodes.clear();
+    renderClubList();
+    renderChips();
+    updateSearchEnabled();
+  });
+
+  nameInp.addEventListener('input', updateSearchEnabled);
+  nameInp.addEventListener('keydown', e => { if (e.key === 'Enter' && !searchBtn.disabled) searchBtn.click(); });
+  searchBtn.addEventListener('click', searchSelected);
+  yearSel.addEventListener('change', () => { if (lastMatches.length) renderFiltered(); });
+  sortSel.addEventListener('change', () => { if (lastMatches.length) renderFiltered(); });
+
+  // Populate year dropdown (current year → 2024)
+  (() => {
+    const currentYear = new Date().getFullYear();
+    const oldestYear = 2024;
+    const frag = document.createDocumentFragment();
+    for (let y = currentYear; y >= oldestYear; y--) {
+      const opt = document.createElement('option');
+      opt.value = String(y);
+      opt.textContent = String(y);
+      frag.appendChild(opt);
+    }
+    yearSel.appendChild(frag);
+  })();
+
+  loadClubs(FIXED_REGION);
+})();
+</script>
+</body>
+</html>
