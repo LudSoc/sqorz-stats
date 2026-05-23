@@ -6,36 +6,77 @@
 <title>Résultats Sqorz — Historique pilote</title>
 <style>
   :root{
-    /* Slate palette anchored on #4c606b (acier doux) */
-    --bg:#eef2f4;
-    --bg-overlay:linear-gradient(180deg, rgba(76,96,107,.78) 0%, rgba(76,96,107,.55) 100%);
-    --card:#ffffff; --card-soft:#f6f8fa;
-    --ink:#2a363e; --ink-2:#4c606b; --muted:#7a8a95;
-    --line:#dde4e8; --line-strong:#c3cdd4;
-    --accent:#4c606b;        /* slate principal */
-    --accent-hi:#3a4a54;
-    --accent-soft:#cbd5dc;
+    /* Palette pastel — ancrée sur un bleu acier (#6a8caf) */
+    --bg:#f1f4f8;
+    --bg-overlay:linear-gradient(180deg, rgba(106,140,175,.55) 0%, rgba(106,140,175,.30) 100%);
+    --card:#ffffff; --card-soft:#f7fafc;
+    --ink:#2c3845; --ink-2:#4a5868; --muted:#6a7886;
+    --line:#e4ebf1; --line-strong:#cdd6e0;
+    --accent:#6a8caf;        /* bleu acier principal */
+    --accent-hi:#506f8f;
+    --accent-soft:#dde6ef;
     --accent-ink:#fff;
-    --good:#7fa890;          /* sauge */
-    --bad:#c97b7b;           /* corail doux */
-    --warn:#c9a574;          /* sable chaud */
-    --gold:#c9a574;
-    --silver:#b8c0c8;
-    --bronze:#b88862;
-    --shadow:0 1px 2px rgba(76,96,107,.10), 0 8px 24px rgba(76,96,107,.12);
-    --radius:16px;
+    /* Famille pastel élargie — un cran plus saturé pour rester lisible sur fond clair */
+    --rose:#f0a8c2;
+    --coral:#f4a89a;
+    --peach:#f5c0a0;
+    --apricot:#f5d4a0;
+    --butter:#f0d878;
+    --lime:#cfdf8c;
+    --mint:#a8dcc4;
+    --teal:#88ccd0;
+    --sky:#a8c8e8;
+    --blueberry:#a8b4e0;
+    --lilac:#bdacd9;
+    --lavender:#d0b6e0;
+    --berry:#e09bc2;
+    --grape:#c594d4;
+    /* Sémantiques + médailles, en pastel */
+    --good:#a8dcc4;
+    --bad:#f5a8a8;
+    --warn:#f5d294;
+    --gold:#e8c574;
+    --silver:#cdd2dc;
+    --bronze:#d4a07c;
+    --shadow:0 1px 2px rgba(60,90,120,.10), 0 10px 28px rgba(60,90,120,.14);
+    --radius:18px;
   }
   @media (prefers-color-scheme:dark){
     :root{
-      --bg:#1f262b; --card:#2a333a; --card-soft:#252d33;
-      --ink:#e6ecef; --ink-2:#c5cdd2; --muted:#8d98a0;
-      --line:#3a4047; --line-strong:#4a5057;
-      --accent:#8aa0ac; --accent-hi:#a0b5c1; --accent-soft:#3a4a54;
-      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+      --bg:#1f262e; --card:#2a3340; --card-soft:#252e3a;
+      --ink:#e4ebf2; --ink-2:#c2ccd8; --muted:#a4afbb;
+      --line:#3a4250; --line-strong:#4d5666;
+      --accent:#9bb5cf; --accent-hi:#b6cce0; --accent-soft:#3a4250;
+      --rose:#f4b8cb; --coral:#f4b4a4; --peach:#f5cdac; --apricot:#f5dab0;
+      --butter:#efdc8c; --lime:#d8e8a0; --mint:#b4e0c8; --teal:#a4d8d8;
+      --sky:#b6d2eb; --blueberry:#b8c5e8; --lilac:#c8b8df; --lavender:#d6bce6;
+      --berry:#e8a8c8; --grape:#cca4dc;
+      --good:#b4e0c8; --bad:#f5b0b0; --warn:#f5d8a4;
+      --gold:#eccc88; --silver:#d4d8e0; --bronze:#d8a888;
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px rgba(0,0,0,.4);
     }
   }
   *{box-sizing:border-box}
   html,body{margin:0; padding:0}
+
+  /* Focus clavier accessible — visible uniquement sur navigation Tab, pas au clic souris */
+  :focus{outline:none}
+  :focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+    border-radius:6px;
+  }
+  .btn:focus-visible,
+  .recent-chip:focus-visible,
+  .recent-clear:focus-visible,
+  .section-toggle:focus-visible,
+  .chip button:focus-visible{
+    outline:2px solid var(--accent-hi);
+    outline-offset:3px;
+  }
+  /* Les inputs gardent leur propre style de focus (border + box-shadow) */
+  .control:focus-visible{outline:none}
+  .topbar :focus-visible{outline-color:#fff}
   body{
     font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     color:var(--ink); background:var(--bg);
@@ -43,13 +84,13 @@
   }
   .topbar{
     position:relative; overflow:hidden;
-    color:#fff; padding:38px 24px 110px;
-    background:linear-gradient(135deg,#2a363e 0%,#4c606b 55%,#7a8a95 100%);
+    color:#fff; padding:42px 24px 116px;
+    background:linear-gradient(135deg, #3f566f 0%, #6a8caf 55%, #8aa6c2 100%);
   }
   .topbar::after{
-    /* subtle radial light, top-right */
+    /* lueur douce en haut */
     content:""; position:absolute; inset:0; pointer-events:none;
-    background:radial-gradient(circle at 85% 0%, rgba(255,255,255,.18), transparent 55%);
+    background:radial-gradient(circle at 80% 0%, rgba(255,255,255,.20), transparent 55%);
   }
   .topbar-inner{
     max-width:1180px; margin:0 auto; position:relative; z-index:1;
@@ -57,13 +98,13 @@
   .brand{display:flex; align-items:center; gap:12px; font-weight:600; letter-spacing:.2px; color:#fff}
   .brand .logo{
     width:40px; height:40px; border-radius:12px;
-    background:rgba(255,255,255,.18); color:#fff;
+    background:rgba(255,255,255,.22); color:#fff;
     display:grid; place-items:center; font-weight:800; font-size:14px;
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.45);
     backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
   }
-  .topbar h1{margin:18px 0 6px; font-size:30px; font-weight:700; letter-spacing:-.5px; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.35)}
-  .topbar p{margin:0; font-size:14.5px; max-width:560px; color:#e9eef1; text-shadow:0 1px 4px rgba(0,0,0,.25)}
+  .topbar h1{margin:18px 0 6px; font-size:30px; font-weight:700; letter-spacing:-.5px; color:#fff; text-shadow:0 2px 10px rgba(30,50,75,.35)}
+  .topbar p{margin:0; font-size:14.5px; max-width:560px; color:#e9eff5; text-shadow:0 1px 4px rgba(30,50,75,.30)}
 
   main{max-width:1180px; margin:-70px auto 40px; padding:0 24px 32px; position:relative; z-index:2;}
   .card{
@@ -80,6 +121,59 @@
   @media (max-width:880px){
     .field.col-clubs,.field.col-name,.field.col-btn{grid-column:span 12}
   }
+
+  /* Skeleton loaders */
+  .skeleton{
+    background:linear-gradient(90deg,
+      var(--card-soft) 0%,
+      color-mix(in srgb, var(--line) 80%, var(--card-soft)) 50%,
+      var(--card-soft) 100%);
+    background-size:200% 100%;
+    animation:shimmer 1.4s infinite linear;
+    border-radius:6px;
+  }
+  @keyframes shimmer{
+    0%{background-position:200% 0}
+    100%{background-position:-200% 0}
+  }
+  .skeleton-card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:16px 18px; box-shadow:var(--shadow);
+  }
+  .skeleton-line{height:14px; margin-bottom:8px; width:100%}
+  .skeleton-line.h1{height:24px; width:60%; margin-bottom:14px}
+  .skeleton-line.h2{height:34px; width:45%; margin-bottom:10px}
+  .skeleton-line.sm{height:11px; width:80%}
+  .skeleton-card:last-child .skeleton-line:last-child{margin-bottom:0}
+
+  /* Recherches récentes */
+  .recent-row{
+    margin-top:14px; padding-top:14px; border-top:1px dashed var(--line);
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  }
+  .recent-row[hidden]{display:none}
+  .recent-label{
+    font-size:11px; font-weight:600; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.5px; flex-shrink:0;
+  }
+  .recent-chip{
+    font:inherit; cursor:pointer; padding:5px 12px; border-radius:99px;
+    background:var(--card-soft); border:1px solid var(--line);
+    color:var(--ink); font-size:12.5px; display:inline-flex; gap:6px; align-items:baseline;
+    transition:border-color .15s, background .15s;
+  }
+  .recent-chip:hover{
+    border-color:var(--accent);
+    background:color-mix(in srgb,var(--accent) 10%, transparent);
+  }
+  .recent-chip .recent-meta{
+    color:var(--muted); font-size:11px; font-weight:400;
+  }
+  .recent-clear{
+    margin-left:auto; background:none; border:none; color:var(--muted); cursor:pointer;
+    font-size:12px; padding:4px 8px; border-radius:6px;
+  }
+  .recent-clear:hover{color:var(--bad); background:color-mix(in srgb,var(--bad) 10%, transparent)}
 
   /* Results filter bar */
   .results-filters{padding:14px 18px; display:flex; gap:18px; flex-wrap:wrap; align-items:flex-end}
@@ -108,6 +202,8 @@
   .btn:hover:not(:disabled){background:var(--accent-hi)}
   .btn:active:not(:disabled){transform:translateY(1px)}
   .btn:disabled{background:var(--line-strong); color:var(--card); cursor:not-allowed}
+  .btn.btn-danger{background:var(--bad)}
+  .btn.btn-danger:hover:not(:disabled){background:color-mix(in srgb, var(--bad) 80%, black)}
   .btn-ghost{background:transparent; color:var(--accent); padding:4px 6px; font-size:12px}
   .btn-ghost:hover:not(:disabled){background:color-mix(in srgb,var(--accent) 10%, transparent)}
   .hint{font-size:12px; color:var(--muted); margin-top:6px}
@@ -117,7 +213,10 @@
     height:6px; background:var(--card-soft); border:1px solid var(--line);
     border-radius:99px; overflow:hidden; margin-top:10px;
   }
-  .progress > div{height:100%; background:linear-gradient(90deg,var(--accent-hi),var(--accent)); width:0; transition:width .2s}
+  .progress > div{
+    height:100%; width:0; transition:width .2s;
+    background:linear-gradient(90deg,var(--teal),var(--sky),var(--lavender));
+  }
 
   /* Club picker */
   .club-picker{display:flex; flex-direction:column; gap:8px}
@@ -135,9 +234,10 @@
   .picker-toolbar{display:flex; gap:4px; font-size:12px}
   .chips{display:flex; gap:6px; flex-wrap:wrap}
   .chip{
-    background:color-mix(in srgb,var(--accent) 14%, transparent);
+    background:color-mix(in srgb,var(--accent) 22%, transparent);
     color:var(--accent-hi); padding:3px 4px 3px 10px; border-radius:99px;
     font-size:12px; font-weight:500; display:inline-flex; gap:2px; align-items:center;
+    border:1px solid color-mix(in srgb,var(--accent) 30%, transparent);
   }
   .chip button{
     background:none; border:none; color:inherit; padding:2px 6px;
@@ -146,30 +246,135 @@
   .chip button:hover{background:color-mix(in srgb,var(--accent) 25%, transparent)}
 
   /* Stats */
-  .stats{display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px; margin-bottom:20px}
+  .stats-hero{
+    display:grid; gap:14px; margin-bottom:16px;
+    grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+  }
+  .stats-detail{display:flex; flex-direction:column; gap:16px; margin-bottom:20px}
+  .stat-group{display:flex; flex-direction:column; gap:8px}
+  .stat-group-title{
+    font-size:11px; font-weight:600; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.6px;
+  }
+  .stat.stat-hero{padding:18px 20px}
+  .stat.stat-hero .k{font-size:12px}
+  .stat.stat-hero .v{font-size:34px}
+  .stat.stat-hero .sub{font-size:12.5px}
+  .stat[title]{cursor:help}
+  .stat .delta{
+    display:inline-flex; align-items:center; gap:3px;
+    margin-left:8px; font-size:12px; font-weight:600;
+    padding:2px 8px; border-radius:99px; vertical-align:middle;
+    font-variant-numeric:tabular-nums;
+  }
+  .stat .delta.up{background:color-mix(in srgb,var(--good) 28%, transparent); color:#1f5135}
+  .stat .delta.down{background:color-mix(in srgb,var(--bad) 28%, transparent); color:#7a2929}
+  .stat .delta.flat{background:var(--card-soft); color:var(--muted); border:1px solid var(--line)}
+  @media (prefers-color-scheme:dark){
+    .stat .delta.up{color:#a8e0c2}
+    .stat .delta.down{color:#f5b8b8}
+  }
+  .stats{display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px; margin-bottom:0}
   .stat{
     background:var(--card); border:1px solid var(--line); border-radius:12px;
     padding:14px 16px; box-shadow:var(--shadow); position:relative; overflow:hidden;
   }
   .stat::before{
-    content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
-    background:var(--accent); opacity:.7;
+    content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
+    background:var(--stat-color, var(--accent)); opacity:.85;
   }
-  .stat.gold::before{background:var(--gold)}
-  .stat.silver::before{background:var(--silver)}
-  .stat.bronze::before{background:var(--bronze)}
-  .stat.good::before{background:var(--mint)}
-  .stat.peach::before{background:var(--peach)}
-  .stat .k{font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:600; letter-spacing:.5px}
-  .stat .v{font-size:24px; font-weight:700; color:var(--ink); margin-top:2px; line-height:1.1}
-  .stat .sub{font-size:12px; color:var(--muted); margin-top:2px}
+  .stat::after{
+    /* lavis très léger pour suggérer la teinte sans saturer */
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(135deg,
+      color-mix(in srgb, var(--stat-color, var(--accent)) 7%, transparent),
+      transparent 55%);
+  }
+  .stat.gold      { --stat-color: var(--gold) }
+  .stat.silver    { --stat-color: var(--silver) }
+  .stat.bronze    { --stat-color: var(--bronze) }
+  .stat.good      { --stat-color: var(--mint) }
+  .stat.mint      { --stat-color: var(--mint) }
+  .stat.peach     { --stat-color: var(--peach) }
+  .stat.apricot   { --stat-color: var(--apricot) }
+  .stat.butter    { --stat-color: var(--butter) }
+  .stat.lime      { --stat-color: var(--lime) }
+  .stat.teal      { --stat-color: var(--teal) }
+  .stat.sky       { --stat-color: var(--sky) }
+  .stat.blueberry { --stat-color: var(--blueberry) }
+  .stat.lav       { --stat-color: var(--lavender) }
+  .stat.lilac     { --stat-color: var(--lilac) }
+  .stat.lavender  { --stat-color: var(--lavender) }
+  .stat.berry     { --stat-color: var(--berry) }
+  .stat.rose      { --stat-color: var(--rose) }
+  .stat.coral     { --stat-color: var(--coral) }
+  .stat.grape     { --stat-color: var(--grape) }
+  .stat.sage      { --stat-color: var(--good) }
+  .stat .k{font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:600; letter-spacing:.5px; position:relative}
+  .stat .v{
+    font-size:24px; font-weight:700; margin-top:2px; line-height:1.1; position:relative;
+    color:var(--ink);
+  }
+  .stat .sub{font-size:12px; color:var(--muted); margin-top:2px; position:relative}
+
+  /* Graphiques (SVG natif) */
+  .charts-grid{
+    display:grid; gap:14px; margin-bottom:20px;
+    grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));
+  }
+  .chart-card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:16px 18px; box-shadow:var(--shadow);
+  }
+  .chart-card.chart-full{grid-column:1 / -1}
+  .chart-title{font-weight:600; font-size:14px; color:var(--ink); margin-bottom:2px}
+  .chart-sub{font-size:11px; color:var(--muted); margin-bottom:10px; text-transform:uppercase; letter-spacing:.5px}
+  .chart{width:100%; height:auto; display:block; font-family:inherit}
+  .chart .grid{stroke:var(--line-strong); stroke-width:1; opacity:.6}
+  .chart .axis{stroke:var(--ink-2); stroke-width:1.25}
+  .chart .axis-label{font-size:13px; fill:var(--ink-2); font-weight:500}
+  .chart .axis-label.muted{fill:var(--muted); font-weight:400}
+  .chart .zone{opacity:.35}
+  .chart .line{fill:none; stroke:var(--accent); stroke-width:2.5; stroke-linejoin:round; stroke-linecap:round}
+  .chart .line-mean{fill:none; stroke:var(--accent-hi); stroke-width:1.5; stroke-dasharray:4 4; opacity:.7}
+  .chart .area{fill:color-mix(in srgb,var(--accent) 18%, transparent); stroke:none}
+  .chart .point{fill:var(--card); stroke:var(--accent); stroke-width:2; transition:r .15s, stroke-width .15s}
+  .chart .point:hover{r:6; stroke-width:2.5}
+  .chart .bar{transition:opacity .15s; stroke:rgba(0,0,0,.04); stroke-width:1}
+  .chart .bar:hover{opacity:.85}
+  .chart .bar.gold{fill:var(--gold)}
+  .chart .bar.silver{fill:var(--silver)}
+  .chart .bar.bronze{fill:var(--bronze)}
+  .chart .bar.mint{fill:var(--mint)}
+  .chart .bar.sky{fill:var(--sky)}
+  .chart .bar.lilac{fill:var(--lilac)}
+  .chart .bar.lavender{fill:var(--lavender)}
+  .chart .bar-value{font-size:15px; fill:var(--ink); font-weight:700}
+  .chart .bar-label{font-size:13px; fill:var(--ink-2); font-weight:500}
+  .chart .donut-center{font-size:30px; font-weight:700; fill:var(--ink)}
+  .chart .donut-center-sub{font-size:11px; fill:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:600}
+  .donut-wrap{display:flex; gap:18px; align-items:center; flex-wrap:wrap}
+  .donut-wrap .chart.donut{flex:0 0 220px; max-width:220px}
+  .legend{list-style:none; padding:0; margin:0; flex:1; min-width:160px; font-size:13px; color:var(--ink-2); max-height:240px; overflow:auto}
+  .legend li{display:flex; align-items:center; gap:8px; padding:4px 0}
+  .legend .dot{width:12px; height:12px; border-radius:4px; flex-shrink:0}
+  .legend .legend-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .legend .legend-num{color:var(--muted); font-variant-numeric:tabular-nums; font-size:12px; flex-shrink:0}
+  .chart-empty{padding:24px 0; text-align:center; color:var(--muted); font-size:13px}
+  @media (max-width:640px){
+    .donut-wrap{flex-direction:column; align-items:flex-start}
+    .donut-wrap .chart.donut{max-width:180px}
+  }
 
   /* Section title */
+  h2.section-title, h3.stat-group-title, h3.chart-title{margin:0}
   .section-title{
     display:flex; align-items:baseline; gap:10px; margin:8px 0 12px;
     font-size:14px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.6px;
   }
   .section-title .meta{font-weight:400; text-transform:none; letter-spacing:0; font-size:12px}
+  .section-title .section-toggle{margin-left:auto; font-size:12px; padding:4px 10px; text-transform:none; letter-spacing:0}
+  .chart-title{margin-bottom:2px}
 
   /* Event card */
   .event{
@@ -197,7 +402,9 @@
   .org-badge{
     display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:500;
     padding:3px 9px; border-radius:99px;
-    background:color-mix(in srgb,var(--accent) 14%, transparent); color:var(--accent-hi);
+    background:color-mix(in srgb,var(--teal) 16%, transparent);
+    color:color-mix(in srgb,var(--teal) 75%, var(--ink));
+    border:1px solid color-mix(in srgb,var(--teal) 22%, transparent);
   }
   .event-body{padding:6px 16px 12px}
   .class-line{
@@ -219,8 +426,21 @@
   .phase.pos-1 b{color:var(--gold)}
   .phase.pos-2 b{color:var(--silver)}
   .phase.pos-3 b{color:var(--bronze)}
-  a.phase{text-decoration:none; cursor:pointer; transition:border-color .15s, background .15s}
-  a.phase:hover{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 8%, transparent)}
+  .phase.is-moto{
+    background:color-mix(in srgb,var(--lavender) 10%, var(--card-soft));
+    border-color:color-mix(in srgb,var(--lavender) 25%, var(--line));
+    color:color-mix(in srgb,var(--lavender) 60%, var(--muted));
+  }
+  .phase.is-final{
+    background:color-mix(in srgb,var(--peach) 12%, var(--card-soft));
+    border-color:color-mix(in srgb,var(--peach) 30%, var(--line));
+    color:color-mix(in srgb,var(--peach) 55%, var(--ink));
+    font-weight:500;
+  }
+  a.phase{text-decoration:none; cursor:pointer; transition:border-color .15s, background .15s, transform .05s}
+  a.phase:hover{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 10%, transparent)}
+  a.phase.is-moto:hover{border-color:var(--lavender); background:color-mix(in srgb,var(--lavender) 18%, transparent)}
+  a.phase.is-final:hover{border-color:var(--peach); background:color-mix(in srgb,var(--peach) 20%, transparent)}
 
   .rank-pill{
     display:inline-flex; align-items:center; justify-content:center;
@@ -228,31 +448,85 @@
     background:var(--card-soft); border:2px solid var(--line); color:var(--ink);
     font-variant-numeric:tabular-nums;
   }
-  .rank-pill.r1{background:linear-gradient(135deg,#f6e5c4,#c9a574); border-color:var(--gold); color:#5a4218}
-  .rank-pill.r2{background:linear-gradient(135deg,#eef1f3,#b8c0c8); border-color:var(--silver); color:#3a4248}
-  .rank-pill.r3{background:linear-gradient(135deg,#ecd6c1,#b88862); border-color:var(--bronze); color:#5c3a1f}
-  .rank-pill.r8{background:#dfe6ea; border-color:var(--accent); color:var(--accent-hi)}
+  .rank-pill.r1{background:linear-gradient(135deg,#fff2c8,#e8c574); border-color:var(--gold); color:#7a5a18}
+  .rank-pill.r2{background:linear-gradient(135deg,#f4f6fa,#cdd2dc); border-color:var(--silver); color:#4a5260}
+  .rank-pill.r3{background:linear-gradient(135deg,#f7dcc4,#d4a07c); border-color:var(--bronze); color:#7a4a2a}
+  .rank-pill.r8{
+    background:linear-gradient(135deg, color-mix(in srgb,var(--teal) 18%, var(--card-soft)), color-mix(in srgb,var(--sky) 22%, var(--card-soft)));
+    border-color:var(--teal);
+    color:color-mix(in srgb,var(--teal) 75%, var(--ink));
+  }
   .cl-right{display:flex; align-items:center; gap:12px}
   .cl-meta-r{display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-size:12px; color:var(--muted)}
   .cl-meta-r .lbl{text-transform:uppercase; letter-spacing:.5px; font-size:10px; font-weight:600}
   .top-pct{
     display:inline-block; font-size:11px; font-weight:600;
     padding:1px 8px; border-radius:99px; margin-top:2px;
-    background:color-mix(in srgb,var(--accent) 14%, transparent); color:var(--accent-hi);
+    background:color-mix(in srgb,var(--sky) 16%, transparent);
+    color:color-mix(in srgb,var(--sky) 70%, var(--ink));
   }
-  .top-pct.elite{background:color-mix(in srgb,var(--gold) 20%, transparent); color:#78350f}
-  .top-pct.good{background:color-mix(in srgb,var(--good) 18%, transparent); color:#14532d}
+  .top-pct.elite{background:color-mix(in srgb,var(--gold) 24%, transparent); color:#78350f}
+  .top-pct.good{background:color-mix(in srgb,var(--good) 22%, transparent); color:#14532d}
 
   .empty{padding:36px; text-align:center; color:var(--muted)}
   .summary{font-size:13px; color:var(--muted); margin:0 0 12px}
+
+  /* Responsive mobile */
+  @media (max-width:640px){
+    .topbar{padding:28px 18px 92px}
+    .topbar h1{font-size:24px}
+    .topbar p{font-size:13px}
+    main{padding:0 16px 24px; margin-top:-60px}
+    .card{padding:14px}
+    .filters{padding:16px}
+
+    .stats-hero{grid-template-columns:repeat(2, 1fr); gap:10px}
+    .stat.stat-hero{padding:14px 16px}
+    .stat.stat-hero .v{font-size:26px}
+    .stat.stat-hero .sub{font-size:12px}
+    .stats{grid-template-columns:repeat(2, 1fr); gap:10px}
+
+    /* Phases : scroll horizontal au lieu de wrap */
+    .phases{
+      flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px;
+      scrollbar-width:thin; scrollbar-color:var(--line-strong) transparent;
+      margin-right:-4px; /* permet aux dernières phases d'aller jusqu'au bord */
+    }
+    .phase{flex-shrink:0}
+
+    /* Class-line plus compacte */
+    .class-line{gap:10px; padding:8px 0}
+    .cl-right{gap:8px}
+    .rank-pill{min-width:36px; height:36px; font-size:14px}
+
+    /* Event head : col plutôt que row si étroit */
+    .event-head .right{align-items:flex-start}
+  }
+  @media (max-width:380px){
+    .stats-hero{grid-template-columns:1fr}
+    .stats{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
 <div class="topbar">
   <div class="topbar-inner">
-    <div class="brand"><span class="logo">SQ</span> Sqorz Stats</div>
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>
+          <line x1="12" y1="12" x2="12" y2="3.5"/>
+          <line x1="12" y1="12" x2="20.08" y2="9.37"/>
+          <line x1="12" y1="12" x2="16.99" y2="18.88"/>
+          <line x1="12" y1="12" x2="7.01" y2="18.88"/>
+          <line x1="12" y1="12" x2="3.92" y2="9.37"/>
+        </svg>
+      </span>
+      Sqorz Stats
+    </div>
     <h1>Historique d'un pilote BMX</h1>
-    <p>Tous les résultats d'un pilote BMX français depuis our.sqorz.com, classés du plus récent au plus ancien, avec statistiques détaillées.</p>
+    <p>Recherche d'un pilote dans les organisations françaises référencées sur our.sqorz.com. Affichage de l'historique des courses, agrégation statistique et accès direct aux résultats détaillés.</p>
   </div>
 </div>
 
@@ -260,32 +534,34 @@
   <div class="card filters">
     <div class="grid">
       <div class="field col-clubs">
-        <label>Clubs français <span id="clubCount" style="color:var(--muted); font-weight:400; text-transform:none; letter-spacing:0"></span></label>
+        <label id="clubsLabel">Organisations françaises <span id="clubCount" style="color:var(--muted); font-weight:400; text-transform:none; letter-spacing:0"></span></label>
         <div class="club-picker">
-          <input type="text" class="control" id="clubFilter" placeholder="Filtrer la liste…" disabled>
-          <div class="list" id="clubList"><div class="empty">Chargement des clubs français…</div></div>
+          <input type="text" class="control" id="clubFilter" placeholder="Filtrer la liste…" aria-label="Filtrer les organisations" disabled>
+          <div class="list" id="clubList" role="group" aria-labelledby="clubsLabel"><div class="empty">Chargement des organisations françaises…</div></div>
           <div class="picker-toolbar">
             <button type="button" class="btn btn-ghost" id="clubAll" disabled>Tout cocher (visibles)</button>
             <button type="button" class="btn btn-ghost" id="clubNone" disabled>Tout décocher</button>
           </div>
-          <div class="chips" id="clubChips"></div>
+          <div class="chips" id="clubChips" aria-label="Organisations sélectionnées"></div>
         </div>
       </div>
       <div class="field col-name">
         <label for="nameInp">Nom du pilote</label>
-        <input id="nameInp" class="control" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off" disabled>
-        <span class="hint">Insensible à la casse et aux accents.</span>
+        <input id="nameInp" class="control" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off" list="pilotsList" aria-describedby="nameHint" disabled>
+        <datalist id="pilotsList"></datalist>
+        <span class="hint" id="nameHint">Insensible à la casse et aux accents.</span>
       </div>
       <div class="field col-btn">
-        <label>&nbsp;</label>
+        <label for="searchBtn">&nbsp;</label>
         <button id="searchBtn" class="btn" disabled>Chercher</button>
       </div>
     </div>
-    <div class="progress" id="progressWrap" hidden><div id="progressBar"></div></div>
-    <div class="status" id="status"></div>
+    <div class="progress" id="progressWrap" role="progressbar" aria-label="Progression de la recherche" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div id="progressBar"></div></div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+    <div class="recent-row" id="recentSearches" aria-label="Recherches récentes" hidden></div>
   </div>
 
-  <div class="card results-filters" id="resultsFilters" hidden>
+  <div class="card results-filters" id="resultsFilters" role="group" aria-label="Filtres des résultats" hidden>
     <div class="field">
       <label for="yearSel">Année</label>
       <select id="yearSel" class="control">
@@ -303,7 +579,7 @@
     </div>
   </div>
 
-  <div id="results"></div>
+  <div id="results" aria-live="polite" aria-busy="false"></div>
 </main>
 
 <script>
@@ -315,19 +591,77 @@
     u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   ];
 
-  async function fetchJson(path) {
+  async function fetchJson(path, signal) {
     const target = API_BASE + path;
     let lastErr;
     for (const buildUrl of PROXIES) {
+      if (signal && signal.aborted) throw new DOMException('Aborted', 'AbortError');
       try {
-        const r = await fetch(buildUrl(target));
+        const r = await fetch(buildUrl(target), signal ? { signal } : {});
         if (!r.ok) { lastErr = new Error(`HTTP ${r.status}`); continue; }
         const text = await r.text();
         try { return JSON.parse(text); }
         catch { lastErr = new Error('JSON parse failed'); }
-      } catch (e) { lastErr = e; }
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+        lastErr = e;
+      }
     }
     throw lastErr || new Error('Tous les proxys ont échoué');
+  }
+
+  // --- Cache localStorage des réponses Sqorz ---
+  const CACHE_KEY = 'sqorzCache';
+  const CACHE_TTL_STATIC = 24 * 60 * 60 * 1000;   // 24h pour /json/region
+  const CACHE_TTL_DYNAMIC = 60 * 60 * 1000;       // 1h pour /json/org et /json/event
+  const CACHE_MAX_ENTRIES = 250;
+  const _cache = (() => {
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch { return {}; }
+  })();
+  function persistCache() {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(_cache)); }
+    catch {
+      // Quota dépassé : on vire la moitié la plus ancienne et on retente
+      const entries = Object.entries(_cache).sort((a, b) => a[1].t - b[1].t);
+      const drop = Math.ceil(entries.length / 2);
+      for (let i = 0; i < drop; i++) delete _cache[entries[i][0]];
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(_cache)); } catch {}
+    }
+  }
+  function ttlFor(path) {
+    return path.startsWith('/json/region/') ? CACHE_TTL_STATIC : CACHE_TTL_DYNAMIC;
+  }
+  async function fetchJsonCached(path, signal) {
+    const now = Date.now();
+    const entry = _cache[path];
+    if (entry && (now - entry.t) < ttlFor(path)) return entry.v;
+    const v = await fetchJson(path, signal);
+    _cache[path] = { v, t: now };
+    const keys = Object.keys(_cache);
+    if (keys.length > CACHE_MAX_ENTRIES) {
+      const entries = Object.entries(_cache).sort((a, b) => a[1].t - b[1].t);
+      const drop = keys.length - CACHE_MAX_ENTRIES;
+      for (let i = 0; i < drop; i++) delete _cache[entries[i][0]];
+    }
+    persistCache();
+    return v;
+  }
+  function clearSqorzCache() {
+    for (const k of Object.keys(_cache)) delete _cache[k];
+    try { localStorage.removeItem(CACHE_KEY); } catch {}
+  }
+
+  // --- Messages d'erreur humanisés ---
+  function humanError(e) {
+    if (!e) return 'Erreur inconnue.';
+    if (e.name === 'AbortError') return 'Recherche annulée.';
+    const msg = e.message || String(e);
+    if (/HTTP 5\d\d/.test(msg)) return 'Sqorz est momentanément indisponible. Réessaie dans quelques instants.';
+    if (/HTTP 4\d\d/.test(msg)) return 'Sqorz refuse la requête. Vérifie le code de l\'organisation ou réessaie plus tard.';
+    if (/network|fetch failed|Failed to fetch|NetworkError/i.test(msg)) return 'Pas de réseau. Vérifie ta connexion.';
+    if (/JSON parse/i.test(msg)) return 'Réponse de Sqorz illisible. Réessaie.';
+    if (/proxys|tous les proxys/i.test(msg)) return 'Les proxys publics ne répondent pas. Réessaie dans quelques minutes.';
+    return msg;
   }
 
   const norm = s => (s || '')
@@ -370,9 +704,115 @@
   }
 
   function setProgress(done, total) {
-    if (!total) { progressWrap.hidden = true; return; }
+    if (!total) {
+      progressWrap.hidden = true;
+      progressWrap.setAttribute('aria-valuenow', '0');
+      return;
+    }
     progressWrap.hidden = false;
-    progressBar.style.width = Math.round(100 * done / total) + '%';
+    const pct = Math.round(100 * done / total);
+    progressBar.style.width = pct + '%';
+    progressWrap.setAttribute('aria-valuenow', String(pct));
+  }
+
+  // --- URL state & history ---
+  function getCurrentState() {
+    return {
+      name: nameInp.value.trim(),
+      clubs: [...selectedCodes].sort(),
+      year: yearSel.value || '',
+      sort: sortSel.value || 'date-desc',
+    };
+  }
+  function parseUrlState() {
+    const u = new URL(location.href);
+    const clubsStr = u.searchParams.get('clubs') || '';
+    return {
+      name: u.searchParams.get('name') || '',
+      clubs: clubsStr ? clubsStr.split(',').filter(Boolean) : [],
+      year: u.searchParams.get('year') || '',
+      sort: u.searchParams.get('sort') || 'date-desc',
+    };
+  }
+  function buildUrlFromState(state) {
+    const u = new URL(location.href);
+    const params = new URLSearchParams();
+    if (state.name) params.set('name', state.name);
+    if (state.clubs && state.clubs.length) params.set('clubs', state.clubs.join(','));
+    if (state.year) params.set('year', state.year);
+    if (state.sort && state.sort !== 'date-desc') params.set('sort', state.sort);
+    const qs = params.toString();
+    return u.pathname + (qs ? '?' + qs : '') + u.hash;
+  }
+  function pushStateUrl() {
+    const newUrl = buildUrlFromState(getCurrentState());
+    const currentUrl = location.pathname + location.search + location.hash;
+    if (newUrl === currentUrl) history.replaceState(null, '', newUrl);
+    else history.pushState(null, '', newUrl);
+  }
+  function replaceStateUrl() { history.replaceState(null, '', buildUrlFromState(getCurrentState())); }
+
+  // --- Recent searches (localStorage) ---
+  const RECENT_KEY = 'recentSearches';
+  const RECENT_MAX = 5;
+  function getRecentSearches() {
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch { return []; }
+  }
+  function saveRecentSearch(name, clubs) {
+    if (!name || !clubs.length) return;
+    const normName = name.toLowerCase();
+    const sortedClubs = [...clubs].sort();
+    const sig = JSON.stringify(sortedClubs);
+    let recent = getRecentSearches()
+      .filter(r => !(r.name.toLowerCase() === normName && JSON.stringify([...r.clubs].sort()) === sig));
+    recent.unshift({ name, clubs: sortedClubs, t: Date.now() });
+    recent = recent.slice(0, RECENT_MAX);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+    renderRecentSearches();
+  }
+  function clearRecentSearches() {
+    localStorage.removeItem(RECENT_KEY);
+    renderRecentSearches();
+  }
+  function renderRecentSearches() {
+    const wrap = document.getElementById('recentSearches');
+    if (!wrap) return;
+    const list = getRecentSearches();
+    if (!list.length) { wrap.hidden = true; wrap.innerHTML = ''; return; }
+    wrap.hidden = false;
+    const byCode = new Map(accounts.map(a => [a.accountCode, a.accountName]));
+    const chips = list.map((r, i) => {
+      const fullOrgs = r.clubs.map(c => byCode.get(c) || c).join(', ');
+      const orgsLabel = r.clubs.length === 1
+        ? (byCode.get(r.clubs[0]) || r.clubs[0])
+        : r.clubs.length + ' organisations';
+      return `<button type="button" class="recent-chip" data-idx="${i}" title="${escape(fullOrgs)}">${escape(r.name)} <span class="recent-meta">${escape(orgsLabel)}</span></button>`;
+    }).join('');
+    wrap.innerHTML = `<span class="recent-label">Récentes</span>${chips}<button type="button" class="recent-clear" id="recentClearBtn">Effacer</button>`;
+  }
+
+  // --- Autocomplete : pilotes déjà vus dans les résultats ---
+  const PILOTS_KEY = 'knownPilots';
+  const PILOTS_MAX = 300;
+  function getKnownPilots() {
+    try { return JSON.parse(localStorage.getItem(PILOTS_KEY) || '[]'); } catch { return []; }
+  }
+  function saveKnownPilots(newNames) {
+    if (!newNames.length) return;
+    const existing = new Set(getKnownPilots());
+    for (const n of newNames) {
+      const clean = (n || '').trim();
+      if (clean) existing.add(clean);
+    }
+    const arr = [...existing].sort((a, b) => a.localeCompare(b)).slice(0, PILOTS_MAX);
+    localStorage.setItem(PILOTS_KEY, JSON.stringify(arr));
+    renderPilotsDatalist();
+  }
+  function renderPilotsDatalist() {
+    const list = document.getElementById('pilotsList');
+    if (!list) return;
+    const pilots = getKnownPilots();
+    list.innerHTML = pilots.map(p => `<option value="${escape(p)}">`).join('');
   }
 
   const escape = s => String(s ?? '').replace(/[&<>"']/g, c => (
@@ -380,14 +820,66 @@
   ));
 
   function updateSearchEnabled() {
+    if (currentAbort) return;
     searchBtn.disabled = !(selectedCodes.size > 0 && nameInp.value.trim().length >= 2);
   }
+  function setSearchMode(mode) {
+    if (mode === 'cancel') {
+      searchBtn.textContent = 'Annuler';
+      searchBtn.setAttribute('aria-label', 'Annuler la recherche en cours');
+      searchBtn.classList.add('btn-danger');
+      searchBtn.disabled = false;
+      resultsEl.setAttribute('aria-busy', 'true');
+    } else {
+      searchBtn.textContent = 'Chercher';
+      searchBtn.setAttribute('aria-label', 'Lancer la recherche');
+      searchBtn.classList.remove('btn-danger');
+      resultsEl.setAttribute('aria-busy', 'false');
+      updateSearchEnabled();
+    }
+  }
+  function renderSkeleton() {
+    const heroCard = `
+      <div class="skeleton-card">
+        <div class="skeleton skeleton-line sm" style="width:45%"></div>
+        <div class="skeleton skeleton-line h2"></div>
+        <div class="skeleton skeleton-line sm" style="width:70%"></div>
+      </div>`;
+    const detailCard = `
+      <div class="skeleton-card">
+        <div class="skeleton skeleton-line sm" style="width:40%"></div>
+        <div class="skeleton skeleton-line" style="height:24px; width:30%"></div>
+        <div class="skeleton skeleton-line sm" style="width:60%"></div>
+      </div>`;
+    const chartCard = `
+      <div class="skeleton-card">
+        <div class="skeleton skeleton-line h1"></div>
+        <div class="skeleton" style="height:220px"></div>
+      </div>`;
+    return `
+      <h2 class="section-title">Statistiques <span class="meta">chargement…</span></h2>
+      <div class="stats-hero" aria-hidden="true">${heroCard.repeat(4)}</div>
+      <div class="stats-detail" aria-hidden="true">
+        <div class="stat-group">
+          <h3 class="stat-group-title">Performance</h3>
+          <div class="stats">${detailCard.repeat(4)}</div>
+        </div>
+        <div class="stat-group">
+          <h3 class="stat-group-title">Manches &amp; finales</h3>
+          <div class="stats">${detailCard.repeat(2)}</div>
+        </div>
+      </div>
+      <h2 class="section-title">Graphiques <span class="meta">chargement…</span></h2>
+      <div class="charts-grid" aria-hidden="true">${chartCard.repeat(3)}</div>
+    `;
+  }
+  let currentAbort = null;
 
   function renderClubList() {
     const q = norm(clubFilter.value);
     const filtered = accounts.filter(a => !q || norm(a.accountName).includes(q));
     if (!filtered.length) {
-      clubList.innerHTML = '<div class="empty">Aucun club ne correspond.</div>';
+      clubList.innerHTML = '<div class="empty">Aucune entrée ne correspond.</div>';
       return;
     }
     clubList.innerHTML = filtered.map(a => `
@@ -400,7 +892,7 @@
 
   function renderChips() {
     const items = accounts.filter(a => selectedCodes.has(a.accountCode));
-    clubCount.textContent = items.length ? `(${items.length} sélectionné${items.length>1?'s':''})` : '';
+    clubCount.textContent = items.length ? `(${items.length} sélectionnée${items.length>1?'s':''})` : '';
     clubChips.innerHTML = items.map(a => `
       <span class="chip">${escape(a.accountName)} <button type="button" data-code="${escape(a.accountCode)}" title="Retirer">×</button></span>
     `).join('');
@@ -415,12 +907,12 @@
     selectedCodes.clear();
     clubList.innerHTML = '<div class="empty">Chargement…</div>';
     renderChips();
-    setStatus('Chargement des clubs de ' + regionCode + '…');
+    setStatus('Chargement des organisations de ' + regionCode + '…');
     try {
-      const data = await fetchJson('/json/region/' + encodeURIComponent(regionCode));
+      const data = await fetchJsonCached('/json/region/' + encodeURIComponent(regionCode));
       accounts = (data.accounts || []).slice().sort((a,b) => a.accountName.localeCompare(b.accountName));
       if (!accounts.length) {
-        clubList.innerHTML = '<div class="empty">Aucun club.</div>';
+        clubList.innerHTML = '<div class="empty">Aucune entrée.</div>';
         setStatus('');
         return;
       }
@@ -431,83 +923,127 @@
       clubNoneBtn.disabled = false;
       setStatus('');
     } catch (e) {
-      setStatus('Impossible de charger les clubs : ' + e.message, true);
+      setStatus('Impossible de charger la liste : ' + humanError(e), true);
     }
   }
 
   async function searchSelected() {
-    resultsEl.innerHTML = '';
-    setStatus('Récupération des événements…');
-    setProgress(0, 0);
+    // Si déjà en cours → annulation
+    if (currentAbort) {
+      currentAbort.abort();
+      return;
+    }
 
     const query = nameInp.value.trim();
     const queryTokens = norm(query).split(' ').filter(Boolean);
     if (!queryTokens.length) { setStatus('Saisir un nom à chercher.', true); return; }
 
-    const targets = accounts.filter(a => selectedCodes.has(a.accountCode));
+    pushStateUrl();
+    saveRecentSearch(query, [...selectedCodes]);
 
-    const orgEvents = [];
-    let orgErrors = 0;
-    for (const a of targets) {
-      try {
-        const orgData = await fetchJson('/json/org/' + encodeURIComponent(a.accountCode));
-        const events = (orgData.events || []).filter(e => e.publish !== false);
-        orgEvents.push({ account: a, events });
-      } catch (e) {
-        orgErrors++;
-      }
-    }
+    currentAbort = new AbortController();
+    const signal = currentAbort.signal;
+    setSearchMode('cancel');
+    resultsEl.innerHTML = renderSkeleton();
+    resultsFiltersEl.hidden = true;
+    setStatus(`Récupération des événements sur ${selectedCodes.size} organisation(s)…`);
+    setProgress(0, 0);
 
-    const allEvents = [];
-    for (const oe of orgEvents) for (const ev of oe.events) allEvents.push({ account: oe.account, event: ev });
-    if (!allEvents.length) {
-      setStatus(`Aucun événement publié dans les ${targets.length} club(s) sélectionné(s).`);
-      return;
-    }
-
-    setStatus(`Analyse de ${allEvents.length} événement(s) sur ${targets.length} club(s)…`);
-    let done = 0;
-    setProgress(0, allEvents.length);
-
-    const CONCURRENCY = 5;
-    const matches = [];
-    const queue = allEvents.slice();
-    const eventErrors = [];
-
-    async function worker() {
-      while (queue.length) {
-        const item = queue.shift();
+    try {
+      const targets = accounts.filter(a => selectedCodes.has(a.accountCode));
+      const orgEvents = [];
+      let orgErrors = 0;
+      let orgDone = 0;
+      setProgress(0, targets.length);
+      for (const a of targets) {
+        if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
         try {
-          const detail = await fetchJson('/json/event/' + encodeURIComponent(item.event.eventId));
-          const classRanks = detail.classRanks || [];
-          for (const cls of classRanks) {
-            const summaries = cls.competitorRankSummaries || [];
-            const totalParticipants = summaries.length;
-            for (const c of summaries) {
-              if (matchPilot(c.firstName, c.lastName, queryTokens)) {
-                matches.push({ account: item.account, event: item.event, cls, competitor: c, totalParticipants });
+          const orgData = await fetchJsonCached('/json/org/' + encodeURIComponent(a.accountCode), signal);
+          const events = (orgData.events || []).filter(e => e.publish !== false);
+          orgEvents.push({ account: a, events });
+        } catch (e) {
+          if (e.name === 'AbortError') throw e;
+          orgErrors++;
+        }
+        orgDone++;
+        setProgress(orgDone, targets.length);
+      }
+
+      const allEvents = [];
+      for (const oe of orgEvents) for (const ev of oe.events) allEvents.push({ account: oe.account, event: ev });
+      if (!allEvents.length) {
+        resultsEl.innerHTML = '';
+        setProgress(0, 0);
+        setStatus(`Aucun événement publié dans les ${targets.length} organisation(s) sélectionnée(s).`);
+        return;
+      }
+
+      setStatus(`Analyse de ${allEvents.length} événement(s) sur ${targets.length} organisation(s)…`);
+      let done = 0;
+      setProgress(0, allEvents.length);
+
+      const CONCURRENCY = 5;
+      const matches = [];
+      const queue = allEvents.slice();
+      const eventErrors = [];
+
+      async function worker() {
+        while (queue.length) {
+          if (signal.aborted) break;
+          const item = queue.shift();
+          try {
+            const detail = await fetchJsonCached('/json/event/' + encodeURIComponent(item.event.eventId), signal);
+            const classRanks = detail.classRanks || [];
+            for (const cls of classRanks) {
+              const summaries = cls.competitorRankSummaries || [];
+              const totalParticipants = summaries.length;
+              for (const c of summaries) {
+                if (matchPilot(c.firstName, c.lastName, queryTokens)) {
+                  matches.push({ account: item.account, event: item.event, cls, competitor: c, totalParticipants });
+                }
               }
             }
+          } catch (e) {
+            if (e.name === 'AbortError') return;
+            eventErrors.push({ event: item.event, error: e.message });
+          } finally {
+            done++;
+            setProgress(done, allEvents.length);
           }
-        } catch (e) {
-          eventErrors.push({ event: item.event, error: e.message });
-        } finally {
-          done++;
-          setProgress(done, allEvents.length);
         }
       }
+
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, allEvents.length) }, worker));
+
+      if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+
+      setProgress(0, 0);
+      const errMsg = (orgErrors || eventErrors.length)
+        ? ` — ${orgErrors} organisation(s) et ${eventErrors.length} événement(s) en erreur`
+        : '';
+      setStatus(`${matches.length} résultat(s) trouvé(s)${errMsg}.`);
+      lastMatches = matches;
+      resultsFiltersEl.hidden = matches.length === 0;
+      renderFiltered();
+
+      if (matches.length) {
+        const names = [...new Set(matches.map(m => `${m.competitor.firstName || ''} ${m.competitor.lastName || ''}`.trim()).filter(Boolean))];
+        saveKnownPilots(names);
+      }
+    } catch (e) {
+      setProgress(0, 0);
+      resultsEl.innerHTML = '';
+      resultsFiltersEl.hidden = true;
+      lastMatches = [];
+      if (e.name === 'AbortError') {
+        setStatus('Recherche annulée.');
+      } else {
+        setStatus(humanError(e), true);
+      }
+    } finally {
+      currentAbort = null;
+      setSearchMode('search');
     }
-
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, allEvents.length) }, worker));
-
-    setProgress(0, 0);
-    const errMsg = (orgErrors || eventErrors.length)
-      ? ` — ${orgErrors} club(s) et ${eventErrors.length} événement(s) en erreur`
-      : '';
-    setStatus(`${matches.length} résultat(s) trouvé(s)${errMsg}.`);
-    lastMatches = matches;
-    resultsFiltersEl.hidden = matches.length === 0;
-    renderFiltered();
   }
 
   let lastMatches = [];
@@ -517,7 +1053,16 @@
       const d = m.event.eventDate || m.event.eventEndDate || '';
       return d.startsWith(y + '-');
     });
-    render(filtered, sortSel.value);
+    let prevYearMatches = null;
+    if (y) {
+      const prevY = String(+y - 1);
+      const prev = lastMatches.filter(m => {
+        const d = m.event.eventDate || m.event.eventEndDate || '';
+        return d.startsWith(prevY + '-');
+      });
+      if (prev.length) prevYearMatches = prev;
+    }
+    render(filtered, sortSel.value, prevYearMatches);
   }
 
   function ordFr(n){ return n === 1 ? '1er' : `${n}e`; }
@@ -545,14 +1090,16 @@
     const gate = d.racePosition;
     const label = escape(frPhaseName(d.phaseName || d.phaseCode || ''));
     const posClass = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : '';
+    const typeClass = isFinalPhase(d) ? 'is-final' : isMotoPhase(d) ? 'is-moto' : '';
+    const cls = ['phase', posClass, typeClass].filter(Boolean).join(' ');
     const posTxt = pos != null ? `<b>${ordFr(pos)}</b>` : '<b>—</b>';
     const gateTxt = gate != null ? `<span class="gate">gr.${gate}</span>` : '';
     const url = ctx ? raceUrl(ctx.accountCode, ctx.eventId, ctx.perpetualClassCode, d.phaseBlockCode, d.phaseCode, d.raceName) : null;
     const inner = `${label} ${posTxt} ${gateTxt}`;
     if (url) {
-      return `<a class="phase ${posClass}" href="${escape(url)}" target="_blank" rel="noopener noreferrer" title="${label} — ouvrir sur Sqorz">${inner}</a>`;
+      return `<a class="${cls}" href="${escape(url)}" target="_blank" rel="noopener noreferrer" title="${label} — ouvrir sur Sqorz">${inner}</a>`;
     }
-    return `<span class="phase ${posClass}" title="${label}">${inner}</span>`;
+    return `<span class="${cls}" title="${label}">${inner}</span>`;
   }
 
   function computeStats(matches) {
@@ -662,7 +1209,239 @@
     return `${m[3]}/${m[2]}/${m[1]}`;
   }
 
-  function renderStats(s) {
+  function renderEvolutionChart(matches) {
+    const points = matches
+      .map(m => ({
+        date: m.event.eventDate,
+        pct: percentile(m.competitor.rank, m.totalParticipants),
+        rank: m.competitor.rank,
+        cls: m.cls.className,
+        ev: m.event.eventName,
+      }))
+      .filter(p => p.date && p.pct != null)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    if (points.length < 2) {
+      return `<div class="chart-card"><h3 class="chart-title">Évolution du percentile</h3><div class="chart-empty">Pas assez de données (au moins 2 engagements classés requis).</div></div>`;
+    }
+    const W = 600, H = 260, PAD = { top: 16, right: 18, bottom: 40, left: 52 };
+    const innerW = W - PAD.left - PAD.right;
+    const innerH = H - PAD.top - PAD.bottom;
+    const t0 = new Date(points[0].date).getTime();
+    const t1 = new Date(points[points.length - 1].date).getTime();
+    const tSpan = Math.max(1, t1 - t0);
+    const x = p => PAD.left + ((new Date(p.date).getTime() - t0) / tSpan) * innerW;
+    const y = pct => PAD.top + (pct / 100) * innerH;
+
+    // Zones colorées : top 25% (vert), 25-50% (jaune), 50-100% (rose) — situent la qualité d'un coup d'œil
+    const zones = [
+      { from: 0,  to: 25,  color: 'var(--mint)' },
+      { from: 25, to: 50,  color: 'var(--butter)' },
+      { from: 50, to: 100, color: 'var(--rose)' },
+    ].map(z =>
+      `<rect x="${PAD.left}" y="${y(z.from).toFixed(1)}" width="${innerW.toFixed(1)}" height="${(y(z.to) - y(z.from)).toFixed(1)}" fill="${z.color}" class="zone"/>`
+    ).join('');
+
+    const yTicks = [1, 25, 50, 75, 100];
+    const gridLines = yTicks.map(t => {
+      const yy = y(t);
+      return `<line x1="${PAD.left}" y1="${yy}" x2="${PAD.left + innerW}" y2="${yy}" class="grid"/>
+              <text x="${PAD.left - 8}" y="${yy + 4}" class="axis-label" text-anchor="end">${t === 1 ? 'top 1%' : 'top ' + t + '%'}</text>`;
+    }).join('');
+
+    const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(p).toFixed(1)} ${y(p.pct).toFixed(1)}`).join(' ');
+    const baseY = PAD.top + innerH;
+
+    // Ligne de moyenne
+    const avgPct = points.reduce((a, p) => a + p.pct, 0) / points.length;
+    const avgY = y(avgPct);
+    const avgLine = `
+      <line x1="${PAD.left}" y1="${avgY.toFixed(1)}" x2="${PAD.left + innerW}" y2="${avgY.toFixed(1)}" class="line-mean"/>
+      <text x="${(PAD.left + innerW - 6).toFixed(1)}" y="${(avgY - 6).toFixed(1)}" class="axis-label" text-anchor="end" style="fill:var(--accent-hi); font-weight:600">moy. ${avgPct.toFixed(0)}%</text>
+    `;
+
+    const dots = points.map(p =>
+      `<circle cx="${x(p).toFixed(1)}" cy="${y(p.pct).toFixed(1)}" r="4" class="point"><title>${escape(fmtDate(p.date))} — ${escape(p.ev)} (${escape(p.cls)}) : top ${p.pct}% (${p.rank}${p.rank===1?'er':'e'})</title></circle>`
+    ).join('');
+
+    const xAxis = `<line x1="${PAD.left}" y1="${baseY}" x2="${PAD.left + innerW}" y2="${baseY}" class="axis"/>`;
+    const xStart = `<text x="${PAD.left}" y="${baseY + 20}" class="axis-label muted" text-anchor="start">${escape(fmtDate(points[0].date))}</text>`;
+    const xEnd = `<text x="${PAD.left + innerW}" y="${baseY + 20}" class="axis-label muted" text-anchor="end">${escape(fmtDate(points[points.length - 1].date))}</text>`;
+
+    return `
+      <div class="chart-card">
+        <h3 class="chart-title">Évolution du percentile</h3>
+        <div class="chart-sub">${points.length} engagement(s) classés · plus haut = meilleur</div>
+        <svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">
+          ${zones}
+          ${gridLines}
+          ${xAxis}
+          <path d="${path}" class="line"/>
+          ${avgLine}
+          ${dots}
+          ${xStart}${xEnd}
+        </svg>
+      </div>
+    `;
+  }
+
+  function renderRankHistogram(matches) {
+    const bins = [
+      { label: '1er',  test: r => r === 1,            count: 0, cls: 'gold' },
+      { label: '2e',   test: r => r === 2,            count: 0, cls: 'silver' },
+      { label: '3e',   test: r => r === 3,            count: 0, cls: 'bronze' },
+      { label: '4-8',  test: r => r >= 4 && r <= 8,   count: 0, cls: 'mint' },
+      { label: '9-16', test: r => r >= 9 && r <= 16,  count: 0, cls: 'sky' },
+      { label: '17+',  test: r => r >= 17,            count: 0, cls: 'lilac' },
+    ];
+    let classified = 0;
+    for (const m of matches) {
+      const r = m.competitor && m.competitor.rank;
+      if (typeof r !== 'number') continue;
+      classified++;
+      for (const b of bins) if (b.test(r)) { b.count++; break; }
+    }
+    if (!classified) {
+      return `<div class="chart-card"><h3 class="chart-title">Distribution des classements</h3><div class="chart-empty">Aucun classement disponible.</div></div>`;
+    }
+    const W = 600, H = 260, PAD = { top: 28, right: 16, bottom: 44, left: 44 };
+    const innerW = W - PAD.left - PAD.right;
+    const innerH = H - PAD.top - PAD.bottom;
+    const rawMax = Math.max(1, ...bins.map(b => b.count));
+    const yMax = niceMax(rawMax);
+    const yTicks = niceTicks(yMax, 4);
+
+    const gridLines = yTicks.map(t => {
+      const yy = PAD.top + innerH - (t / yMax) * innerH;
+      return `<line x1="${PAD.left}" y1="${yy}" x2="${PAD.left + innerW}" y2="${yy}" class="grid"/>
+              <text x="${PAD.left - 8}" y="${yy + 4}" class="axis-label muted" text-anchor="end">${t}</text>`;
+    }).join('');
+
+    const slotW = innerW / bins.length;
+    const barW = slotW * 0.7;
+    const baseY = PAD.top + innerH;
+
+    const bars = bins.map((b, i) => {
+      const h = (b.count / yMax) * innerH;
+      const bx = PAD.left + i * slotW + (slotW - barW) / 2;
+      const by = baseY - h;
+      const showNum = b.count > 0;
+      const pctOfTotal = Math.round((b.count / classified) * 100);
+      return `
+        <rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="5" class="bar ${b.cls}">
+          <title>${b.label} : ${b.count} engagement(s) (${pctOfTotal}%)</title>
+        </rect>
+        ${showNum ? `<text x="${(bx + barW/2).toFixed(1)}" y="${(by - 8).toFixed(1)}" class="bar-value" text-anchor="middle">${b.count}</text>` : ''}
+        <text x="${(bx + barW/2).toFixed(1)}" y="${(baseY + 22).toFixed(1)}" class="bar-label" text-anchor="middle">${b.label}</text>
+      `;
+    }).join('');
+
+    const xAxis = `<line x1="${PAD.left}" y1="${baseY}" x2="${PAD.left + innerW}" y2="${baseY}" class="axis"/>`;
+
+    return `
+      <div class="chart-card">
+        <h3 class="chart-title">Distribution des classements</h3>
+        <div class="chart-sub">Sur ${classified} engagement(s) classés</div>
+        <svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">
+          ${gridLines}
+          ${xAxis}
+          ${bars}
+        </svg>
+      </div>
+    `;
+  }
+
+  function niceMax(max) {
+    if (max <= 5) return Math.max(1, max);
+    const exp = Math.pow(10, Math.floor(Math.log10(max)));
+    const frac = max / exp;
+    const niceFrac = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 5 ? 5 : 10;
+    return niceFrac * exp;
+  }
+  function niceTicks(max, n) {
+    const ticks = [];
+    for (let i = 0; i <= n; i++) ticks.push(Math.round((max * i) / n));
+    return [...new Set(ticks)];
+  }
+
+  function renderOrgDonut(matches) {
+    const counts = new Map();
+    for (const m of matches) {
+      const n = m.account.accountName;
+      counts.set(n, (counts.get(n) || 0) + 1);
+    }
+    const allEntries = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    const total = allEntries.reduce((a, e) => a + e[1], 0);
+    if (!total) {
+      return `<div class="chart-card"><h3 class="chart-title">Répartition par organisation</h3><div class="chart-empty">Aucune donnée.</div></div>`;
+    }
+    // Regroupe au-delà de 7 segments visibles pour rester lisible
+    const MAX_VISIBLE = 7;
+    let entries;
+    if (allEntries.length > MAX_VISIBLE) {
+      const visible = allEntries.slice(0, MAX_VISIBLE - 1);
+      const restCount = allEntries.slice(MAX_VISIBLE - 1).reduce((a, e) => a + e[1], 0);
+      const restCountOrgs = allEntries.length - (MAX_VISIBLE - 1);
+      entries = [...visible, [`Autres (${restCountOrgs})`, restCount]];
+    } else {
+      entries = allEntries;
+    }
+    const palette = ['var(--teal)','var(--peach)','var(--lilac)','var(--berry)','var(--mint)','var(--butter)','var(--sky)','var(--coral)'];
+    const VB = 240;
+    const cx = VB / 2, cy = VB / 2, r = 100, rIn = 62;
+    let acc = -Math.PI / 2;
+    const segments = entries.map(([name, count], i) => {
+      const angle = (count / total) * Math.PI * 2;
+      const a0 = acc;
+      const a1 = acc + angle;
+      acc = a1;
+      const color = palette[i % palette.length];
+      if (entries.length === 1) {
+        return { full: true, color, name, count, share: count / total };
+      }
+      const x0o = cx + r * Math.cos(a0), y0o = cy + r * Math.sin(a0);
+      const x1o = cx + r * Math.cos(a1), y1o = cy + r * Math.sin(a1);
+      const x0i = cx + rIn * Math.cos(a1), y0i = cy + rIn * Math.sin(a1);
+      const x1i = cx + rIn * Math.cos(a0), y1i = cy + rIn * Math.sin(a0);
+      const large = angle > Math.PI ? 1 : 0;
+      const path = `M ${x0o.toFixed(1)} ${y0o.toFixed(1)} A ${r} ${r} 0 ${large} 1 ${x1o.toFixed(1)} ${y1o.toFixed(1)} L ${x0i.toFixed(1)} ${y0i.toFixed(1)} A ${rIn} ${rIn} 0 ${large} 0 ${x1i.toFixed(1)} ${y1i.toFixed(1)} Z`;
+      return { path, full: false, color, name, count, share: count / total };
+    });
+    const slicesSvg = segments.map(s => {
+      const title = `<title>${escape(s.name)} — ${s.count} engagement(s) (${Math.round(s.share * 100)}%)</title>`;
+      if (s.full) {
+        return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${s.color}" stroke="var(--card)" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="${rIn}" fill="var(--card)"/>${title}`;
+      }
+      return `<path d="${s.path}" fill="${s.color}" stroke="var(--card)" stroke-width="2.5">${title}</path>`;
+    }).join('');
+    const legend = segments.map(s => {
+      const share = Math.round(s.share * 100);
+      return `<li><span class="dot" style="background:${s.color}"></span><span class="legend-name">${escape(s.name)}</span> <span class="legend-num">${s.count} · ${share}%</span></li>`;
+    }).join('');
+    return `
+      <div class="chart-card">
+        <h3 class="chart-title">Répartition par organisation</h3>
+        <div class="chart-sub">${allEntries.length} organisation(s)${allEntries.length > MAX_VISIBLE ? ' · ' + (MAX_VISIBLE - 1) + ' principales affichées' : ''}</div>
+        <div class="donut-wrap">
+          <svg viewBox="0 0 ${VB} ${VB}" class="chart donut" preserveAspectRatio="xMidYMid meet">
+            ${slicesSvg}
+            <text x="${cx}" y="${cy + 4}" class="donut-center" text-anchor="middle">${total}</text>
+            <text x="${cx}" y="${cy + 22}" class="donut-center-sub" text-anchor="middle">engagements</text>
+          </svg>
+          <ul class="legend">${legend}</ul>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCharts(matches) {
+    return [
+      renderEvolutionChart(matches),
+      renderRankHistogram(matches),
+      renderOrgDonut(matches),
+    ].join('');
+  }
+
+  function renderStats(s, prev = null) {
     const podiumRate = s.entries ? Math.round(100 * s.podiums / s.entries) : 0;
     const winRate = s.entries ? Math.round(100 * s.wins / s.entries) : 0;
     const motoRate = s.motosRaced ? Math.round(100 * s.motoWins / s.motosRaced) : 0;
@@ -671,30 +1450,96 @@
     const dateRange = s.firstDate
       ? (s.firstDate === s.lastDate ? fmtDate(s.firstDate) : `${fmtDate(s.firstDate)} → ${fmtDate(s.lastDate)}`)
       : '—';
-    return `
-      <div class="stats">
-        <div class="stat"><div class="k">Événements</div><div class="v">${s.events.size}</div><div class="sub">${s.entries} engagement(s)</div></div>
-        <div class="stat gold"><div class="k">Victoires</div><div class="v">${s.wins}</div><div class="sub">${winRate}% des engagements</div></div>
-        <div class="stat silver"><div class="k">Podiums</div><div class="v">${s.podiums}</div><div class="sub">${podiumRate}% des engagements</div></div>
-        <div class="stat bronze"><div class="k">Top 8</div><div class="v">${s.top8}</div><div class="sub">classement de classe</div></div>
-        <div class="stat good"><div class="k">Top 10%</div><div class="v">${s.topTen}</div><div class="sub">${topTenRate}% des engagements</div></div>
-        <div class="stat"><div class="k">Top 25%</div><div class="v">${s.topQuarter}</div><div class="sub">${topQuarterRate}% des engagements</div></div>
-        <div class="stat"><div class="k">Percentile moyen</div><div class="v">${s.avgPct != null ? 'top ' + s.avgPct.toFixed(0) + '%' : '—'}</div><div class="sub">meilleur&nbsp;: ${s.bestPct != null ? 'top ' + s.bestPct + '%' : '—'}</div></div>
-        <div class="stat"><div class="k">Finales</div><div class="v">${s.finalsReached}</div><div class="sub">${s.finalWins} gagnée(s), ${s.finalPodiums} podium(s)</div></div>
-        <div class="stat"><div class="k">Manches</div><div class="v">${s.motoWins}/${s.motosRaced}</div><div class="sub">${motoRate}% de manches gagnées</div></div>
-        <div class="stat"><div class="k">Meilleur classement</div><div class="v">${s.bestRank ?? '—'}</div><div class="sub">moyenne&nbsp;${s.avgRank != null ? s.avgRank.toFixed(1) : '—'}${s.avgField != null ? ' · ' + Math.round(s.avgField) + ' pilotes/classe' : ''}</div></div>
-        <div class="stat"><div class="k">Période</div><div class="v" style="font-size:14px; padding-top:6px">${dateRange}</div><div class="sub">${s.orgs.size} organisation(s)${s.pilots.size > 1 ? ` · ${s.pilots.size} pilotes` : ''}</div></div>
+
+    function delta(curr, prevVal, opts = {}) {
+      if (prev == null) return '';
+      if (curr == null || prevVal == null || Number.isNaN(curr) || Number.isNaN(prevVal)) return '';
+      const d = +(curr - prevVal).toFixed(opts.decimals ?? 0);
+      if (d === 0) return `<span class="delta flat" title="Identique à l'année précédente">±0</span>`;
+      const better = opts.inverse ? d < 0 : d > 0;
+      const cls = better ? 'up' : 'down';
+      const sign = d > 0 ? '+' : '';
+      const arrow = better ? '▲' : '▼';
+      const valStr = opts.suffix ? `${sign}${d}${opts.suffix}` : `${sign}${d}`;
+      return `<span class="delta ${cls}" title="vs année précédente : ${valStr}">${arrow} ${valStr}</span>`;
+    }
+
+    const heroCards = `
+      <div class="stat stat-hero teal" title="Nombre d'engagements (un par catégorie courue) sur la période. Compte plusieurs fois un même événement si plusieurs catégories.">
+        <div class="k">Engagements</div>
+        <div class="v">${s.entries}${delta(s.entries, prev?.entries)}</div>
+        <div class="sub">${s.events.size} événement(s)</div>
+      </div>
+      <div class="stat stat-hero silver" title="Top 3 atteint en classement final de catégorie.">
+        <div class="k">Podiums</div>
+        <div class="v">${s.podiums}${delta(s.podiums, prev?.podiums)}</div>
+        <div class="sub">dont ${s.wins} victoire(s) · ${podiumRate}% des engagements</div>
+      </div>
+      <div class="stat stat-hero sky" title="Position moyenne sur le classement de catégorie, en pourcentage. Top 1% = excellent, top 100% = dernier.">
+        <div class="k">Percentile moyen</div>
+        <div class="v">${s.avgPct != null ? 'top ' + s.avgPct.toFixed(0) + '%' : '—'}${delta(s.avgPct != null ? Math.round(s.avgPct) : null, prev?.avgPct != null ? Math.round(prev.avgPct) : null, { inverse: true, suffix: 'pts' })}</div>
+        <div class="sub">meilleur : ${s.bestPct != null ? 'top ' + s.bestPct + '%' : '—'}</div>
+      </div>
+      <div class="stat stat-hero berry" title="Meilleur classement final atteint sur la période (1 = victoire).">
+        <div class="k">Meilleur classement</div>
+        <div class="v">${s.bestRank ?? '—'}${delta(s.bestRank, prev?.bestRank, { inverse: true })}</div>
+        <div class="sub">moyenne ${s.avgRank != null ? s.avgRank.toFixed(1) : '—'}${s.avgField != null ? ' · ' + Math.round(s.avgField) + ' pilotes/catégorie' : ''}</div>
       </div>
     `;
+
+    const detail = `
+      <div class="stats-detail">
+        <div class="stat-group">
+          <h3 class="stat-group-title">Performance</h3>
+          <div class="stats">
+            <div class="stat gold" title="Nombre de catégories terminées en 1ʳᵉ place du classement final.">
+              <div class="k">Victoires</div><div class="v">${s.wins}</div><div class="sub">${winRate}% des engagements</div>
+            </div>
+            <div class="stat bronze" title="Engagements terminés dans les 8 premières positions (places 1 à 8).">
+              <div class="k">Top 8</div><div class="v">${s.top8}</div><div class="sub">classement de catégorie</div>
+            </div>
+            <div class="stat mint" title="Engagements dans le premier 10% du classement de catégorie (rapporté au nombre de pilotes).">
+              <div class="k">Top 10%</div><div class="v">${s.topTen}</div><div class="sub">${topTenRate}% des engagements</div>
+            </div>
+            <div class="stat lime" title="Engagements dans le premier quart du classement de catégorie.">
+              <div class="k">Top 25%</div><div class="v">${s.topQuarter}</div><div class="sub">${topQuarterRate}% des engagements</div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-group">
+          <h3 class="stat-group-title">Manches &amp; finales</h3>
+          <div class="stats">
+            <div class="stat peach" title="Nombre de catégories où une phase de finale a effectivement été disputée.">
+              <div class="k">Finales</div><div class="v">${s.finalsReached}</div><div class="sub">${s.finalWins} gagnée(s), ${s.finalPodiums} podium(s)</div>
+            </div>
+            <div class="stat lilac" title="Manches (motos) gagnées sur le total de manches disputées, toutes catégories confondues.">
+              <div class="k">Manches</div><div class="v">${s.motoWins}/${s.motosRaced}</div><div class="sub">${motoRate}% de manches gagnées</div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-group">
+          <h3 class="stat-group-title">Contexte</h3>
+          <div class="stats">
+            <div class="stat grape" title="Plage de dates couverte et organisations concernées.">
+              <div class="k">Période</div>
+              <div class="v" style="font-size:14px; padding-top:6px">${dateRange}</div>
+              <div class="sub">${s.orgs.size} organisation(s)${s.pilots.size > 1 ? ` · ${s.pilots.size} pilotes` : ''}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    return `<div class="stats-hero">${heroCards}</div>${detail}`;
   }
 
-  function render(matches, sortMode = 'date-desc') {
+  function render(matches, sortMode = 'date-desc', prevYearMatches = null) {
     if (!matches.length) {
       resultsEl.innerHTML = '<div class="card empty">Aucun pilote ne correspond à cette recherche.</div>';
       return;
     }
 
     const stats = computeStats(matches);
+    const prevStats = prevYearMatches ? computeStats(prevYearMatches) : null;
 
     const eventGroups = new Map();
     for (const m of matches) {
@@ -743,8 +1588,13 @@
         break;
     }
 
-    const html = [renderStats(stats)];
-    html.push(`<div class="section-title">Historique <span class="meta">${sortedEvents.length} événement(s), ${sortLabel}</span></div>`);
+    const html = [];
+    const statsMeta = `synthèse sur ${stats.entries} engagement(s)${prevStats ? ` · comparé à ${prevStats.entries} engagement(s) en ${(prevStats.firstDate || '').slice(0,4)}` : ''}`;
+    html.push(`<h2 class="section-title">Statistiques <span class="meta">${statsMeta}</span><button type="button" class="btn btn-ghost section-toggle" id="statsToggle" aria-controls="statsWrap">Masquer</button></h2>`);
+    html.push(`<div id="statsWrap" role="region" aria-label="Statistiques">${renderStats(stats, prevStats)}</div>`);
+    html.push(`<h2 class="section-title">Graphiques <span class="meta">visualisations des résultats</span><button type="button" class="btn btn-ghost section-toggle" id="chartsToggle" aria-controls="chartsWrap">Masquer</button></h2>`);
+    html.push(`<div id="chartsWrap" role="region" aria-label="Graphiques"><div class="charts-grid">${renderCharts(matches)}</div></div>`);
+    html.push(`<h2 class="section-title">Historique <span class="meta">${sortedEvents.length} événement(s), ${sortLabel}</span></h2>`);
 
     for (const { event, account, items } of sortedEvents) {
       const evUrl = eventUrl(account.accountCode, event.eventId);
@@ -783,7 +1633,7 @@
         const clUrl = classUrl(m.account.accountCode, m.event.eventId, cls.perpetualClassCode);
         const clName = escape(cls.className);
         const clNameHtml = clUrl
-          ? `<a class="sqorz-link" href="${escape(clUrl)}" target="_blank" rel="noopener noreferrer" title="Ouvrir la classe sur Sqorz">${clName}</a>`
+          ? `<a class="sqorz-link" href="${escape(clUrl)}" target="_blank" rel="noopener noreferrer" title="Ouvrir la catégorie sur Sqorz">${clName}</a>`
           : clName;
         html.push(`
           <div class="class-line">
@@ -799,7 +1649,7 @@
                 ${pctTxt}
                 ${finalTxt}
               </div>
-              <div class="rank-pill ${pillClass}" title="Classement final de la classe">${rk ?? '—'}</div>
+              <div class="rank-pill ${pillClass}" title="Classement final de la catégorie">${rk ?? '—'}</div>
             </div>
           </div>
         `);
@@ -808,7 +1658,33 @@
       html.push(`</div></div>`);
     }
     resultsEl.innerHTML = html.join('');
+    applySectionVisibility();
   }
+
+  const sectionState = {
+    stats:  { hidden: localStorage.getItem('statsHidden') === '1',  wrap: 'statsWrap',  btn: 'statsToggle',  key: 'statsHidden' },
+    charts: { hidden: localStorage.getItem('chartsHidden') === '1', wrap: 'chartsWrap', btn: 'chartsToggle', key: 'chartsHidden' },
+  };
+  function applySectionVisibility() {
+    for (const s of Object.values(sectionState)) {
+      const wrap = document.getElementById(s.wrap);
+      const btn = document.getElementById(s.btn);
+      if (!wrap || !btn) continue;
+      wrap.hidden = s.hidden;
+      btn.textContent = s.hidden ? 'Afficher' : 'Masquer';
+      btn.setAttribute('aria-expanded', String(!s.hidden));
+    }
+  }
+  resultsEl.addEventListener('click', e => {
+    for (const s of Object.values(sectionState)) {
+      if (e.target.closest('#' + s.btn)) {
+        s.hidden = !s.hidden;
+        localStorage.setItem(s.key, s.hidden ? '1' : '0');
+        applySectionVisibility();
+        return;
+      }
+    }
+  });
 
   clubFilter.addEventListener('input', renderClubList);
   clubList.addEventListener('change', e => {
@@ -846,8 +1722,46 @@
   nameInp.addEventListener('input', updateSearchEnabled);
   nameInp.addEventListener('keydown', e => { if (e.key === 'Enter' && !searchBtn.disabled) searchBtn.click(); });
   searchBtn.addEventListener('click', searchSelected);
-  yearSel.addEventListener('change', () => { if (lastMatches.length) renderFiltered(); });
-  sortSel.addEventListener('change', () => { if (lastMatches.length) renderFiltered(); });
+  yearSel.addEventListener('change', () => { replaceStateUrl(); if (lastMatches.length) renderFiltered(); });
+  sortSel.addEventListener('change', () => { replaceStateUrl(); if (lastMatches.length) renderFiltered(); });
+
+  // Recherches récentes : clic sur une chip → restaure et relance ; bouton Effacer
+  document.getElementById('recentSearches').addEventListener('click', e => {
+    if (e.target.closest('#recentClearBtn')) { clearRecentSearches(); return; }
+    const chip = e.target.closest('.recent-chip');
+    if (!chip) return;
+    const idx = +chip.dataset.idx;
+    const r = getRecentSearches()[idx];
+    if (!r) return;
+    applyStateToUi({ name: r.name, clubs: r.clubs, year: '', sort: 'date-desc' });
+    if (!searchBtn.disabled) searchSelected();
+  });
+
+  // Navigation back/forward
+  window.addEventListener('popstate', () => {
+    const state = parseUrlState();
+    applyStateToUi(state);
+    if (state.name && state.clubs.length && !searchBtn.disabled) {
+      searchSelected();
+    } else if (!state.name || !state.clubs.length) {
+      resultsEl.innerHTML = '';
+      resultsFiltersEl.hidden = true;
+      setStatus('');
+      lastMatches = [];
+    }
+  });
+
+  function applyStateToUi(state) {
+    selectedCodes.clear();
+    const valid = new Set(accounts.map(a => a.accountCode));
+    for (const c of state.clubs || []) if (valid.has(c)) selectedCodes.add(c);
+    renderClubList();
+    renderChips();
+    nameInp.value = state.name || '';
+    yearSel.value = state.year || '';
+    sortSel.value = state.sort || 'date-desc';
+    updateSearchEnabled();
+  }
 
   // Populate year dropdown (current year → 2024)
   (() => {
@@ -863,7 +1777,18 @@
     yearSel.appendChild(frag);
   })();
 
-  loadClubs(FIXED_REGION);
+  (async function init() {
+    renderPilotsDatalist();
+    await loadClubs(FIXED_REGION);
+    renderRecentSearches();
+    const state = parseUrlState();
+    if (state.name || state.clubs.length) {
+      applyStateToUi(state);
+      if (state.name && state.clubs.length && !searchBtn.disabled) {
+        searchSelected();
+      }
+    }
+  })();
 })();
 </script>
 </body>
