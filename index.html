@@ -476,8 +476,38 @@
   .championship .event-head{
     background:linear-gradient(180deg, color-mix(in srgb,var(--gold) 14%, var(--card)) 0%, var(--card) 100%);
   }
+
+  /* Ligne de championnat : grille à 2 colonnes sur desktop, 1 col empilée sur mobile */
+  .champ-line{
+    display:grid;
+    grid-template-columns:1fr auto;
+    grid-template-areas:
+      "category rank"
+      "summary  rank"
+      "details  rank";
+    gap:6px 18px;
+    padding:4px 0 4px;
+    align-items:start;
+  }
+  .champ-category{grid-area:category; min-width:0; display:flex; flex-direction:column; gap:2px}
+  .champ-category .class-name{font-weight:600; font-size:14px; color:var(--ink)}
+  .champ-category .meta{font-size:12px; color:var(--muted)}
+  .champ-rank{
+    grid-area:rank;
+    display:flex; flex-direction:row-reverse; align-items:center; gap:12px;
+    align-self:center;
+  }
+  .champ-rank-text{text-align:right}
+  .champ-rank-text .lbl{
+    display:block;
+    text-transform:uppercase; letter-spacing:.5px; font-size:10px; font-weight:600;
+    color:var(--muted);
+  }
+  .champ-rank-sub{font-size:12px; color:var(--muted); margin-top:2px}
+
   .champ-summary{
-    margin-top:6px; font-size:13px; color:var(--ink-2);
+    grid-area:summary;
+    margin-top:2px; font-size:13px; color:var(--ink-2);
     display:flex; flex-wrap:wrap; align-items:baseline; gap:6px;
   }
   .champ-summary .lbl{
@@ -489,7 +519,8 @@
   .champ-summary .muted{color:var(--muted); font-size:12px}
 
   .champ-details{
-    margin-top:10px;
+    grid-area:details;
+    margin-top:8px;
     border:1px solid var(--line); border-radius:10px;
     background:var(--card-soft);
   }
@@ -506,6 +537,8 @@
   }
   .champ-details[open] > summary::before{transform:rotate(90deg)}
   .champ-details > summary:hover{color:var(--accent-hi)}
+  .champ-details[open] .sum-show{display:none}
+  .champ-details:not([open]) .sum-hide{display:none}
 
   .champ-stages{
     width:100%; border-collapse:collapse; font-size:12.5px;
@@ -582,6 +615,30 @@
 
     /* Event head : col plutôt que row si étroit */
     .event-head .right{align-items:flex-start}
+
+    /* Ligne de championnat : tout empilé, rang en bandeau au-dessus */
+    .champ-line{
+      grid-template-columns:1fr;
+      grid-template-areas:
+        "rank"
+        "category"
+        "summary"
+        "details";
+      gap:10px;
+      padding:8px 0 6px;
+    }
+    .champ-rank{
+      flex-direction:row;
+      gap:12px;
+      padding:8px 12px;
+      background:color-mix(in srgb, var(--gold) 12%, var(--card-soft));
+      border:1px solid color-mix(in srgb, var(--gold) 28%, var(--line));
+      border-radius:10px;
+    }
+    .champ-rank-text{text-align:left; flex:1; min-width:0}
+    .champ-rank-text .lbl{font-size:11px}
+    .champ-rank-sub{font-size:13px; color:var(--ink-2); font-weight:500}
+    .champ-summary{font-size:13px}
 
     /* Manches : layout liste verticale (une carte par manche) */
     .champ-details > summary{padding:10px 12px}
@@ -1890,7 +1947,7 @@
 
       const detailsBlock = stageCount
         ? `<details class="champ-details">
-            <summary>Détail des ${stageCount} manche(s)</summary>
+            <summary><span class="sum-show">Voir le détail des ${stageCount} manche(s)</span><span class="sum-hide">Masquer le détail des ${stageCount} manche(s)</span></summary>
             <table class="champ-stages">
               <thead><tr><th>Date</th><th>Manche</th><th>Rang</th><th>Points</th><th title="Manche comptabilisée dans le total">Tallied</th></tr></thead>
               <tbody>${stageRows}</tbody>
@@ -1919,25 +1976,24 @@
             </div>
           </div>
           <div class="event-body">
-            <div class="class-line">
-              <div class="cl-info">
-                <div><span class="class-name">${escape(sm.cls.className || '—')}</span></div>
+            <div class="champ-line">
+              <div class="champ-category">
+                <span class="class-name">${escape(sm.cls.className || '—')}</span>
                 <div class="meta">${escape(c.firstName || '')} ${escape(c.lastName || '')}${c.groupName ? ` · ${escape(c.groupName)}` : ''}</div>
-                <div class="champ-summary">
-                  <span class="lbl">Points</span> <b>${c.seriesPoints != null ? c.seriesPoints : '—'}</b>
-                  ${stageCount ? `<span class="sep">·</span><span class="lbl">Manches comptabilisées</span> <b>${talliedCount}/${stageCount}</b>` : ''}
-                  ${ranEvents && ranEvents !== talliedCount ? `<span class="sep">·</span><span class="muted">${ranEvents} couru(es)</span>` : ''}
-                </div>
-                ${detailsBlock}
               </div>
-              <div class="cl-right">
-                <div class="cl-meta-r">
-                  <div><span class="lbl">Classement général</span></div>
-                  ${totalTxt ? `<div>${totalTxt}</div>` : ''}
-                  ${pctTxt ? `<div>${pctTxt}</div>` : ''}
-                </div>
+              <div class="champ-rank">
                 <div class="rank-pill ${pillClass}" title="Classement général du championnat">${rk != null ? rk : '—'}</div>
+                <div class="champ-rank-text">
+                  <div class="lbl">Classement général</div>
+                  <div class="champ-rank-sub">${[totalTxt, pctTxt].filter(Boolean).join(' · ')}</div>
+                </div>
               </div>
+              <div class="champ-summary">
+                <span class="lbl">Points</span> <b>${c.seriesPoints != null ? c.seriesPoints : '—'}</b>
+                ${stageCount ? `<span class="sep">·</span><span class="lbl">Manches comptabilisées</span> <b>${talliedCount}/${stageCount}</b>` : ''}
+                ${ranEvents && ranEvents !== talliedCount ? `<span class="sep">·</span><span class="muted">${ranEvents} couru(es)</span>` : ''}
+              </div>
+              ${detailsBlock}
             </div>
           </div>
         </div>
