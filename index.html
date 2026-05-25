@@ -640,33 +640,39 @@
     .champ-rank-sub{font-size:13px; color:var(--ink-2); font-weight:500}
     .champ-summary{font-size:13px}
 
-    /* Manches : layout liste verticale (une carte par manche) */
+    /* Manches : layout liste verticale (une ligne par manche, robuste, pas de flex-wrap) */
+    .champ-details{min-width:0; max-width:100%; overflow:hidden}
     .champ-details > summary{padding:10px 12px}
-    .champ-stages, .champ-stages tbody{display:block; border:none}
+    .champ-stages, .champ-stages tbody{
+      display:block; border:none;
+      width:100%; max-width:100%; box-sizing:border-box;
+    }
     .champ-stages thead{display:none}
     .champ-stages tr{
-      display:flex; flex-wrap:wrap; align-items:baseline;
+      display:block;
       padding:9px 12px;
       border:none;
       border-top:1px solid var(--line);
       background:transparent;
+      width:100%; box-sizing:border-box;
+      overflow:hidden;
     }
     .champ-stages tr:first-child{border-top:none}
     .champ-stages td{
-      padding:0; border:none; white-space:normal; width:auto;
+      padding:0; border:none;
       font-size:13px;
     }
     .champ-stages .st-name{
-      order:1; flex:1 1 auto; min-width:0;
-      font-weight:600; color:var(--ink);
+      display:block; font-weight:600; color:var(--ink);
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      max-width:100%;
     }
     .champ-stages .st-date{
-      order:2; margin-left:8px;
-      color:var(--muted); font-size:12px; white-space:nowrap;
+      display:block; color:var(--muted); font-size:12px;
+      margin-top:1px;
     }
     .champ-stages .st-rank{
-      order:3; flex-basis:100%; padding-top:4px;
+      display:inline-block; margin-top:4px;
       font-weight:600; color:var(--ink-2);
     }
     .champ-stages .st-rank::before{
@@ -674,17 +680,18 @@
       text-transform:uppercase; letter-spacing:.4px; margin-right:2px;
     }
     .champ-stages .st-pts{
-      order:4; padding-top:4px;
+      display:inline-block; margin-top:4px; margin-left:10px;
       color:var(--ink-2);
     }
     .champ-stages .st-pts::before{
-      content:" · "; color:var(--line-strong); margin:0 6px 0 6px;
+      content:"· "; color:var(--line-strong); margin-right:4px;
     }
     .champ-stages .st-tally{
-      order:5; padding-top:4px; margin-left:auto;
+      display:inline-block; margin-top:4px; margin-left:10px;
+      vertical-align:middle;
     }
     .champ-stages tr.absent{opacity:.55}
-    .champ-stages tr.absent .st-rank::before{content:"DNS"; font-style:normal; color:var(--muted)}
+    .champ-stages tr.absent .st-rank::before{content:"DNS "; font-style:normal; color:var(--muted)}
     .champ-stages tr.absent .st-rank > *,
     .champ-stages tr.absent .st-pts,
     .champ-stages tr.absent .st-tally{display:none}
