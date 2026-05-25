@@ -7,6 +7,16 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Résultats Sqorz — Historique pilote</title>
+<script>
+  // Applique le thème AVANT le rendu pour éviter le flash
+  (() => {
+    const saved = localStorage.getItem('theme'); // 'light' | 'dark' | null (auto)
+    const isDark = saved === 'dark' ||
+      (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.classList.toggle('dark', isDark);
+    if (saved) document.documentElement.dataset.themePref = saved;
+  })();
+</script>
 <style>
   :root{
     /* Palette pastel — ancrée sur un bleu acier (#6a8caf) */
@@ -44,20 +54,18 @@
     --shadow:0 1px 2px rgba(60,90,120,.10), 0 10px 28px rgba(60,90,120,.14);
     --radius:18px;
   }
-  @media (prefers-color-scheme:dark){
-    :root{
-      --bg:#1f262e; --card:#2a3340; --card-soft:#252e3a;
-      --ink:#e4ebf2; --ink-2:#c2ccd8; --muted:#a4afbb;
-      --line:#3a4250; --line-strong:#4d5666;
-      --accent:#9bb5cf; --accent-hi:#b6cce0; --accent-soft:#3a4250;
-      --rose:#f4b8cb; --coral:#f4b4a4; --peach:#f5cdac; --apricot:#f5dab0;
-      --butter:#efdc8c; --lime:#d8e8a0; --mint:#b4e0c8; --teal:#a4d8d8;
-      --sky:#b6d2eb; --blueberry:#b8c5e8; --lilac:#c8b8df; --lavender:#d6bce6;
-      --berry:#e8a8c8; --grape:#cca4dc;
-      --good:#b4e0c8; --bad:#f5b0b0; --warn:#f5d8a4;
-      --gold:#eccc88; --silver:#d4d8e0; --bronze:#d8a888;
-      --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px rgba(0,0,0,.4);
-    }
+  :root.dark{
+    --bg:#1f262e; --card:#2a3340; --card-soft:#252e3a;
+    --ink:#e4ebf2; --ink-2:#c2ccd8; --muted:#a4afbb;
+    --line:#3a4250; --line-strong:#4d5666;
+    --accent:#9bb5cf; --accent-hi:#b6cce0; --accent-soft:#3a4250;
+    --rose:#f4b8cb; --coral:#f4b4a4; --peach:#f5cdac; --apricot:#f5dab0;
+    --butter:#efdc8c; --lime:#d8e8a0; --mint:#b4e0c8; --teal:#a4d8d8;
+    --sky:#b6d2eb; --blueberry:#b8c5e8; --lilac:#c8b8df; --lavender:#d6bce6;
+    --berry:#e8a8c8; --grape:#cca4dc;
+    --good:#b4e0c8; --bad:#f5b0b0; --warn:#f5d8a4;
+    --gold:#eccc88; --silver:#d4d8e0; --bronze:#d8a888;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px rgba(0,0,0,.4);
   }
   *{box-sizing:border-box}
   html,body{margin:0; padding:0}
@@ -98,7 +106,18 @@
   .topbar-inner{
     max-width:1180px; margin:0 auto; position:relative; z-index:1;
   }
+  .brand-row{display:flex; align-items:center; justify-content:space-between; gap:12px}
   .brand{display:flex; align-items:center; gap:12px; font-weight:600; letter-spacing:.2px; color:#fff}
+  .theme-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:36px; height:36px; padding:0;
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22);
+    color:#fff; border-radius:10px;
+    cursor:pointer; font-size:18px; line-height:1;
+    transition:background .15s, border-color .15s, transform .15s;
+  }
+  .theme-btn:hover{background:rgba(255,255,255,.2); border-color:rgba(255,255,255,.4)}
+  .theme-btn:active{transform:scale(.95)}
   .brand .logo{
     width:40px; height:40px; border-radius:12px;
     background:rgba(255,255,255,.22); color:#fff;
@@ -273,10 +292,8 @@
   .stat .delta.up{background:color-mix(in srgb,var(--good) 28%, transparent); color:#1f5135}
   .stat .delta.down{background:color-mix(in srgb,var(--bad) 28%, transparent); color:#7a2929}
   .stat .delta.flat{background:var(--card-soft); color:var(--muted); border:1px solid var(--line)}
-  @media (prefers-color-scheme:dark){
-    .stat .delta.up{color:#a8e0c2}
-    .stat .delta.down{color:#f5b8b8}
-  }
+  :root.dark .stat .delta.up{color:#a8e0c2}
+  :root.dark .stat .delta.down{color:#f5b8b8}
   .stats{display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px; margin-bottom:0}
   .stat{
     background:var(--card); border:1px solid var(--line); border-radius:12px;
@@ -577,9 +594,7 @@
     background:transparent; color:var(--muted);
     border:1px solid var(--line-strong);
   }
-  @media (prefers-color-scheme:dark){
-    .tally-on{color:#bfe6d0}
-  }
+  :root.dark .tally-on{color:#bfe6d0}
 
   /* Onglets mobiles — masqués sur desktop (scroll continu) */
   .tabs-nav{display:none}
@@ -603,13 +618,9 @@
     .stat.stat-hero .sub{font-size:12px}
     .stats{grid-template-columns:repeat(2, 1fr); gap:10px}
 
-    /* Phases : scroll horizontal au lieu de wrap */
-    .phases{
-      flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px;
-      scrollbar-width:thin; scrollbar-color:var(--line-strong) transparent;
-      margin-right:-4px; /* permet aux dernières phases d'aller jusqu'au bord */
-    }
-    .phase{flex-shrink:0}
+    /* Phases : wrap sur plusieurs lignes pour tout voir sans scroll latéral */
+    .phases{flex-wrap:wrap; gap:5px}
+    .phase{flex-shrink:1; max-width:100%}
 
     /* Class-line plus compacte */
     .class-line{gap:10px; padding:8px 0}
@@ -754,19 +765,22 @@
 <body>
 <div class="topbar">
   <div class="topbar-inner">
-    <div class="brand">
-      <span class="logo" aria-hidden="true">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="9"/>
-          <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>
-          <line x1="12" y1="12" x2="12" y2="3.5"/>
-          <line x1="12" y1="12" x2="20.08" y2="9.37"/>
-          <line x1="12" y1="12" x2="16.99" y2="18.88"/>
-          <line x1="12" y1="12" x2="7.01" y2="18.88"/>
-          <line x1="12" y1="12" x2="3.92" y2="9.37"/>
-        </svg>
-      </span>
-      Sqorz Stats
+    <div class="brand-row">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/>
+            <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>
+            <line x1="12" y1="12" x2="12" y2="3.5"/>
+            <line x1="12" y1="12" x2="20.08" y2="9.37"/>
+            <line x1="12" y1="12" x2="16.99" y2="18.88"/>
+            <line x1="12" y1="12" x2="7.01" y2="18.88"/>
+            <line x1="12" y1="12" x2="3.92" y2="9.37"/>
+          </svg>
+        </span>
+        Sqorz Stats
+      </div>
+      <button type="button" id="themeBtn" class="theme-btn" aria-label="Changer le thème" title="Changer le thème (auto / clair / sombre)"></button>
     </div>
     <h1>Historique d'un pilote BMX</h1>
     <p>Recherche d'un pilote dans les organisations françaises référencées sur our.sqorz.com. Affichage de l'historique des courses, agrégation statistique et accès direct aux résultats détaillés.</p>
@@ -2213,12 +2227,55 @@
     }
   });
 
+  function prefetchOrg(code) {
+    // Réchauffe le cache /json/org en arrière-plan, sans bloquer ni propager les erreurs
+    fetchJsonCached('/json/org/' + encodeURIComponent(code)).catch(() => {});
+  }
+
+  // Thème : cycle auto → clair → sombre → auto
+  const themeBtn = document.getElementById('themeBtn');
+  const THEME_ICONS = { auto: '🌓', light: '☀️', dark: '🌙' };
+  const THEME_LABELS = { auto: 'Thème : auto (système)', light: 'Thème : clair', dark: 'Thème : sombre' };
+  function getThemePref() {
+    return localStorage.getItem('theme') || 'auto';
+  }
+  function applyTheme(pref) {
+    const isDark = pref === 'dark' || (pref === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.classList.toggle('dark', isDark);
+    if (pref === 'auto') {
+      localStorage.removeItem('theme');
+      delete document.documentElement.dataset.themePref;
+    } else {
+      localStorage.setItem('theme', pref);
+      document.documentElement.dataset.themePref = pref;
+    }
+    if (themeBtn) {
+      themeBtn.textContent = THEME_ICONS[pref];
+      themeBtn.title = THEME_LABELS[pref];
+      themeBtn.setAttribute('aria-label', THEME_LABELS[pref]);
+    }
+  }
+  applyTheme(getThemePref());
+  themeBtn?.addEventListener('click', () => {
+    const order = ['auto', 'light', 'dark'];
+    const next = order[(order.indexOf(getThemePref()) + 1) % order.length];
+    applyTheme(next);
+  });
+  // En mode auto, réagir aux changements du système
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (getThemePref() === 'auto') applyTheme('auto');
+  });
+
   clubFilter.addEventListener('input', renderClubList);
   clubList.addEventListener('change', e => {
     const cb = e.target;
     if (cb.tagName !== 'INPUT' || cb.type !== 'checkbox') return;
-    if (cb.checked) selectedCodes.add(cb.value);
-    else selectedCodes.delete(cb.value);
+    if (cb.checked) {
+      selectedCodes.add(cb.value);
+      prefetchOrg(cb.value);
+    } else {
+      selectedCodes.delete(cb.value);
+    }
     renderChips();
     updateSearchEnabled();
   });
@@ -2233,7 +2290,10 @@
   clubAllBtn.addEventListener('click', () => {
     const q = norm(clubFilter.value);
     for (const a of accounts) {
-      if (!q || norm(a.accountName).includes(q)) selectedCodes.add(a.accountCode);
+      if (!q || norm(a.accountName).includes(q)) {
+        if (!selectedCodes.has(a.accountCode)) prefetchOrg(a.accountCode);
+        selectedCodes.add(a.accountCode);
+      }
     }
     renderClubList();
     renderChips();
@@ -2282,7 +2342,10 @@
   function applyStateToUi(state) {
     selectedCodes.clear();
     const valid = new Set(accounts.map(a => a.accountCode));
-    for (const c of state.clubs || []) if (valid.has(c)) selectedCodes.add(c);
+    for (const c of state.clubs || []) if (valid.has(c)) {
+      selectedCodes.add(c);
+      prefetchOrg(c);
+    }
     renderClubList();
     renderChips();
     nameInp.value = state.name || '';
