@@ -583,9 +583,55 @@
     /* Event head : col plutôt que row si étroit */
     .event-head .right{align-items:flex-start}
 
-    /* Tableau manches : police plus petite, padding réduit */
-    .champ-stages{font-size:11.5px}
-    .champ-stages th, .champ-stages td{padding:5px 6px}
+    /* Manches : layout liste verticale (une carte par manche) */
+    .champ-details > summary{padding:10px 12px}
+    .champ-stages, .champ-stages tbody{display:block; border:none}
+    .champ-stages thead{display:none}
+    .champ-stages tr{
+      display:flex; flex-wrap:wrap; align-items:baseline;
+      padding:9px 12px;
+      border:none;
+      border-top:1px solid var(--line);
+      background:transparent;
+    }
+    .champ-stages tr:first-child{border-top:none}
+    .champ-stages td{
+      padding:0; border:none; white-space:normal; width:auto;
+      font-size:13px;
+    }
+    .champ-stages .st-name{
+      order:1; flex:1 1 auto; min-width:0;
+      font-weight:600; color:var(--ink);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .champ-stages .st-date{
+      order:2; margin-left:8px;
+      color:var(--muted); font-size:12px; white-space:nowrap;
+    }
+    .champ-stages .st-rank{
+      order:3; flex-basis:100%; padding-top:4px;
+      font-weight:600; color:var(--ink-2);
+    }
+    .champ-stages .st-rank::before{
+      content:"Rang "; font-weight:400; color:var(--muted); font-size:11px;
+      text-transform:uppercase; letter-spacing:.4px; margin-right:2px;
+    }
+    .champ-stages .st-pts{
+      order:4; padding-top:4px;
+      color:var(--ink-2);
+    }
+    .champ-stages .st-pts::before{
+      content:" · "; color:var(--line-strong); margin:0 6px 0 6px;
+    }
+    .champ-stages .st-tally{
+      order:5; padding-top:4px; margin-left:auto;
+    }
+    .champ-stages tr.absent{opacity:.55}
+    .champ-stages tr.absent .st-rank::before{content:"DNS"; font-style:normal; color:var(--muted)}
+    .champ-stages tr.absent .st-rank > *,
+    .champ-stages tr.absent .st-pts,
+    .champ-stages tr.absent .st-tally{display:none}
+
     .champ-summary{font-size:12px}
 
     /* Onglets mobiles — sticky sous le topbar avec fond flouté */
@@ -1970,13 +2016,13 @@
       panels.series.push(renderChampionships(seriesMatches));
     }
     if (hasEventMatches) {
-      panels.history.push(`<h2 class="section-title">Historique <span class="meta">${sortedEvents.length} événement(s), ${sortLabel}</span></h2>`);
+      panels.history.push(`<h2 class="section-title">Événements <span class="meta">${sortedEvents.length} événement(s), ${sortLabel}</span></h2>`);
     }
 
     const tabsAvailable = [];
     if (panels.stats.length)   tabsAvailable.push({ key: 'stats',   label: 'Stats',      count: null });
     if (panels.series.length)  tabsAvailable.push({ key: 'series',  label: 'Séries',     count: seriesMatches.length });
-    if (panels.history.length) tabsAvailable.push({ key: 'history', label: 'Historique', count: sortedEvents.length });
+    if (panels.history.length) tabsAvailable.push({ key: 'history', label: 'Événements', count: sortedEvents.length });
 
     const html = [];
     if (tabsAvailable.length > 1) {
