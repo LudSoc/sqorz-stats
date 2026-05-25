@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Résultats Sqorz — Historique pilote</title>
 <style>
   :root{
@@ -661,18 +664,21 @@
     .champ-stages td{
       padding:0; border:none;
       font-size:13px;
+      width:auto;
     }
     .champ-stages .st-name{
-      display:block; font-weight:600; color:var(--ink);
+      display:block; width:auto;
+      font-weight:600; color:var(--ink);
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
       max-width:100%;
     }
     .champ-stages .st-date{
-      display:block; color:var(--muted); font-size:12px;
+      display:block; width:auto;
+      color:var(--muted); font-size:12px;
       margin-top:1px;
     }
     .champ-stages .st-rank{
-      display:inline-block; margin-top:4px;
+      display:inline-block; width:auto; margin-top:4px;
       font-weight:600; color:var(--ink-2);
     }
     .champ-stages .st-rank::before{
@@ -680,14 +686,14 @@
       text-transform:uppercase; letter-spacing:.4px; margin-right:2px;
     }
     .champ-stages .st-pts{
-      display:inline-block; margin-top:4px; margin-left:10px;
+      display:inline-block; width:auto; margin-top:4px; margin-left:10px;
       color:var(--ink-2);
     }
     .champ-stages .st-pts::before{
       content:"· "; color:var(--line-strong); margin-right:4px;
     }
     .champ-stages .st-tally{
-      display:inline-block; margin-top:4px; margin-left:10px;
+      display:inline-block; width:auto; margin-top:4px; margin-left:10px;
       vertical-align:middle;
     }
     .champ-stages tr.absent{opacity:.55}
