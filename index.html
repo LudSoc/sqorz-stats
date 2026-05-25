@@ -1199,21 +1199,22 @@
       let orgErrors = 0;
       let orgDone = 0;
       setProgress(0, targets.length);
-      for (const a of targets) {
-        if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+      await Promise.all(targets.map(async a => {
         try {
+          if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
           const orgData = await fetchJsonCached('/json/org/' + encodeURIComponent(a.accountCode), signal);
           const events = (orgData.events || []).filter(e => e.publish !== false);
           const series = (orgData.series || []).filter(s => s.publish !== false);
           orgEvents.push({ account: a, events });
           orgSeries.push({ account: a, series });
         } catch (e) {
-          if (e.name === 'AbortError') throw e;
-          orgErrors++;
+          if (e.name !== 'AbortError') orgErrors++;
+        } finally {
+          orgDone++;
+          setProgress(orgDone, targets.length);
         }
-        orgDone++;
-        setProgress(orgDone, targets.length);
-      }
+      }));
+      if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
 
       const allEvents = [];
       for (const oe of orgEvents) for (const ev of oe.events) allEvents.push({ account: oe.account, event: ev });
