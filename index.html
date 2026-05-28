@@ -1243,7 +1243,12 @@
       if (!allEvents.length && !allSeries.length) {
         resultsEl.innerHTML = '';
         setProgress(0, 0);
-        setStatus(`Aucun événement ou championnat publié dans les ${targets.length} organisation(s) sélectionnée(s).`);
+        if (orgErrors === targets.length) {
+          setStatus(`Impossible de récupérer les ${targets.length} organisation(s) — proxys saturés ou Sqorz indisponible. Réessaie dans une minute.`, true);
+        } else {
+          const ok = targets.length - orgErrors;
+          setStatus(`Aucun événement ou championnat publié dans les ${ok} organisation(s) répondues${orgErrors ? ` (${orgErrors} en échec)` : ''}.`);
+        }
         return;
       }
 
@@ -1442,6 +1447,15 @@
     return Math.max(1, Math.round(p));
   }
 
+  // Z-score du rang sous l'hypothèse uniforme : positif = mieux que la médiane du plateau, borné par ±√3.
+  function zScore(rank, total){
+    if (!total || total < 2 || typeof rank !== 'number') return null;
+    const mu = (total + 1) / 2;
+    const sigma = Math.sqrt((total * total - 1) / 12);
+    if (!sigma) return null;
+    return (mu - rank) / sigma;
+  }
+
   function isFinalPhase(d) {
     const n = (d.phaseName || '').toLowerCase();
     return /final/.test(n) && !/semi|quarter|1\/|eighth|repech/.test(n);
@@ -1586,15 +1600,16 @@
     const points = matches
       .map(m => ({
         date: m.event.eventDate,
-        pct: percentile(m.competitor.rank, m.totalParticipants),
+        z: zScore(m.competitor.rank, m.totalParticipants),
         rank: m.competitor.rank,
+        total: m.totalParticipants,
         cls: m.cls.className,
         ev: m.event.eventName,
       }))
-      .filter(p => p.date && p.pct != null)
+      .filter(p => p.date && p.z != null)
       .sort((a, b) => a.date.localeCompare(b.date));
     if (points.length < 2) {
-      return `<div class="chart-card"><h3 class="chart-title">Évolution du percentile</h3><div class="chart-empty">Pas assez de données (au moins 2 engagements classés requis).</div></div>`;
+      return `<div class="chart-card"><h3 class="chart-title">Évolution de la performance</h3><div class="chart-empty">Pas assez de données (au moins 2 engagements classés requis).</div></div>`;
     }
     const W = 600, H = 260, PAD = { top: 16, right: 18, bottom: 40, left: 52 };
     const innerW = W - PAD.left - PAD.right;
@@ -1603,37 +1618,40 @@
     const t1 = new Date(points[points.length - 1].date).getTime();
     const tSpan = Math.max(1, t1 - t0);
     const x = p => PAD.left + ((new Date(p.date).getTime() - t0) / tSpan) * innerW;
-    const y = pct => PAD.top + (pct / 100) * innerH;
+    const zMin = -1.8, zMax = 1.8;
+    const y = z => PAD.top + ((zMax - z) / (zMax - zMin)) * innerH;
 
-    // Zones colorées : top 25% (vert), 25-50% (jaune), 50-100% (rose) — situent la qualité d'un coup d'œil
+    // Zones : z > +1 = solidement au-dessus du peloton, 0..+1 = légèrement mieux, -1..0 = légèrement moins bien, < -1 = en queue
     const zones = [
-      { from: 0,  to: 25,  color: 'var(--mint)' },
-      { from: 25, to: 50,  color: 'var(--butter)' },
-      { from: 50, to: 100, color: 'var(--rose)' },
-    ].map(z =>
-      `<rect x="${PAD.left}" y="${y(z.from).toFixed(1)}" width="${innerW.toFixed(1)}" height="${(y(z.to) - y(z.from)).toFixed(1)}" fill="${z.color}" class="zone"/>`
+      { from: 1,    to: zMax,  color: 'var(--mint)' },
+      { from: 0,    to: 1,     color: 'var(--butter)' },
+      { from: -1,   to: 0,     color: 'var(--peach)' },
+      { from: zMin, to: -1,    color: 'var(--rose)' },
+    ].map(zone =>
+      `<rect x="${PAD.left}" y="${y(zone.to).toFixed(1)}" width="${innerW.toFixed(1)}" height="${(y(zone.from) - y(zone.to)).toFixed(1)}" fill="${zone.color}" class="zone"/>`
     ).join('');
 
-    const yTicks = [1, 25, 50, 75, 100];
+    const yTicks = [1.5, 1, 0, -1, -1.5];
     const gridLines = yTicks.map(t => {
       const yy = y(t);
+      const label = t === 0 ? 'médiane' : (t > 0 ? `+${t}` : `${t}`);
       return `<line x1="${PAD.left}" y1="${yy}" x2="${PAD.left + innerW}" y2="${yy}" class="grid"/>
-              <text x="${PAD.left - 8}" y="${yy + 4}" class="axis-label" text-anchor="end">${t === 1 ? 'top 1%' : 'top ' + t + '%'}</text>`;
+              <text x="${PAD.left - 8}" y="${yy + 4}" class="axis-label" text-anchor="end">${label}</text>`;
     }).join('');
 
-    const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(p).toFixed(1)} ${y(p.pct).toFixed(1)}`).join(' ');
+    const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(p).toFixed(1)} ${y(p.z).toFixed(1)}`).join(' ');
     const baseY = PAD.top + innerH;
 
-    // Ligne de moyenne
-    const avgPct = points.reduce((a, p) => a + p.pct, 0) / points.length;
-    const avgY = y(avgPct);
+    const avgZ = points.reduce((a, p) => a + p.z, 0) / points.length;
+    const avgY = y(avgZ);
+    const fmtZ = v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}`;
     const avgLine = `
       <line x1="${PAD.left}" y1="${avgY.toFixed(1)}" x2="${PAD.left + innerW}" y2="${avgY.toFixed(1)}" class="line-mean"/>
-      <text x="${(PAD.left + innerW - 6).toFixed(1)}" y="${(avgY - 6).toFixed(1)}" class="axis-label" text-anchor="end" style="fill:var(--accent-hi); font-weight:600">moy. ${avgPct.toFixed(0)}%</text>
+      <text x="${(PAD.left + innerW - 6).toFixed(1)}" y="${(avgY - 6).toFixed(1)}" class="axis-label" text-anchor="end" style="fill:var(--accent-hi); font-weight:600">moy. ${fmtZ(avgZ)}</text>
     `;
 
     const dots = points.map(p =>
-      `<circle cx="${x(p).toFixed(1)}" cy="${y(p.pct).toFixed(1)}" r="4" class="point"><title>${escape(fmtDate(p.date))} — ${escape(p.ev)} (${escape(p.cls)}) : top ${p.pct}% (${p.rank}${p.rank===1?'er':'e'})</title></circle>`
+      `<circle cx="${x(p).toFixed(1)}" cy="${y(p.z).toFixed(1)}" r="4" class="point"><title>${escape(fmtDate(p.date))} — ${escape(p.ev)} (${escape(p.cls)}) : ${p.rank}${p.rank===1?'er':'e'}/${p.total} · z = ${fmtZ(p.z)}</title></circle>`
     ).join('');
 
     const xAxis = `<line x1="${PAD.left}" y1="${baseY}" x2="${PAD.left + innerW}" y2="${baseY}" class="axis"/>`;
@@ -1642,8 +1660,8 @@
 
     return `
       <div class="chart-card">
-        <h3 class="chart-title">Évolution du percentile</h3>
-        <div class="chart-sub">${points.length} engagement(s) classés · plus haut = meilleur</div>
+        <h3 class="chart-title">Évolution de la performance</h3>
+        <div class="chart-sub">${points.length} engagement(s) classés · z-score (0 = médiane du plateau, plus haut = meilleur)</div>
         <svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">
           ${zones}
           ${gridLines}
@@ -2354,10 +2372,10 @@
     updateSearchEnabled();
   }
 
-  // Populate year dropdown (current year → 2024)
+  // Populate year dropdown (current year → 2023)
   (() => {
     const currentYear = new Date().getFullYear();
-    const oldestYear = 2024;
+    const oldestYear = 2023;
     const frag = document.createDocumentFragment();
     for (let y = currentYear; y >= oldestYear; y--) {
       const opt = document.createElement('option');
