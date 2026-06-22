@@ -841,15 +841,17 @@
 
 <script>
 (() => {
-  const API_BASE = 'https://our.sqorz.com';
+  const API_BASE = 'https://sqorz-proxy.ludovicsocie.workers.dev';
 
-  const PROXIES = [
-    u => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
-    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-  ];
+  const PROXIES = [];
 
   async function fetchJson(path, signal) {
     const target = API_BASE + path;
+    if (PROXIES.length === 0) {
+      const r = await fetch(target, signal ? { signal } : {});
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    }
     let lastErr;
     for (const buildUrl of PROXIES) {
       if (signal && signal.aborted) throw new DOMException('Aborted', 'AbortError');
