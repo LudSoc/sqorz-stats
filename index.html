@@ -1465,6 +1465,13 @@
   function isMotoPhase(d) {
     return /^moto/i.test(d.phaseName || '');
   }
+  function isSemiPhase(d) {
+    return /semi/i.test(d.phaseName || '');
+  }
+  function isKnockoutPhase(d) {
+    const n = (d.phaseName || '').toLowerCase();
+    return (/final/.test(n) || /1\/\d+/.test(n)) && !/repech/.test(n);
+  }
 
   function frPhaseName(raw) {
     return (raw || '').replace(/\bMoto\b/gi, 'Manche');
@@ -1495,7 +1502,11 @@
       pilots: new Set(),
       wins: 0, podiums: 0, top8: 0,
       finalsReached: 0, finalWins: 0, finalPodiums: 0,
-      motosRaced: 0, motoWins: 0,
+      semiFinalsReached: 0, semiFinalWins: 0,
+      finalPhasesReached: 0,
+      eventsWithMotos: 0,
+      motosRaced: 0, motoWins: 0, motoTop4: 0,
+      gateResults: {},
       bestRank: null,
       rankSum: 0, rankCount: 0,
       pctSum: 0, pctCount: 0, bestPct: null,
@@ -1538,12 +1549,29 @@
         if (finalPh.result === 1) s.finalWins++;
         if (finalPh.result <= 3) s.finalPodiums++;
       }
+      const semiPh = details.find(isSemiPhase);
+      if (semiPh && semiPh.result != null) {
+        s.semiFinalsReached++;
+        if (semiPh.result === 1) s.semiFinalWins++;
+      }
+      if (details.some(d => isKnockoutPhase(d) && d.result != null)) {
+        s.finalPhasesReached++;
+      }
+      let hasMoto = false;
       for (const d of details) {
         if (isMotoPhase(d) && d.result != null) {
           s.motosRaced++;
           if (d.result === 1) s.motoWins++;
+          if (d.result <= 4) s.motoTop4++;
+          hasMoto = true;
+          if (d.racePosition != null) {
+            const g = d.racePosition;
+            if (!s.gateResults[g]) s.gateResults[g] = [];
+            s.gateResults[g].push(d.result);
+          }
         }
       }
+      if (hasMoto) s.eventsWithMotos++;
 
       const d = ev.eventDate;
       if (d) {
@@ -1838,6 +1866,16 @@
     const podiumRate = s.entries ? Math.round(100 * s.podiums / s.entries) : 0;
     const winRate = s.entries ? Math.round(100 * s.wins / s.entries) : 0;
     const motoRate = s.motosRaced ? Math.round(100 * s.motoWins / s.motosRaced) : 0;
+    const motoTop4Rate = s.motosRaced ? Math.round(100 * s.motoTop4 / s.motosRaced) : 0;
+    const finaleRate = s.entries ? Math.round(100 * s.finalsReached / s.entries) : 0;
+    const finalPhasesRate = s.entries ? Math.round(100 * s.finalPhasesReached / s.entries) : 0;
+
+    const gateEntries = Object.entries(s.gateResults)
+      .map(([g, rs]) => ({ gate: +g, avg: rs.reduce((a, b) => a + b, 0) / rs.length, count: rs.length }))
+      .filter(x => x.count >= 2)
+      .sort((a, b) => a.avg - b.avg);
+    const bestGate = gateEntries[0] ?? null;
+    const worstGate = gateEntries.length > 1 ? gateEntries[gateEntries.length - 1] : null;
     const topTenRate = s.pctCount ? Math.round(100 * s.topTen / s.pctCount) : 0;
     const topQuarterRate = s.pctCount ? Math.round(100 * s.topQuarter / s.pctCount) : 0;
     const dateRange = s.firstDate
@@ -1902,14 +1940,33 @@
         <div class="stat-group">
           <h3 class="stat-group-title">Manches &amp; finales</h3>
           <div class="stats">
-            <div class="stat peach" title="Nombre de catégories où une phase de finale a effectivement été disputée.">
-              <div class="k">Finales</div><div class="v">${s.finalsReached}</div><div class="sub">${s.finalWins} gagnée(s), ${s.finalPodiums} podium(s)</div>
+            <div class="stat lilac" title="Pourcentage de manches terminées dans les 4 premières places, sur le total de manches disputées.">
+              <div class="k">Manches top 4</div><div class="v">${motoTop4Rate}%</div><div class="sub">${s.motoTop4}/${s.motosRaced} · ${motoRate}% de victoires</div>
             </div>
-            <div class="stat lilac" title="Manches (motos) gagnées sur le total de manches disputées, toutes catégories confondues.">
-              <div class="k">Manches</div><div class="v">${s.motoWins}/${s.motosRaced}</div><div class="sub">${motoRate}% de manches gagnées</div>
+            ${s.entries ? `<div class="stat sky" title="Pourcentage d'engagements où au moins une phase éliminatoire (32ème, 16ème, 8ème, quart, demi ou finale) a été atteinte.">
+              <div class="k">Phases finales</div><div class="v">${finalPhasesRate}%</div><div class="sub">${s.finalPhasesReached}/${s.entries} engagements</div>
+            </div>` : ''}
+            <div class="stat peach" title="Pourcentage d'engagements où la finale a été atteinte.">
+              <div class="k">Finales</div><div class="v">${finaleRate}%</div><div class="sub">${s.finalsReached}/${s.entries} · ${s.finalWins} gagnée(s)</div>
             </div>
           </div>
         </div>
+        ${gateEntries.length ? `<div class="stat-group">
+          <h3 class="stat-group-title">Portes de départ <span style="font-size:11px;font-weight:normal;opacity:0.6">(manches uniquement)</span></h3>
+          <div class="stats">
+            ${bestGate ? `<div class="stat mint" title="Porte depuis laquelle le résultat moyen en manche est le meilleur (sur ${bestGate.count} course(s)).">
+              <div class="k">Meilleure porte</div><div class="v">#${bestGate.gate}</div><div class="sub">moy. ${bestGate.avg.toFixed(1)} · ${bestGate.count} course(s)</div>
+            </div>` : ''}
+            ${worstGate ? `<div class="stat peach" title="Porte depuis laquelle le résultat moyen en manche est le moins bon (sur ${worstGate.count} course(s)).">
+              <div class="k">Porte difficile</div><div class="v">#${worstGate.gate}</div><div class="sub">moy. ${worstGate.avg.toFixed(1)} · ${worstGate.count} course(s)</div>
+            </div>` : ''}
+            <div class="stat grape" title="Répartition des résultats par porte de départ (minimum 2 courses par porte).">
+              <div class="k">Toutes portes</div>
+              <div class="v" style="font-size:13px; padding-top:4px">${gateEntries.map(x => `#${x.gate} → ${x.avg.toFixed(1)}`).join(' · ')}</div>
+              <div class="sub">${gateEntries.reduce((a, x) => a + x.count, 0)} courses analysées</div>
+            </div>
+          </div>
+        </div>` : ''}
         <div class="stat-group">
           <h3 class="stat-group-title">Contexte</h3>
           <div class="stats">
