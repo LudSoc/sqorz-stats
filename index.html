@@ -1012,7 +1012,7 @@
 </main>
 
 <footer>
-  <span>Données issues de <a href="https://sqorz.com" target="_blank" rel="noopener noreferrer">Sqorz</a></span>
+  <span>Données issues de <a href="https://our.sqorz.com/orgs" target="_blank" rel="noopener noreferrer">Sqorz</a></span>
   <span class="footer-sep">·</span>
   <span>© <span id="footerYear"></span></span>
 </footer>
@@ -1051,7 +1051,8 @@
   // --- Cache localStorage des réponses Sqorz ---
   const CACHE_KEY = 'sqorzCache';
   const CACHE_TTL_STATIC = 24 * 60 * 60 * 1000;   // 24h pour /json/region
-  const CACHE_TTL_DYNAMIC = 60 * 60 * 1000;       // 1h pour /json/org, /json/event et /json/series
+  const CACHE_TTL_DYNAMIC = 60 * 60 * 1000;       // 1h pour /json/org et /json/series
+  const CACHE_TTL_FROZEN = 30 * 24 * 60 * 60 * 1000; // 30j pour événements passés (immuables)
   const CACHE_MAX_ENTRIES = 250;
   const _cache = (() => {
     try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch { return {}; }
@@ -1066,13 +1067,15 @@
       try { localStorage.setItem(CACHE_KEY, JSON.stringify(_cache)); } catch {}
     }
   }
-  function ttlFor(path) {
-    return path.startsWith('/json/region/') ? CACHE_TTL_STATIC : CACHE_TTL_DYNAMIC;
+  function ttlFor(path, eventDate) {
+    if (path.startsWith('/json/region/')) return CACHE_TTL_STATIC;
+    if (eventDate && eventDate < new Date().toISOString().slice(0, 10)) return CACHE_TTL_FROZEN;
+    return CACHE_TTL_DYNAMIC;
   }
-  async function fetchJsonCached(path, signal) {
+  async function fetchJsonCached(path, signal, eventDate) {
     const now = Date.now();
     const entry = _cache[path];
-    if (entry && (now - entry.t) < ttlFor(path)) return entry.v;
+    if (entry && (now - entry.t) < ttlFor(path, eventDate)) return entry.v;
     const v = await fetchJson(path, signal);
     _cache[path] = { v, t: now };
     const keys = Object.keys(_cache);
@@ -1461,7 +1464,7 @@
           if (signal.aborted) break;
           const item = eventQueue.shift();
           try {
-            const detail = await fetchJsonCached('/json/event/' + encodeURIComponent(item.event.eventId), signal);
+            const detail = await fetchJsonCached('/json/event/' + encodeURIComponent(item.event.eventId), signal, item.event.eventEndDate || item.event.eventDate);
             lastEventData.set(item.event.eventId, { account: item.account, event: item.event, detail });
             const classRanks = detail.classRanks || [];
             for (const cls of classRanks) {
