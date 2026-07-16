@@ -596,6 +596,64 @@
   }
   :root.dark .tally-on{color:#bfe6d0}
 
+  /* Carte pilote */
+  .pilot-card{
+    display:flex; align-items:center; gap:20px;
+    padding:22px 24px; margin-bottom:18px;
+    background:linear-gradient(135deg, var(--card) 55%, color-mix(in srgb, var(--pilot-color, var(--accent)) 8%, var(--card)));
+    border-left:4px solid var(--pilot-color, var(--accent));
+    position:relative; overflow:hidden;
+  }
+  .pilot-card::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(circle at 90% 50%, color-mix(in srgb, var(--pilot-color, var(--accent)) 7%, transparent), transparent 65%);
+  }
+  .pilot-avatar{
+    width:64px; height:64px; border-radius:50%;
+    display:grid; place-items:center;
+    font-weight:800; font-size:22px; letter-spacing:-.5px;
+    color:#fff; flex-shrink:0;
+    background:var(--pilot-color, var(--accent));
+    box-shadow:0 3px 14px rgba(0,0,0,.20);
+    position:relative;
+  }
+  .pilot-info{ flex:1; min-width:0; position:relative }
+  .pilot-name{
+    font-size:22px; font-weight:700; color:var(--ink);
+    line-height:1.15; margin-bottom:8px; letter-spacing:-.3px;
+  }
+  .pilot-badges{ display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+  .pilot-plate{
+    font-size:12px; font-weight:700; letter-spacing:.4px;
+    padding:4px 12px; border-radius:99px;
+    background:var(--pilot-color, var(--accent)); color:#fff;
+    font-variant-numeric:tabular-nums;
+  }
+  .pilot-club{
+    font-size:12.5px; font-weight:500; color:var(--ink-2);
+    padding:4px 12px; border-radius:99px;
+    background:var(--card-soft); border:1px solid var(--line);
+  }
+  .pilot-qs{
+    display:flex; gap:20px; flex-shrink:0; position:relative;
+    border-left:1px solid var(--line); padding-left:20px;
+  }
+  .pilot-qs-item{ text-align:center; min-width:44px }
+  .pilot-qs-item .qv{
+    font-size:22px; font-weight:700; color:var(--ink);
+    line-height:1; font-variant-numeric:tabular-nums;
+  }
+  .pilot-qs-item .qk{
+    font-size:10px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.5px; margin-top:3px;
+  }
+  @media (max-width:640px){
+    .pilot-card{ gap:14px; padding:16px }
+    .pilot-avatar{ width:52px; height:52px; font-size:18px }
+    .pilot-name{ font-size:18px; margin-bottom:6px }
+    .pilot-qs{ display:none }
+  }
+
   /* Onglets mobiles — masqués sur desktop (scroll continu) */
   .tabs-nav{display:none}
   .tab-panel{display:block}
@@ -760,6 +818,105 @@
     .stats-hero{grid-template-columns:1fr}
     .stats{grid-template-columns:1fr}
   }
+
+  /* Comparaison de pilotes */
+  .compare-section{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 20px; margin-bottom:18px; box-shadow:var(--shadow);
+  }
+  .compare-section-hd{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .compare-section-hd span{
+    font-size:12px; font-weight:600; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.5px;
+  }
+  .compare-close-btn{
+    background:none; border:none; color:var(--muted); cursor:pointer;
+    font-size:16px; padding:3px 8px; border-radius:6px; line-height:1;
+  }
+  .compare-close-btn:hover{color:var(--bad); background:color-mix(in srgb,var(--bad) 10%, transparent)}
+  .compare-pilots{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;
+  }
+  @media(max-width:520px){.compare-pilots{grid-template-columns:1fr}}
+  .compare-pilot{
+    display:flex; align-items:center; gap:10px; padding:10px 12px;
+    background:var(--card-soft); border-radius:10px; border:1px solid var(--line);
+  }
+  .cav{
+    width:42px; height:42px; border-radius:50%; flex-shrink:0;
+    background:var(--cp-color, var(--accent)); color:#fff;
+    display:grid; place-items:center; font-weight:800; font-size:12px; letter-spacing:.3px;
+  }
+  .cpname{font-weight:700; font-size:13px; color:var(--ink); line-height:1.2}
+  .cpsub{font-size:11px; color:var(--muted); margin-top:2px}
+  .compare-rows{display:flex; flex-direction:column; gap:5px}
+  .compare-row{display:grid; grid-template-columns:52px 1fr 52px; gap:8px; align-items:center}
+  .cv{font-size:13px; font-weight:700; color:var(--ink-2); font-variant-numeric:tabular-nums}
+  .cv.p1{text-align:right}
+  .cv.p2{text-align:left}
+  .cv.better{color:var(--ink)}
+  .cbar-wrap{
+    position:relative; height:20px; border-radius:99px;
+    background:var(--card-soft); border:1px solid var(--line); overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .cbar-p1{
+    position:absolute; right:50%; top:0; bottom:0; border-radius:99px;
+    background:var(--cp1, var(--teal)); opacity:.65;
+  }
+  .cbar-p2{
+    position:absolute; left:50%; top:0; bottom:0; border-radius:99px;
+    background:var(--cp2, var(--berry)); opacity:.65;
+  }
+  .clabel{
+    position:relative; z-index:1; font-size:10px; font-weight:600;
+    color:var(--muted); text-transform:uppercase; letter-spacing:.4px; white-space:nowrap;
+  }
+  @media(max-width:640px){
+    .compare-row{grid-template-columns:38px 1fr 38px; gap:4px}
+    .cv{font-size:11px}
+    .clabel{font-size:9px}
+  }
+  @media(max-width:380px){
+    .compare-row{grid-template-columns:1fr; grid-template-rows:auto auto auto; gap:4px}
+    .cv.p1{text-align:left}
+    .cv.p2{text-align:left}
+    .cbar-wrap{order:-1}
+  }
+  .compare-input-card{padding:14px 18px}
+  .compare-input-row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap}
+  .compare-input-row .field{flex:1 1 180px}
+
+  /* Bouton retour en haut */
+  #backToTop{
+    position:fixed; bottom:24px; right:24px; z-index:100;
+    width:44px; height:44px; border-radius:50%; border:none;
+    background:var(--accent); color:#fff;
+    display:grid; place-items:center;
+    cursor:pointer; font-size:20px; line-height:1;
+    box-shadow:0 4px 16px rgba(0,0,0,.22);
+    opacity:0; pointer-events:none;
+    transition:opacity .2s, transform .2s, background .15s;
+    transform:translateY(8px);
+  }
+  #backToTop.visible{ opacity:1; pointer-events:auto; transform:translateY(0) }
+  #backToTop:hover{ background:var(--accent-hi) }
+  #backToTop:active{ transform:translateY(2px) }
+  @media (max-width:640px){
+    #backToTop{ bottom:16px; right:16px; width:40px; height:40px; font-size:18px }
+  }
+  footer{
+    text-align:center; padding:28px 24px 36px;
+    font-size:12.5px; color:var(--muted);
+    border-top:1px solid var(--line);
+    display:flex; justify-content:center; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  footer a{ color:var(--accent); text-decoration:none }
+  footer a:hover{ text-decoration:underline }
+  .footer-sep{ color:var(--line-strong) }
 </style>
 </head>
 <body>
@@ -834,10 +991,32 @@
         <option value="rank-desc">Rang final (moins bon → meilleur)</option>
       </select>
     </div>
+    <div class="field" style="flex:0 0 auto; align-self:flex-end">
+      <button type="button" id="compareToggleBtn" class="btn" style="white-space:nowrap" disabled>⚡ Comparer pilotes</button>
+    </div>
+  </div>
+
+  <div class="card compare-input-card" id="compareInputCard" hidden>
+    <div class="compare-input-row">
+      <div class="field">
+        <label for="compareInp">2ᵉ pilote à comparer</label>
+        <input id="compareInp" class="control" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off" list="pilotsList">
+      </div>
+      <button type="button" class="btn" id="compareSearchBtn">Comparer</button>
+      <button type="button" class="btn btn-danger" id="compareCloseBtn" style="padding:11px 14px" title="Fermer">✕</button>
+    </div>
+    <div class="status" id="compareStatus" role="status" aria-live="polite"></div>
   </div>
 
   <div id="results" aria-live="polite" aria-busy="false"></div>
 </main>
+
+<footer>
+  <span>Données issues de <a href="https://sqorz.com" target="_blank" rel="noopener noreferrer">Sqorz</a></span>
+  <span class="footer-sep">·</span>
+  <span>© <span id="footerYear"></span></span>
+</footer>
+<script>document.getElementById('footerYear').textContent = new Date().getFullYear();</script>
 
 <script>
 (() => {
@@ -1180,6 +1359,7 @@
       nameInp.disabled = false;
       clubAllBtn.disabled = false;
       clubNoneBtn.disabled = false;
+      updateSearchEnabled();
       setStatus('');
     } catch (e) {
       setStatus('Impossible de charger la liste : ' + humanError(e), true);
@@ -1199,6 +1379,14 @@
 
     pushStateUrl();
     saveRecentSearch(query, [...selectedCodes]);
+
+    lastEventData.clear();
+    lastCompareMatches = [];
+    compareActive = false;
+    document.getElementById('compareInputCard').hidden = true;
+    document.getElementById('compareInp').value = '';
+    document.getElementById('compareStatus').textContent = '';
+    document.getElementById('compareToggleBtn').disabled = true;
 
     currentAbort = new AbortController();
     const signal = currentAbort.signal;
@@ -1274,6 +1462,7 @@
           const item = eventQueue.shift();
           try {
             const detail = await fetchJsonCached('/json/event/' + encodeURIComponent(item.event.eventId), signal);
+            lastEventData.set(item.event.eventId, { account: item.account, event: item.event, detail });
             const classRanks = detail.classRanks || [];
             for (const cls of classRanks) {
               const summaries = cls.competitorRankSummaries || [];
@@ -1386,6 +1575,7 @@
       lastMatches = matches;
       lastSeriesMatches = seriesMatches;
       resultsFiltersEl.hidden = (matches.length + seriesMatches.length) === 0;
+      document.getElementById('compareToggleBtn').disabled = (matches.length + seriesMatches.length) === 0;
       renderFiltered();
 
       if (matches.length || seriesMatches.length) {
@@ -1413,6 +1603,9 @@
 
   let lastMatches = [];
   let lastSeriesMatches = [];
+  let lastEventData = new Map(); // eventId → {account, event, detail}
+  let lastCompareMatches = [];
+  let compareActive = false;
   function seriesYears(sm) {
     const set = new Set();
     for (const e of sm.rankEvents || []) {
@@ -2105,7 +2298,207 @@
       `;
     }).join('');
 
-    return `<h2 class="section-title">Championnats <span class="meta">${seriesMatches.length} classement(s) de série</span></h2>${cards}`;
+    return `<h2 class="section-title">Championnats <span class="meta">${seriesMatches.length} classement(s) de série</span><button type="button" class="btn btn-ghost section-toggle" id="seriesToggle" aria-controls="seriesWrap">Masquer</button></h2><div id="seriesWrap" role="region" aria-label="Championnats">${cards}</div>`;
+  }
+
+  const PILOT_COLORS = [
+    'var(--teal)', 'var(--accent)', 'var(--lilac)', 'var(--berry)',
+    'var(--mint)', 'var(--coral)', 'var(--sky)', 'var(--grape)',
+    'var(--peach)', 'var(--blueberry)',
+  ];
+  function avatarColor(name) {
+    let hash = 0;
+    for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
+    return PILOT_COLORS[Math.abs(hash) % PILOT_COLORS.length];
+  }
+
+  function renderPilotCard(matches, seriesMatches, stats) {
+    const sortedEv = [...matches].sort((a, b) =>
+      (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
+
+    const baseCmp = (sortedEv.find(m => m.competitor.firstName || m.competitor.lastName)
+      || seriesMatches.find(m => m.competitor.firstName || m.competitor.lastName))?.competitor;
+    if (!baseCmp) return '';
+
+    const firstName = baseCmp.firstName || '';
+    const lastName  = baseCmp.lastName  || '';
+    const fullName  = `${firstName} ${lastName}`.trim();
+    if (!fullName) return '';
+
+    const plate = sortedEv.find(m => m.competitor.plate)?.competitor.plate || null;
+    const club  = sortedEv.find(m => m.competitor.groupName)?.competitor.groupName
+               || seriesMatches.find(m => m.competitor.groupName)?.competitor.groupName
+               || null;
+
+    const initials = [firstName[0], lastName[0]].filter(Boolean).join('').toUpperCase() || '?';
+    const color    = avatarColor(fullName.toLowerCase());
+
+    // Avatar : numéro de plaque si disponible, initiales sinon
+    const avatarInner = plate
+      ? `<span style="font-size:${plate.length <= 3 ? 15 : 12}px;font-weight:900;letter-spacing:.5px">${escape(plate)}</span>`
+      : escape(initials);
+
+    const qsItems = stats ? [
+      { v: stats.entries, k: 'Engagements' },
+      { v: stats.wins,    k: 'Victoires'   },
+      { v: stats.podiums, k: 'Podiums'     },
+    ] : [];
+    const qsHtml = qsItems.length ? `
+      <div class="pilot-qs" aria-hidden="true">
+        ${qsItems.map(s => `<div class="pilot-qs-item"><div class="qv">${s.v}</div><div class="qk">${escape(s.k)}</div></div>`).join('')}
+      </div>` : '';
+
+    return `
+      <div class="pilot-card card" style="--pilot-color:${color}" role="region" aria-label="Identité du pilote">
+        <div class="pilot-avatar" aria-hidden="true">${avatarInner}</div>
+        <div class="pilot-info">
+          <div class="pilot-name">${escape(fullName)}</div>
+          <div class="pilot-badges">
+            ${club ? `<span class="pilot-club" title="Club / groupe">${escape(club)}</span>` : ''}
+          </div>
+        </div>
+        ${qsHtml}
+      </div>`;
+  }
+
+  function searchCompare() {
+    const query = document.getElementById('compareInp').value.trim();
+    const st = document.getElementById('compareStatus');
+    if (!query) { st.textContent = 'Saisir un nom.'; return; }
+    if (!lastEventData.size) { st.textContent = 'Lance d\'abord une recherche principale.'; return; }
+    const queryTokens = norm(query).split(' ').filter(Boolean);
+    const found = [];
+    for (const { account, event, detail } of lastEventData.values()) {
+      for (const cls of (detail.classRanks || [])) {
+        const summaries = cls.competitorRankSummaries || [];
+        for (const c of summaries) {
+          if (matchPilot(c.firstName, c.lastName, queryTokens))
+            found.push({ account, event, cls, competitor: c, totalParticipants: summaries.length });
+        }
+      }
+    }
+    if (!found.length) {
+      st.textContent = `Aucun résultat pour « ${query} » dans les mêmes organisations.`;
+      return;
+    }
+    st.textContent = '';
+    lastCompareMatches = found;
+    compareActive = true;
+    renderFiltered();
+  }
+
+  function renderCompareSection(p1Matches, p1Stats) {
+    if (!compareActive || !lastCompareMatches.length || !p1Stats) return '';
+
+    // Pilote 2 : filtrer par année si nécessaire, même logique que le pilote principal
+    const y = yearSel.value;
+    const compareFiltered = !y ? lastCompareMatches
+      : lastCompareMatches.filter(m => (m.event.eventDate || m.event.eventEndDate || '').startsWith(y + '-'));
+    if (!compareFiltered.length) {
+      const p2name = (() => {
+        const c = [...lastCompareMatches].sort((a,b) =>
+          (b.event.eventDate||'').localeCompare(a.event.eventDate||''))
+          .find(m => m.competitor.firstName || m.competitor.lastName)?.competitor;
+        return c ? `${c.firstName||''} ${c.lastName||''}`.trim() : 'le 2ᵉ pilote';
+      })();
+      return `<div class="compare-section" id="compareSection">
+        <div class="compare-section-hd">
+          <span>Comparaison</span>
+          <button type="button" class="compare-close-btn" id="compareCloseResult" title="Fermer">✕</button>
+        </div>
+        <div class="empty" style="padding:18px 0 4px">Aucun résultat pour ${escape(p2name)} en ${escape(y)}.</div>
+      </div>`;
+    }
+    const p2Sorted = [...compareFiltered].sort((a, b) =>
+      (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
+    const p2PriCmp = p2Sorted.find(m => m.competitor.firstName || m.competitor.lastName)?.competitor;
+    const p2Key = p2PriCmp ? norm(`${p2PriCmp.firstName||''} ${p2PriCmp.lastName||''}`).trim() : null;
+    const p2Primary = p2Key
+      ? compareFiltered.filter(m => norm(`${m.competitor.firstName||''} ${m.competitor.lastName||''}`).trim() === p2Key)
+      : compareFiltered;
+    const p2Stats = computeStats(p2Primary);
+
+    // Identité
+    const p1Sorted = [...p1Matches].sort((a, b) => (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
+    const p1c = p1Sorted[0]?.competitor;
+    const p2c = p2Sorted[0]?.competitor;
+    const p1Name = p1c ? `${p1c.firstName||''} ${p1c.lastName||''}`.trim() : '—';
+    const p2Name = p2c ? `${p2c.firstName||''} ${p2c.lastName||''}`.trim() : '—';
+    const p1Plate = p1Sorted.find(m => m.competitor.plate)?.competitor.plate || null;
+    const p2Plate = p2Sorted.find(m => m.competitor.plate)?.competitor.plate || null;
+    const p1Club = p1Sorted.find(m => m.competitor.groupName)?.competitor.groupName || null;
+    const p2Club = p2Sorted.find(m => m.competitor.groupName)?.competitor.groupName || null;
+    const p1Color = avatarColor(p1Name.toLowerCase());
+    const _p2ColorRaw = avatarColor(p2Name.toLowerCase());
+    const p2Color = _p2ColorRaw === p1Color
+      ? PILOT_COLORS[(PILOT_COLORS.indexOf(p1Color) + 1) % PILOT_COLORS.length]
+      : _p2ColorRaw;
+    const avInner = (cmp, plate) => plate
+      ? `<span style="font-size:${plate.length<=3?13:11}px;font-weight:900;letter-spacing:.5px">${escape(plate)}</span>`
+      : escape([cmp?.firstName?.[0], cmp?.lastName?.[0]].filter(Boolean).join('').toUpperCase() || '?');
+
+    // Lignes de stats
+    const mtr1 = p1Stats.motosRaced ? Math.round(100*p1Stats.motoTop4/p1Stats.motosRaced) : 0;
+    const mtr2 = p2Stats.motosRaced ? Math.round(100*p2Stats.motoTop4/p2Stats.motosRaced) : 0;
+    const fin1 = p1Stats.entries ? Math.round(100*p1Stats.finalsReached/p1Stats.entries) : 0;
+    const fin2 = p2Stats.entries ? Math.round(100*p2Stats.finalsReached/p2Stats.entries) : 0;
+    const pod1 = p1Stats.entries ? Math.round(100*p1Stats.podiums/p1Stats.entries) : 0;
+    const pod2 = p2Stats.entries ? Math.round(100*p2Stats.podiums/p2Stats.entries) : 0;
+
+    const rows = [
+      { label:'Engagements',    v1:p1Stats.entries,  v2:p2Stats.entries,  hi:true  },
+      { label:'Victoires',      v1:p1Stats.wins,     v2:p2Stats.wins,     hi:true  },
+      { label:'Podiums',        v1:p1Stats.podiums,  v2:p2Stats.podiums,  hi:true  },
+      { label:'% podium',       v1:pod1,             v2:pod2,             hi:true,  s:'%' },
+      { label:'Top 10%',        v1:p1Stats.topTen,   v2:p2Stats.topTen,   hi:true  },
+      { label:'Percentile moy.',v1:p1Stats.avgPct!=null?Math.round(p1Stats.avgPct):null, v2:p2Stats.avgPct!=null?Math.round(p2Stats.avgPct):null, hi:false, s:'%' },
+      { label:'Meilleur rang',  v1:p1Stats.bestRank, v2:p2Stats.bestRank, hi:false },
+      { label:'Rang moyen',     v1:p1Stats.avgRank!=null?+p1Stats.avgRank.toFixed(1):null, v2:p2Stats.avgRank!=null?+p2Stats.avgRank.toFixed(1):null, hi:false },
+      { label:'Finales',        v1:fin1,             v2:fin2,             hi:true,  s:'%' },
+      { label:'Manches top 4',  v1:mtr1,             v2:mtr2,             hi:true,  s:'%' },
+    ];
+
+    function barW(v1, v2, hi) {
+      if (v1 == null || v2 == null || (v1 === 0 && v2 === 0)) return [25, 25];
+      let b1 = hi ? v1 : (v1 ? 1/v1 : 0);
+      let b2 = hi ? v2 : (v2 ? 1/v2 : 0);
+      const t = b1 + b2;
+      return t ? [Math.round(b1/t*50), Math.round(b2/t*50)] : [25, 25];
+    }
+
+    const rowsHtml = rows.map(r => {
+      const [w1, w2] = barW(r.v1, r.v2, r.hi);
+      const p1w = r.v1 != null && r.v2 != null && (r.hi ? r.v1 > r.v2 : r.v1 < r.v2);
+      const p2w = r.v1 != null && r.v2 != null && (r.hi ? r.v2 > r.v1 : r.v2 < r.v1);
+      const fmt = v => v == null ? '—' : `${v}${r.s||''}`;
+      return `<div class="compare-row">
+        <div class="cv p1${p1w?' better':''}">${escape(fmt(r.v1))}</div>
+        <div class="cbar-wrap" style="--cp1:${p1Color};--cp2:${p2Color}">
+          <div class="cbar-p1" style="width:${w1}%"></div>
+          <div class="cbar-p2" style="width:${w2}%"></div>
+          <span class="clabel">${escape(r.label)}</span>
+        </div>
+        <div class="cv p2${p2w?' better':''}">${escape(fmt(r.v2))}</div>
+      </div>`;
+    }).join('');
+
+    return `<div class="compare-section" id="compareSection">
+      <div class="compare-section-hd">
+        <span>Comparaison</span>
+        <button type="button" class="compare-close-btn" id="compareCloseResult" title="Fermer">✕</button>
+      </div>
+      <div class="compare-pilots">
+        <div class="compare-pilot">
+          <div class="cav" style="--cp-color:${p1Color}">${avInner(p1c, p1Plate)}</div>
+          <div><div class="cpname">${escape(p1Name)}</div><div class="cpsub">${escape(p1Club||'—')}</div></div>
+        </div>
+        <div class="compare-pilot">
+          <div class="cav" style="--cp-color:${p2Color}">${avInner(p2c, p2Plate)}</div>
+          <div><div class="cpname">${escape(p2Name)}</div><div class="cpsub">${escape(p2Club||'—')}</div></div>
+        </div>
+      </div>
+      <div class="compare-rows">${rowsHtml}</div>
+    </div>`;
   }
 
   function render(matches, sortMode = 'date-desc', prevYearMatches = null, seriesMatches = []) {
@@ -2115,11 +2508,26 @@
     }
 
     const hasEventMatches = matches.length > 0;
-    const stats = hasEventMatches ? computeStats(matches) : null;
-    const prevStats = hasEventMatches && prevYearMatches ? computeStats(prevYearMatches) : null;
+
+    // Pilote principal = match le plus récent ; on filtre tout sur lui si plusieurs noms distincts
+    const sortedForPrimary = [...matches].sort((a, b) =>
+      (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
+    const primaryCmp = sortedForPrimary.find(m => m.competitor.firstName || m.competitor.lastName)?.competitor;
+    const primaryKey = primaryCmp
+      ? norm(`${primaryCmp.firstName || ''} ${primaryCmp.lastName || ''}`).trim()
+      : null;
+    const primaryMatches = primaryKey
+      ? matches.filter(m => norm(`${m.competitor.firstName || ''} ${m.competitor.lastName || ''}`).trim() === primaryKey)
+      : matches;
+    const primaryPrev = primaryKey && prevYearMatches
+      ? prevYearMatches.filter(m => norm(`${m.competitor.firstName || ''} ${m.competitor.lastName || ''}`).trim() === primaryKey)
+      : prevYearMatches;
+
+    const stats = hasEventMatches ? computeStats(primaryMatches) : null;
+    const prevStats = hasEventMatches && primaryPrev?.length ? computeStats(primaryPrev) : null;
 
     const eventGroups = new Map();
-    for (const m of matches) {
+    for (const m of primaryMatches) {
       const k = m.event.eventId;
       if (!eventGroups.has(k)) eventGroups.set(k, { event: m.event, account: m.account, items: [] });
       eventGroups.get(k).items.push(m);
@@ -2171,13 +2579,13 @@
       panels.stats.push(`<h2 class="section-title">Statistiques <span class="meta">${statsMeta}</span><button type="button" class="btn btn-ghost section-toggle" id="statsToggle" aria-controls="statsWrap">Masquer</button></h2>`);
       panels.stats.push(`<div id="statsWrap" role="region" aria-label="Statistiques">${renderStats(stats, prevStats)}</div>`);
       panels.stats.push(`<h2 class="section-title">Graphiques <span class="meta">visualisations des résultats</span><button type="button" class="btn btn-ghost section-toggle" id="chartsToggle" aria-controls="chartsWrap">Masquer</button></h2>`);
-      panels.stats.push(`<div id="chartsWrap" role="region" aria-label="Graphiques"><div class="charts-grid">${renderCharts(matches)}</div></div>`);
+      panels.stats.push(`<div id="chartsWrap" role="region" aria-label="Graphiques"><div class="charts-grid">${renderCharts(primaryMatches)}</div></div>`);
     }
     if (seriesMatches && seriesMatches.length) {
       panels.series.push(renderChampionships(seriesMatches));
     }
     if (hasEventMatches) {
-      panels.history.push(`<h2 class="section-title">Événements <span class="meta">${sortedEvents.length} événement(s), ${sortLabel}</span></h2>`);
+      panels.history.push(`<h2 class="section-title">Événements <span class="meta">${sortedEvents.length} événement(s), ${sortLabel}</span><button type="button" class="btn btn-ghost section-toggle" id="historyToggle" aria-controls="historyWrap">Masquer</button></h2><div id="historyWrap" role="region" aria-label="Événements">`);
     }
 
     const tabsAvailable = [];
@@ -2186,6 +2594,10 @@
     if (panels.history.length) tabsAvailable.push({ key: 'history', label: 'Événements', count: sortedEvents.length });
 
     const html = [];
+    if (compareActive && lastCompareMatches.length) {
+      html.push(renderCompareSection(primaryMatches, stats));
+    }
+    html.push(renderPilotCard(primaryMatches, seriesMatches, stats));
     if (tabsAvailable.length > 1) {
       const navHtml = tabsAvailable.map((t, i) => {
         const badge = t.count != null ? ` <span class="tab-badge">${t.count}</span>` : '';
@@ -2261,14 +2673,16 @@
 
       html.push(`</div></div>`);
     }
-    if (panels.history.length) html.push(`</section>`);
+    if (panels.history.length) html.push(`</div></section>`);
     resultsEl.innerHTML = html.join('');
     applySectionVisibility();
   }
 
   const sectionState = {
-    stats:  { hidden: localStorage.getItem('statsHidden') === '1',  wrap: 'statsWrap',  btn: 'statsToggle',  key: 'statsHidden' },
-    charts: { hidden: localStorage.getItem('chartsHidden') === '1', wrap: 'chartsWrap', btn: 'chartsToggle', key: 'chartsHidden' },
+    stats:   { hidden: localStorage.getItem('statsHidden') === '1',   wrap: 'statsWrap',   btn: 'statsToggle',   key: 'statsHidden' },
+    charts:  { hidden: localStorage.getItem('chartsHidden') === '1',  wrap: 'chartsWrap',  btn: 'chartsToggle',  key: 'chartsHidden' },
+    series:  { hidden: localStorage.getItem('seriesHidden') === '1',  wrap: 'seriesWrap',  btn: 'seriesToggle',  key: 'seriesHidden' },
+    history: { hidden: localStorage.getItem('historyHidden') === '1', wrap: 'historyWrap', btn: 'historyToggle', key: 'historyHidden' },
   };
   function applySectionVisibility() {
     for (const s of Object.values(sectionState)) {
@@ -2281,6 +2695,15 @@
     }
   }
   resultsEl.addEventListener('click', e => {
+    if (e.target.closest('#compareCloseResult')) {
+      lastCompareMatches = [];
+      compareActive = false;
+      document.getElementById('compareInp').value = '';
+      document.getElementById('compareStatus').textContent = '';
+      document.getElementById('compareInputCard').hidden = true;
+      renderFiltered();
+      return;
+    }
     const tabBtn = e.target.closest('[data-tab-btn]');
     if (tabBtn && resultsEl.contains(tabBtn)) {
       const key = tabBtn.dataset.tabBtn;
@@ -2383,6 +2806,24 @@
     updateSearchEnabled();
   });
 
+  document.getElementById('compareToggleBtn').addEventListener('click', () => {
+    const card = document.getElementById('compareInputCard');
+    card.hidden = !card.hidden;
+    if (!card.hidden) document.getElementById('compareInp').focus();
+  });
+  document.getElementById('compareSearchBtn').addEventListener('click', searchCompare);
+  document.getElementById('compareInp').addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchCompare();
+  });
+  document.getElementById('compareCloseBtn').addEventListener('click', () => {
+    document.getElementById('compareInputCard').hidden = true;
+    lastCompareMatches = [];
+    compareActive = false;
+    document.getElementById('compareInp').value = '';
+    document.getElementById('compareStatus').textContent = '';
+    renderFiltered();
+  });
+
   nameInp.addEventListener('input', updateSearchEnabled);
   nameInp.addEventListener('keydown', e => { if (e.key === 'Enter' && !searchBtn.disabled) searchBtn.click(); });
   searchBtn.addEventListener('click', searchSelected);
@@ -2458,6 +2899,16 @@
     }
   })();
 })();
+</script>
+<button id="backToTop" aria-label="Retour en haut" title="Retour en haut">↑</button>
+<script>
+  (() => {
+    const btn = document.getElementById('backToTop');
+    window.addEventListener('scroll', () => {
+      btn.classList.toggle('visible', window.scrollY > 300);
+    }, { passive: true });
+    btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  })();
 </script>
 </body>
 </html>
