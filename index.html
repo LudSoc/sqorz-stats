@@ -254,17 +254,7 @@
   .stat.stat-hero .v{font-size:34px}
   .stat.stat-hero .sub{font-size:12.5px}
   .stat[title]{cursor:help}
-  .stat .delta{
-    display:inline-flex; align-items:center; gap:3px;
-    margin-left:8px; font-size:12px; font-weight:600;
-    padding:2px 8px; border-radius:99px; vertical-align:middle;
-    font-variant-numeric:tabular-nums;
-  }
-  .stat .delta.up{background:color-mix(in srgb,var(--good) 28%, transparent); color:#1f5135}
-  .stat .delta.down{background:color-mix(in srgb,var(--bad) 28%, transparent); color:#7a2929}
-  .stat .delta.flat{background:var(--card-soft); color:var(--muted); border:1px solid var(--line)}
-  :root.dark .stat .delta.up{color:#a8e0c2}
-  :root.dark .stat .delta.down{color:#f5b8b8}
+
   .stats{display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px; margin-bottom:0}
   .stat{
     background:var(--card); border:1px solid var(--line); border-radius:12px;
@@ -1035,8 +1025,7 @@
     <div class="grid">
       <div class="field col-name">
         <label for="nameInp">Nom du pilote</label>
-        <input id="nameInp" class="control" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off" list="pilotsList" aria-describedby="nameHint" disabled>
-        <datalist id="pilotsList"></datalist>
+        <input id="nameInp" class="control" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off" aria-describedby="nameHint" disabled>
         <span class="hint" id="nameHint">Insensible à la casse et aux accents.</span>
       </div>
       <div class="field col-btn">
@@ -1074,7 +1063,7 @@
     <div class="compare-input-row">
       <div class="field">
         <label for="compareInp">2ᵉ pilote à comparer</label>
-        <input id="compareInp" class="control" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off" list="pilotsList">
+        <input id="compareInp" class="control" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off">
       </div>
       <button type="button" class="btn" id="compareSearchBtn">Comparer</button>
       <button type="button" class="btn btn-danger" id="compareCloseBtn" style="padding:11px 14px" title="Fermer">✕</button>
@@ -1376,30 +1365,6 @@
     wrap.innerHTML = `<span class="recent-label">Récentes</span>${chips}<button type="button" class="recent-clear" id="recentClearBtn">Effacer</button>`;
   }
 
-  // --- Autocomplete : pilotes déjà vus dans les résultats ---
-  const PILOTS_KEY = 'knownPilots';
-  const PILOTS_MAX = 300;
-  function getKnownPilots() {
-    try { return JSON.parse(localStorage.getItem(PILOTS_KEY) || '[]'); } catch { return []; }
-  }
-  function saveKnownPilots(newNames) {
-    if (!newNames.length) return;
-    const existing = new Set(getKnownPilots());
-    for (const n of newNames) {
-      const clean = (n || '').trim();
-      if (clean) existing.add(clean);
-    }
-    const arr = [...existing].sort((a, b) => a.localeCompare(b)).slice(0, PILOTS_MAX);
-    localStorage.setItem(PILOTS_KEY, JSON.stringify(arr));
-    renderPilotsDatalist();
-  }
-  function renderPilotsDatalist() {
-    const list = document.getElementById('pilotsList');
-    if (!list) return;
-    const pilots = getKnownPilots();
-    list.innerHTML = pilots.map(p => `<option value="${escape(p)}">`).join('');
-  }
-
   const escape = s => String(s ?? '').replace(/[&<>"']/g, c => (
     { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
   ));
@@ -1458,13 +1423,6 @@
               item.event.eventEndDate || item.event.eventDate
             );
             lastEventData.set(item.event.eventId, { account: item.account, event: item.event, detail });
-            // Mémorise tous les noms pour l'autocomplétion
-            for (const cls of (detail.classRanks || [])) {
-              for (const c of (cls.competitorRankSummaries || [])) {
-                const n = `${c.firstName||''} ${c.lastName||''}`.trim();
-                if (n) _bgPilotNames.add(n);
-              }
-            }
           } catch {}
           done++;
           setGlb(done, total);
@@ -1505,7 +1463,6 @@
       lastSeriesData = srByKey;
       lastSearchedCodes = new Set(accounts.map(a => a.accountCode));
       globalDataReady = true;
-      saveKnownPilots([..._bgPilotNames]);
       updateSearchEnabled();
       if (!silent) {
         setGlb(1, 1);
@@ -1519,7 +1476,6 @@
     }
   }
 
-  const _bgPilotNames = new Set();
   function setSearchMode(mode) {
     if (mode === 'cancel') {
       searchBtn.textContent = 'Annuler';
@@ -1880,12 +1836,6 @@
       renderFiltered();
       if (matches.length || seriesMatches.length) saveResultsCache(norm(nameInp.value.trim()), matches, seriesMatches);
 
-      if (matches.length || seriesMatches.length) {
-        const namesFromEvents = matches.map(m => `${m.competitor.firstName || ''} ${m.competitor.lastName || ''}`.trim());
-        const namesFromSeries = seriesMatches.map(m => `${m.competitor.firstName || ''} ${m.competitor.lastName || ''}`.trim());
-        const names = [...new Set([...namesFromEvents, ...namesFromSeries].filter(Boolean))];
-        if (names.length) saveKnownPilots(names);
-      }
     } catch (e) {
       setProgress(0, 0);
       resultsEl.innerHTML = '';
@@ -1928,16 +1878,7 @@
       return d.startsWith(y + '-');
     });
     const filteredSeries = !y ? lastSeriesMatches : lastSeriesMatches.filter(sm => seriesYears(sm).has(y));
-    let prevYearMatches = null;
-    if (y) {
-      const prevY = String(+y - 1);
-      const prev = lastMatches.filter(m => {
-        const d = m.event.eventDate || m.event.eventEndDate || '';
-        return d.startsWith(prevY + '-');
-      });
-      if (prev.length) prevYearMatches = prev;
-    }
-    render(filtered, sortSel.value, prevYearMatches, filteredSeries);
+    render(filtered, sortSel.value, filteredSeries);
   }
 
   function ordFr(n){ return n === 1 ? '1er' : `${n}e`; }
@@ -2362,7 +2303,7 @@
     ].join('');
   }
 
-  function renderStats(s, prev = null) {
+  function renderStats(s) {
     const podiumRate = s.entries ? Math.round(100 * s.podiums / s.entries) : 0;
     const winRate = s.entries ? Math.round(100 * s.wins / s.entries) : 0;
     const motoRate = s.motosRaced ? Math.round(100 * s.motoWins / s.motosRaced) : 0;
@@ -2382,38 +2323,25 @@
       ? (s.firstDate === s.lastDate ? fmtDate(s.firstDate) : `${fmtDate(s.firstDate)} → ${fmtDate(s.lastDate)}`)
       : '—';
 
-    function delta(curr, prevVal, opts = {}) {
-      if (prev == null) return '';
-      if (curr == null || prevVal == null || Number.isNaN(curr) || Number.isNaN(prevVal)) return '';
-      const d = +(curr - prevVal).toFixed(opts.decimals ?? 0);
-      if (d === 0) return `<span class="delta flat" title="Identique à l'année précédente">±0</span>`;
-      const better = opts.inverse ? d < 0 : d > 0;
-      const cls = better ? 'up' : 'down';
-      const sign = d > 0 ? '+' : '';
-      const arrow = better ? '▲' : '▼';
-      const valStr = opts.suffix ? `${sign}${d}${opts.suffix}` : `${sign}${d}`;
-      return `<span class="delta ${cls}" title="vs année précédente : ${valStr}">${arrow} ${valStr}</span>`;
-    }
-
     const heroCards = `
       <div class="stat stat-hero teal" title="Nombre d'engagements (un par catégorie courue) sur la période. Compte plusieurs fois un même événement si plusieurs catégories.">
         <div class="k">Engagements</div>
-        <div class="v">${s.entries}${delta(s.entries, prev?.entries)}</div>
+        <div class="v">${s.entries}</div>
         <div class="sub">${s.events.size} événement(s)</div>
       </div>
       <div class="stat stat-hero silver" title="Top 3 atteint en classement final de catégorie.">
         <div class="k">Podiums</div>
-        <div class="v">${s.podiums}${delta(s.podiums, prev?.podiums)}</div>
+        <div class="v">${s.podiums}</div>
         <div class="sub">dont ${s.wins} victoire(s) · ${podiumRate}% des engagements</div>
       </div>
       <div class="stat stat-hero sky" title="Position moyenne sur le classement de catégorie, en pourcentage. Top 1% = excellent, top 100% = dernier.">
         <div class="k">Percentile moyen</div>
-        <div class="v">${s.avgPct != null ? 'top ' + s.avgPct.toFixed(0) + '%' : '—'}${delta(s.avgPct != null ? Math.round(s.avgPct) : null, prev?.avgPct != null ? Math.round(prev.avgPct) : null, { inverse: true, suffix: 'pts' })}</div>
+        <div class="v">${s.avgPct != null ? 'top ' + s.avgPct.toFixed(0) + '%' : '—'}</div>
         <div class="sub">meilleur : ${s.bestPct != null ? 'top ' + s.bestPct + '%' : '—'}</div>
       </div>
       <div class="stat stat-hero berry" title="Meilleur classement final atteint sur la période (1 = victoire).">
         <div class="k">Meilleur classement</div>
-        <div class="v">${s.bestRank ?? '—'}${delta(s.bestRank, prev?.bestRank, { inverse: true })}</div>
+        <div class="v">${s.bestRank ?? '—'}</div>
         <div class="sub">moyenne ${s.avgRank != null ? s.avgRank.toFixed(1) : '—'}${s.avgField != null ? ' · ' + Math.round(s.avgField) + ' pilotes/catégorie' : ''}</div>
       </div>
     `;
@@ -2860,7 +2788,7 @@
     </div>`;
   }
 
-  function render(matches, sortMode = 'date-desc', prevYearMatches = null, seriesMatches = []) {
+  function render(matches, sortMode = 'date-desc', seriesMatches = []) {
     if (!matches.length && !seriesMatches.length) {
       resultsEl.innerHTML = '<div class="card empty">Aucun pilote ne correspond à cette recherche.</div>';
       return;
@@ -2896,15 +2824,11 @@
     const primaryMatches = activeKey
       ? matches.filter(m => norm(`${m.competitor.firstName||''} ${m.competitor.lastName||''}`).trim() === activeKey)
       : matches;
-    const primaryPrev = activeKey && prevYearMatches
-      ? prevYearMatches.filter(m => norm(`${m.competitor.firstName || ''} ${m.competitor.lastName || ''}`).trim() === activeKey)
-      : prevYearMatches;
     const primarySeriesMatches = activeKey
       ? seriesMatches.filter(sm => norm(`${sm.competitor.firstName||''} ${sm.competitor.lastName||''}`).trim() === activeKey)
       : seriesMatches;
 
     const stats = hasEventMatches ? computeStats(primaryMatches) : null;
-    const prevStats = hasEventMatches && primaryPrev?.length ? computeStats(primaryPrev) : null;
 
     const eventGroups = new Map();
     for (const m of primaryMatches) {
@@ -2955,9 +2879,9 @@
 
     const panels = { stats: [], series: [], history: [] };
     if (hasEventMatches) {
-      const statsMeta = `synthèse sur ${stats.entries} engagement(s)${prevStats ? ` · comparé à ${prevStats.entries} engagement(s) en ${(prevStats.firstDate || '').slice(0,4)}` : ''}`;
+      const statsMeta = `synthèse sur ${stats.entries} engagement(s)`;
       panels.stats.push(`<h2 class="section-title">Statistiques <span class="meta">${statsMeta}</span><button type="button" class="btn btn-ghost section-toggle" id="statsToggle" aria-controls="statsWrap">Masquer</button></h2>`);
-      panels.stats.push(`<div id="statsWrap" role="region" aria-label="Statistiques">${renderStats(stats, prevStats)}</div>`);
+      panels.stats.push(`<div id="statsWrap" role="region" aria-label="Statistiques">${renderStats(stats)}</div>`);
       panels.stats.push(`<h2 class="section-title">Graphiques <span class="meta">visualisations des résultats</span><button type="button" class="btn btn-ghost section-toggle" id="chartsToggle" aria-controls="chartsWrap">Masquer</button></h2>`);
       panels.stats.push(`<div id="chartsWrap" role="region" aria-label="Graphiques"><div class="charts-grid">${renderCharts(primaryMatches)}</div></div>`);
     }
@@ -3282,7 +3206,6 @@
   })();
 
   (async function init() {
-    renderPilotsDatalist();
     // Restaurer les codes sélectionnés depuis l'URL avant loadAccounts() pour que la pré-sélection soit correcte
     const initState = parseUrlState();
     if (initState.orgs) {
