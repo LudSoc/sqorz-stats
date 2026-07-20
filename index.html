@@ -80,8 +80,7 @@
   .btn:focus-visible,
   .recent-chip:focus-visible,
   .recent-clear:focus-visible,
-  .section-toggle:focus-visible,
-  .chip button:focus-visible{
+  .section-toggle:focus-visible{
     outline:2px solid var(--accent-hi);
     outline-offset:3px;
   }
@@ -137,11 +136,10 @@
   .grid{display:grid; gap:14px}
   .filters .grid{grid-template-columns:repeat(12,1fr)}
   .field{display:flex; flex-direction:column; min-width:0}
-  .field.col-clubs{grid-column:span 6}
-  .field.col-name{grid-column:span 4}
+  .field.col-name{grid-column:span 10}
   .field.col-btn{grid-column:span 2; align-items:stretch}
   @media (max-width:880px){
-    .field.col-clubs,.field.col-name,.field.col-btn{grid-column:span 12}
+    .field.col-name,.field.col-btn{grid-column:span 12}
   }
 
   /* Skeleton loaders */
@@ -239,33 +237,6 @@
     height:100%; width:0; transition:width .2s;
     background:linear-gradient(90deg,var(--teal),var(--sky),var(--lavender));
   }
-
-  /* Club picker */
-  .club-picker{display:flex; flex-direction:column; gap:8px}
-  .club-picker .list{
-    max-height:180px; overflow:auto; border:1px solid var(--line); border-radius:9px;
-    background:var(--card-soft); padding:4px;
-  }
-  .club-picker .list label{
-    display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:6px;
-    cursor:pointer; color:var(--ink); font-size:13px; font-weight:500; text-transform:none; letter-spacing:0;
-  }
-  .club-picker .list label:hover{background:color-mix(in srgb,var(--accent) 8%, transparent)}
-  .club-picker .list input[type=checkbox]{margin:0; accent-color:var(--accent)}
-  .club-picker .list .empty{padding:10px; font-size:12px; color:var(--muted); text-transform:none; letter-spacing:0}
-  .picker-toolbar{display:flex; gap:4px; font-size:12px}
-  .chips{display:flex; gap:6px; flex-wrap:wrap}
-  .chip{
-    background:color-mix(in srgb,var(--accent) 22%, transparent);
-    color:var(--accent-hi); padding:3px 4px 3px 10px; border-radius:99px;
-    font-size:12px; font-weight:500; display:inline-flex; gap:2px; align-items:center;
-    border:1px solid color-mix(in srgb,var(--accent) 30%, transparent);
-  }
-  .chip button{
-    background:none; border:none; color:inherit; padding:2px 6px;
-    font-size:14px; line-height:1; cursor:pointer; border-radius:99px;
-  }
-  .chip button:hover{background:color-mix(in srgb,var(--accent) 25%, transparent)}
 
   /* Stats */
   .stats-hero{
@@ -596,6 +567,40 @@
   }
   :root.dark .tally-on{color:#bfe6d0}
 
+  /* Sélecteur de pilote (homonymes) */
+  .pilot-picker{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 20px; margin-bottom:18px; box-shadow:var(--shadow);
+  }
+  .pilot-picker-title{
+    font-size:12px; font-weight:600; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px;
+  }
+  .pilot-picker-list{
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .pilot-pick-btn{
+    display:flex; align-items:center; gap:12px;
+    width:100%; text-align:left; background:var(--card-soft);
+    border:1.5px solid var(--line); border-radius:12px;
+    padding:10px 14px; cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  .pilot-pick-btn:hover{ border-color:var(--accent); background:var(--accent-soft) }
+  .pilot-pick-btn.active{ border-color:var(--accent); background:var(--accent-soft) }
+  .ppav{
+    width:36px; height:36px; border-radius:50%; flex-shrink:0;
+    display:grid; place-items:center;
+    font-weight:800; font-size:11px; color:#fff; letter-spacing:.3px;
+  }
+  .ppinfo{ flex:1; min-width:0 }
+  .ppname{ font-size:13px; font-weight:700; color:var(--ink) }
+  .ppmeta{ font-size:11.5px; color:var(--muted); margin-top:1px }
+  .ppcount{ font-size:11px; font-weight:600; color:var(--muted); white-space:nowrap }
+  @media(max-width:640px){
+    .pilot-picker{ padding:12px 14px }
+    .pilot-pick-btn{ padding:8px 12px; gap:10px }
+  }
+
   /* Carte pilote */
   .pilot-card{
     display:flex; align-items:center; gap:20px;
@@ -890,6 +895,29 @@
   .compare-input-row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap}
   .compare-input-row .field{flex:1 1 180px}
 
+  /* Barre de chargement global en fond */
+  #globalLoadBar{
+    position:fixed; top:0; left:0; right:0; z-index:200;
+    height:3px; background:transparent; pointer-events:none;
+  }
+  #globalLoadBar .glb-fill{
+    height:100%; background:var(--accent);
+    transition:width .3s ease; width:0%;
+  }
+  #globalLoadBanner{
+    background:color-mix(in srgb,var(--accent) 12%,var(--card));
+    border-bottom:1px solid var(--accent-soft);
+    padding:6px 24px; font-size:12px; color:var(--ink-2);
+    display:flex; align-items:center; gap:8px;
+  }
+  #globalLoadBanner.hidden{display:none}
+  .glb-spinner{
+    width:12px; height:12px; border:2px solid var(--accent-soft);
+    border-top-color:var(--accent); border-radius:50%;
+    animation:spin .7s linear infinite; flex-shrink:0;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
   /* Bouton retour en haut */
   #backToTop{
     position:fixed; bottom:24px; right:24px; z-index:100;
@@ -920,6 +948,11 @@
 </style>
 </head>
 <body>
+<div id="globalLoadBar"><div class="glb-fill" id="globalLoadFill"></div></div>
+<div id="globalLoadBanner" class="hidden">
+  <div class="glb-spinner"></div>
+  <span id="globalLoadMsg">Chargement des données…</span>
+</div>
 <div class="topbar">
   <div class="topbar-inner">
     <div class="brand-row">
@@ -947,18 +980,6 @@
 <main>
   <div class="card filters">
     <div class="grid">
-      <div class="field col-clubs">
-        <label id="clubsLabel">Organisations françaises <span id="clubCount" style="color:var(--muted); font-weight:400; text-transform:none; letter-spacing:0"></span></label>
-        <div class="club-picker">
-          <input type="text" class="control" id="clubFilter" placeholder="Filtrer la liste…" aria-label="Filtrer les organisations" disabled>
-          <div class="list" id="clubList" role="group" aria-labelledby="clubsLabel"><div class="empty">Chargement des organisations françaises…</div></div>
-          <div class="picker-toolbar">
-            <button type="button" class="btn btn-ghost" id="clubAll" disabled>Tout cocher (visibles)</button>
-            <button type="button" class="btn btn-ghost" id="clubNone" disabled>Tout décocher</button>
-          </div>
-          <div class="chips" id="clubChips" aria-label="Organisations sélectionnées"></div>
-        </div>
-      </div>
       <div class="field col-name">
         <label for="nameInp">Nom du pilote</label>
         <input id="nameInp" class="control" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off" list="pilotsList" aria-describedby="nameHint" disabled>
@@ -1022,30 +1043,62 @@
 (() => {
   const API_BASE = 'https://sqorz-proxy.ludovicsocie.workers.dev';
 
-  const PROXIES = [];
-
   async function fetchJson(path, signal) {
-    const target = API_BASE + path;
-    if (PROXIES.length === 0) {
-      const r = await fetch(target, signal ? { signal } : {});
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json();
+    const r = await fetch(API_BASE + path, signal ? { signal } : {});
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  }
+
+  // --- Cache des derniers résultats de recherche ---
+  const RESULTS_CACHE_KEY = 'sqorzResultsCache';
+  const RESULTS_CACHE_TTL = 6 * 60 * 60 * 1000; // 6h
+
+  function slimMatch(m) {
+    return {
+      account: { accountCode: m.account.accountCode, accountName: m.account.accountName },
+      event: { eventId: m.event.eventId, eventName: m.event.eventName,
+               eventDate: m.event.eventDate, eventEndDate: m.event.eventEndDate },
+      cls: { className: m.cls?.className || '' },
+      competitor: m.competitor,
+      totalParticipants: m.totalParticipants,
+    };
+  }
+  function slimSeriesMatch(sm) {
+    return {
+      account: { accountCode: sm.account.accountCode, accountName: sm.account.accountName },
+      coOrgs: (sm.coOrgs || []).map(a => ({ accountCode: a.accountCode, accountName: a.accountName })),
+      series: { seriesId: sm.series.seriesId, seriesName: sm.series.seriesName },
+      competitor: sm.competitor,
+      totalCompetitors: sm.totalCompetitors,
+      cls: sm.cls ? { className: sm.cls.className } : null,
+      rankEvents: (sm.rankEvents || []).map(e => ({
+        eventId: e.eventId, eventName: e.eventName, eventShortName: e.eventShortName,
+        eventDate: e.eventDate, eventEndDate: e.eventEndDate,
+      })),
+    };
+  }
+  function saveResultsCache(query, matches, seriesMatches) {
+    try {
+      const payload = JSON.stringify({
+        query,
+        timestamp: Date.now(),
+        matches: matches.map(slimMatch),
+        seriesMatches: seriesMatches.map(slimSeriesMatch),
+      });
+      localStorage.setItem(RESULTS_CACHE_KEY, payload);
+    } catch (e) {
+      console.warn('[sqorz] saveResultsCache failed:', e.message);
     }
-    let lastErr;
-    for (const buildUrl of PROXIES) {
-      if (signal && signal.aborted) throw new DOMException('Aborted', 'AbortError');
-      try {
-        const r = await fetch(buildUrl(target), signal ? { signal } : {});
-        if (!r.ok) { lastErr = new Error(`HTTP ${r.status}`); continue; }
-        const text = await r.text();
-        try { return JSON.parse(text); }
-        catch { lastErr = new Error('JSON parse failed'); }
-      } catch (e) {
-        if (e.name === 'AbortError') throw e;
-        lastErr = e;
-      }
-    }
-    throw lastErr || new Error('Tous les proxys ont échoué');
+  }
+  function loadResultsCache(query) {
+    try {
+      const raw = localStorage.getItem(RESULTS_CACHE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (data.query !== query) return null;
+      if (Date.now() - data.timestamp > RESULTS_CACHE_TTL) return null;
+      return data;
+    } catch { return null; }
   }
 
   // --- Cache localStorage des réponses Sqorz ---
@@ -1120,12 +1173,6 @@
   }
 
   const FIXED_REGION = 'FR';
-  const clubFilter = document.getElementById('clubFilter');
-  const clubList = document.getElementById('clubList');
-  const clubChips = document.getElementById('clubChips');
-  const clubCount = document.getElementById('clubCount');
-  const clubAllBtn = document.getElementById('clubAll');
-  const clubNoneBtn = document.getElementById('clubNone');
   const yearSel = document.getElementById('yearSel');
   const sortSel = document.getElementById('sortSel');
   const resultsFiltersEl = document.getElementById('resultsFilters');
@@ -1137,7 +1184,6 @@
   const progressBar = document.getElementById('progressBar');
 
   let accounts = [];
-  const selectedCodes = new Set();
 
   function setStatus(msg, isError = false) {
     statusEl.textContent = msg || '';
@@ -1160,17 +1206,14 @@
   function getCurrentState() {
     return {
       name: nameInp.value.trim(),
-      clubs: [...selectedCodes].sort(),
       year: yearSel.value || '',
       sort: sortSel.value || 'date-desc',
     };
   }
   function parseUrlState() {
     const u = new URL(location.href);
-    const clubsStr = u.searchParams.get('clubs') || '';
     return {
       name: u.searchParams.get('name') || '',
-      clubs: clubsStr ? clubsStr.split(',').filter(Boolean) : [],
       year: u.searchParams.get('year') || '',
       sort: u.searchParams.get('sort') || 'date-desc',
     };
@@ -1179,7 +1222,6 @@
     const u = new URL(location.href);
     const params = new URLSearchParams();
     if (state.name) params.set('name', state.name);
-    if (state.clubs && state.clubs.length) params.set('clubs', state.clubs.join(','));
     if (state.year) params.set('year', state.year);
     if (state.sort && state.sort !== 'date-desc') params.set('sort', state.sort);
     const qs = params.toString();
@@ -1199,14 +1241,12 @@
   function getRecentSearches() {
     try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch { return []; }
   }
-  function saveRecentSearch(name, clubs) {
-    if (!name || !clubs.length) return;
+  function saveRecentSearch(name) {
+    if (!name) return;
     const normName = name.toLowerCase();
-    const sortedClubs = [...clubs].sort();
-    const sig = JSON.stringify(sortedClubs);
     let recent = getRecentSearches()
-      .filter(r => !(r.name.toLowerCase() === normName && JSON.stringify([...r.clubs].sort()) === sig));
-    recent.unshift({ name, clubs: sortedClubs, t: Date.now() });
+      .filter(r => r.name.toLowerCase() !== normName);
+    recent.unshift({ name, t: Date.now() });
     recent = recent.slice(0, RECENT_MAX);
     localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
     renderRecentSearches();
@@ -1221,13 +1261,8 @@
     const list = getRecentSearches();
     if (!list.length) { wrap.hidden = true; wrap.innerHTML = ''; return; }
     wrap.hidden = false;
-    const byCode = new Map(accounts.map(a => [a.accountCode, a.accountName]));
     const chips = list.map((r, i) => {
-      const fullOrgs = r.clubs.map(c => byCode.get(c) || c).join(', ');
-      const orgsLabel = r.clubs.length === 1
-        ? (byCode.get(r.clubs[0]) || r.clubs[0])
-        : r.clubs.length + ' organisations';
-      return `<button type="button" class="recent-chip" data-idx="${i}" title="${escape(fullOrgs)}">${escape(r.name)} <span class="recent-meta">${escape(orgsLabel)}</span></button>`;
+      return `<button type="button" class="recent-chip" data-idx="${i}">${escape(r.name)}</button>`;
     }).join('');
     wrap.innerHTML = `<span class="recent-label">Récentes</span>${chips}<button type="button" class="recent-clear" id="recentClearBtn">Effacer</button>`;
   }
@@ -1260,10 +1295,122 @@
     { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
   ));
 
+  let globalDataReady = false; // true quand lastEventData est complet pour toutes les orgs
+
   function updateSearchEnabled() {
     if (currentAbort) return;
-    searchBtn.disabled = !(selectedCodes.size > 0 && nameInp.value.trim().length >= 2);
+    searchBtn.disabled = !(nameInp.value.trim().length >= 2 && (globalDataReady || accounts.length > 0));
   }
+
+  async function loadAllDataBackground(silent = false) {
+    const fill = document.getElementById('globalLoadFill');
+    const banner = document.getElementById('globalLoadBanner');
+    const msg = document.getElementById('globalLoadMsg');
+    const setGlb = (done, total) => {
+      if (silent) return;
+      if (fill) fill.style.width = total ? Math.round(100 * done / total) + '%' : '0%';
+    };
+
+    try {
+      if (!silent) {
+        banner.classList.remove('hidden');
+        msg.textContent = `Chargement des ${accounts.length} organisation(s)…`;
+      }
+      setGlb(0, 1);
+
+      // 1. Récupère tous les événements de toutes les orgs
+      const allEvents = [], allSeries = [];
+      let orgDone = 0;
+      await Promise.all(accounts.map(async a => {
+        try {
+          const orgData = await fetchJsonCached('/json/org/' + encodeURIComponent(a.accountCode));
+          for (const e of (orgData.events || [])) if (e.publish !== false) allEvents.push({ account: a, event: e });
+          for (const s of (orgData.series || [])) if (s.publish !== false && s.seriesId) allSeries.push({ account: a, series: s });
+        } catch {}
+        orgDone++;
+        setGlb(orgDone, accounts.length);
+      }));
+
+      // 2. Charge les détails de chaque événement
+      const total = allEvents.length + allSeries.length;
+      let done = 0;
+      msg.textContent = `Chargement de ${allEvents.length} événement(s)…`;
+      setGlb(0, total);
+
+      const CONC = 25;
+      const evQueue = allEvents.slice();
+      async function evWorker() {
+        while (evQueue.length) {
+          const item = evQueue.shift();
+          try {
+            const detail = await fetchJsonCached(
+              '/json/event/' + encodeURIComponent(item.event.eventId),
+              null,
+              item.event.eventEndDate || item.event.eventDate
+            );
+            lastEventData.set(item.event.eventId, { account: item.account, event: item.event, detail });
+            // Mémorise tous les noms pour l'autocomplétion
+            for (const cls of (detail.classRanks || [])) {
+              for (const c of (cls.competitorRankSummaries || [])) {
+                const n = `${c.firstName||''} ${c.lastName||''}`.trim();
+                if (n) _bgPilotNames.add(n);
+              }
+            }
+          } catch {}
+          done++;
+          setGlb(done, total);
+        }
+      }
+
+      // 3. Séries
+      const srByKey = new Map();
+      const srQueue = allSeries.slice();
+      async function srWorker() {
+        while (srQueue.length) {
+          const item = srQueue.shift();
+          try {
+            const detail = await fetchJsonCached('/json/series/' + encodeURIComponent(item.series.seriesId));
+            const rankEvents = detail.seriesRankEvents || [];
+            const key = norm(item.series.seriesName || '') || item.series.seriesId;
+            if (!srByKey.has(key)) {
+              srByKey.set(key, { account: item.account, coOrgs: [], series: item.series, detail, rankEvents });
+            } else {
+              const ex = srByKey.get(key);
+              if (rankEvents.length > ex.rankEvents.length) {
+                ex.account = item.account; ex.series = item.series; ex.detail = detail; ex.rankEvents = rankEvents;
+              } else if (!ex.coOrgs.some(a => a.accountCode === item.account.accountCode)) {
+                ex.coOrgs.push(item.account);
+              }
+            }
+          } catch {}
+          done++;
+          setGlb(done, total);
+        }
+      }
+
+      const workers = [];
+      for (let i = 0; i < Math.min(CONC, allEvents.length || 1); i++) workers.push(evWorker());
+      for (let i = 0; i < Math.min(2, allSeries.length || 1); i++) workers.push(srWorker());
+      await Promise.all(workers);
+
+      lastSeriesData = srByKey;
+      lastSearchedCodes = new Set(accounts.map(a => a.accountCode));
+      globalDataReady = true;
+      saveKnownPilots([..._bgPilotNames]);
+      updateSearchEnabled();
+      if (!silent) {
+        setGlb(1, 1);
+        setTimeout(() => {
+          banner.classList.add('hidden');
+          fill.style.width = '0%';
+        }, 800);
+      }
+    } catch {
+      if (!silent) banner.classList.add('hidden');
+    }
+  }
+
+  const _bgPilotNames = new Set();
   function setSearchMode(mode) {
     if (mode === 'cancel') {
       searchBtn.textContent = 'Annuler';
@@ -1316,52 +1463,14 @@
   }
   let currentAbort = null;
 
-  function renderClubList() {
-    const q = norm(clubFilter.value);
-    const filtered = accounts.filter(a => !q || norm(a.accountName).includes(q));
-    if (!filtered.length) {
-      clubList.innerHTML = '<div class="empty">Aucune entrée ne correspond.</div>';
-      return;
-    }
-    clubList.innerHTML = filtered.map(a => `
-      <label>
-        <input type="checkbox" value="${escape(a.accountCode)}" data-name="${escape(a.accountName)}" ${selectedCodes.has(a.accountCode) ? 'checked' : ''}>
-        ${escape(a.accountName)}
-      </label>
-    `).join('');
-  }
-
-  function renderChips() {
-    const items = accounts.filter(a => selectedCodes.has(a.accountCode));
-    clubCount.textContent = items.length ? `(${items.length} sélectionnée${items.length>1?'s':''})` : '';
-    clubChips.innerHTML = items.map(a => `
-      <span class="chip">${escape(a.accountName)} <button type="button" data-code="${escape(a.accountCode)}" title="Retirer">×</button></span>
-    `).join('');
-  }
-
-  async function loadClubs(regionCode) {
-    clubFilter.disabled = true;
+  async function loadAccounts() {
     nameInp.disabled = true;
-    clubAllBtn.disabled = true;
-    clubNoneBtn.disabled = true;
     accounts = [];
-    selectedCodes.clear();
-    clubList.innerHTML = '<div class="empty">Chargement…</div>';
-    renderChips();
-    setStatus('Chargement des organisations de ' + regionCode + '…');
+    setStatus('Chargement des organisations…');
     try {
-      const data = await fetchJsonCached('/json/region/' + encodeURIComponent(regionCode));
+      const data = await fetchJsonCached('/json/region/' + encodeURIComponent(FIXED_REGION));
       accounts = (data.accounts || []).slice().sort((a,b) => a.accountName.localeCompare(b.accountName));
-      if (!accounts.length) {
-        clubList.innerHTML = '<div class="empty">Aucune entrée.</div>';
-        setStatus('');
-        return;
-      }
-      renderClubList();
-      clubFilter.disabled = false;
       nameInp.disabled = false;
-      clubAllBtn.disabled = false;
-      clubNoneBtn.disabled = false;
       updateSearchEnabled();
       setStatus('');
     } catch (e) {
@@ -1381,11 +1490,62 @@
     if (!queryTokens.length) { setStatus('Saisir un nom à chercher.', true); return; }
 
     pushStateUrl();
-    saveRecentSearch(query, [...selectedCodes]);
+    saveRecentSearch(query);
+
+    // Chemin rapide : données globales prêtes, ou mêmes orgs déjà en mémoire → re-scan local, zéro requête
+    const fastPath = lastEventData.size > 0 && (
+      globalDataReady ||
+      (lastSearchedCodes.size === accounts.length && accounts.every(a => lastSearchedCodes.has(a.accountCode)))
+    );
+    const sameOrgs = fastPath;
+
+    if (sameOrgs) {
+      lastCompareMatches = [];
+      compareActive = false;
+      selectedPilotKey = null;
+      selectedComparePilotKey = null;
+      document.getElementById('compareInputCard').hidden = true;
+      document.getElementById('compareInp').value = '';
+      document.getElementById('compareStatus').textContent = '';
+
+      const matches = [];
+      for (const { account, event, detail } of lastEventData.values()) {
+        for (const cls of (detail.classRanks || [])) {
+          const summaries = cls.competitorRankSummaries || [];
+          for (const c of summaries) {
+            if (matchPilot(c.firstName, c.lastName, queryTokens))
+              matches.push({ account, event, cls, competitor: c, totalParticipants: summaries.length });
+          }
+        }
+      }
+      const seriesMatches = [];
+      for (const entry of lastSeriesData.values()) {
+        for (const cls of (entry.detail.seriesRankClasses || [])) {
+          const competitors = cls.seriesRankCompetitors || [];
+          for (const c of competitors) {
+            if (matchPilot(c.firstName, c.lastName, queryTokens))
+              seriesMatches.push({ account: entry.account, coOrgs: entry.coOrgs, series: entry.series, seriesDetail: entry.detail, rankEvents: entry.rankEvents, cls, competitor: c, totalCompetitors: competitors.length });
+          }
+        }
+      }
+      lastMatches = matches;
+      lastSeriesMatches = seriesMatches;
+      const srMsg = seriesMatches.length ? ` · ${seriesMatches.length} classement(s) de championnat` : '';
+      setStatus(`${matches.length} résultat(s) trouvé(s)${srMsg} sur ${accounts.length} org(s) — résultat instantané ⚡`);
+      resultsFiltersEl.hidden = (matches.length + seriesMatches.length) === 0;
+      document.getElementById('compareToggleBtn').disabled = (matches.length + seriesMatches.length) === 0;
+      renderFiltered();
+      if (matches.length || seriesMatches.length) saveResultsCache(norm(nameInp.value.trim()), matches, seriesMatches);
+      return;
+    }
 
     lastEventData.clear();
+    lastSeriesData.clear();
+    lastSearchedCodes.clear();
     lastCompareMatches = [];
     compareActive = false;
+    selectedPilotKey = null;
+    selectedComparePilotKey = null;
     document.getElementById('compareInputCard').hidden = true;
     document.getElementById('compareInp').value = '';
     document.getElementById('compareStatus').textContent = '';
@@ -1396,11 +1556,11 @@
     setSearchMode('cancel');
     resultsEl.innerHTML = renderSkeleton();
     resultsFiltersEl.hidden = true;
-    setStatus(`Récupération des événements sur ${selectedCodes.size} organisation(s)…`);
+    setStatus(`Récupération des événements sur ${accounts.length} organisation(s)…`);
     setProgress(0, 0);
 
     try {
-      const targets = accounts.filter(a => selectedCodes.has(a.accountCode));
+      const targets = accounts;
       const orgEvents = [];
       const orgSeries = [];
       let orgErrors = 0;
@@ -1567,6 +1727,8 @@
         }
       }
 
+      lastSeriesData = seriesByKey;
+      lastSearchedCodes = new Set(accounts.map(a => a.accountCode));
       setProgress(0, 0);
       const errParts = [];
       if (orgErrors) errParts.push(`${orgErrors} organisation(s)`);
@@ -1580,6 +1742,7 @@
       resultsFiltersEl.hidden = (matches.length + seriesMatches.length) === 0;
       document.getElementById('compareToggleBtn').disabled = (matches.length + seriesMatches.length) === 0;
       renderFiltered();
+      if (matches.length || seriesMatches.length) saveResultsCache(norm(nameInp.value.trim()), matches, seriesMatches);
 
       if (matches.length || seriesMatches.length) {
         const namesFromEvents = matches.map(m => `${m.competitor.firstName || ''} ${m.competitor.lastName || ''}`.trim());
@@ -1607,8 +1770,12 @@
   let lastMatches = [];
   let lastSeriesMatches = [];
   let lastEventData = new Map(); // eventId → {account, event, detail}
+  let lastSeriesData = new Map(); // seriesKey → entry (pour re-scan instantané)
+  let lastSearchedCodes = new Set(); // orgs du dernier fetch complet
   let lastCompareMatches = [];
   let compareActive = false;
+  let selectedPilotKey = null; // null = auto (plus récent), sinon clé norm() du pilote choisi
+  let selectedComparePilotKey = null; // idem pour le pilote de comparaison
   function seriesYears(sm) {
     const set = new Set();
     for (const e of sm.rankEvents || []) {
@@ -1760,7 +1927,8 @@
           if (d.result === 1) s.motoWins++;
           if (d.result <= 4) s.motoTop4++;
           hasMoto = true;
-          if (d.racePosition != null) {
+          if (d.racePosition != null && d.racePosition >= 1 && d.racePosition <= 8 &&
+              Number.isInteger(d.result) && d.result >= 1 && d.result <= 20) {
             const g = d.racePosition;
             if (!s.gateResults[g]) s.gateResults[g] = [];
             s.gateResults[g].push(d.result);
@@ -2386,6 +2554,7 @@
     }
     st.textContent = '';
     lastCompareMatches = found;
+    selectedComparePilotKey = null; // réinitialiser la sélection à chaque nouvelle recherche
     compareActive = true;
     renderFiltered();
   }
@@ -2393,13 +2562,66 @@
   function renderCompareSection(p1Matches, p1Stats) {
     if (!compareActive || !lastCompareMatches.length || !p1Stats) return '';
 
+    // Construire la pilotMap pour le pilote 2 (gestion des homonymes)
+    const cmpPilotMap = new Map();
+    for (const m of lastCompareMatches) {
+      const c = m.competitor;
+      const k = norm(`${c.firstName||''} ${c.lastName||''}`).trim();
+      if (!k) continue;
+      if (!cmpPilotMap.has(k)) {
+        cmpPilotMap.set(k, { cmp: c, plate: c.plate || null, club: c.groupName || null, count: 0, lastDate: '' });
+      }
+      const entry = cmpPilotMap.get(k);
+      entry.count++;
+      const d = m.event.eventDate || '';
+      if (d > entry.lastDate) {
+        entry.lastDate = d;
+        if (c.plate) entry.plate = c.plate;
+        if (c.groupName) entry.club = c.groupName;
+      }
+    }
+    const cmpDistinct = [...cmpPilotMap.entries()].sort((a, b) => b[1].lastDate.localeCompare(a[1].lastDate));
+    const cmpActiveKey = selectedComparePilotKey && cmpPilotMap.has(selectedComparePilotKey)
+      ? selectedComparePilotKey : (cmpDistinct[0]?.[0] ?? null);
+
+    // Construire le sélecteur si homonymes
+    let cmpPickerHtml = '';
+    if (cmpDistinct.length > 1 && !selectedComparePilotKey) {
+      const items = cmpDistinct.map(([k, p], idx) => {
+        const fullName = `${p.cmp.firstName||''} ${p.cmp.lastName||''}`.trim() || k;
+        const color = PILOT_COLORS[idx % PILOT_COLORS.length];
+        const avInner = p.plate
+          ? `<span style="font-size:${p.plate.length<=3?11:9}px;font-weight:900">${escape(p.plate)}</span>`
+          : escape([p.cmp.firstName?.[0], p.cmp.lastName?.[0]].filter(Boolean).join('').toUpperCase() || '?');
+        const meta = [p.plate ? `#${escape(p.plate)}` : null, p.club ? escape(p.club) : null].filter(Boolean).join(' · ');
+        const isActive = k === cmpActiveKey;
+        return `<button type="button" class="pilot-pick-btn${isActive?' active':''}" data-compare-pilot-key="${escape(k)}">
+          <div class="ppav" style="background:${color}">${avInner}</div>
+          <div class="ppinfo">
+            <div class="ppname">${escape(fullName)}</div>
+            ${meta ? `<div class="ppmeta">${meta}</div>` : ''}
+          </div>
+          <div class="ppcount">${p.count} résultat(s)</div>
+        </button>`;
+      }).join('');
+      cmpPickerHtml = `<div class="pilot-picker">
+        <div class="pilot-picker-title">Plusieurs pilotes trouvés — sélectionne le bon</div>
+        <div class="pilot-picker-list">${items}</div>
+      </div>`;
+    }
+
+    // Filtrer les matchs du pilote 2 sélectionné
+    const cmpSelectedMatches = cmpActiveKey
+      ? lastCompareMatches.filter(m => norm(`${m.competitor.firstName||''} ${m.competitor.lastName||''}`).trim() === cmpActiveKey)
+      : lastCompareMatches;
+
     // Pilote 2 : filtrer par année si nécessaire, même logique que le pilote principal
     const y = yearSel.value;
-    const compareFiltered = !y ? lastCompareMatches
-      : lastCompareMatches.filter(m => (m.event.eventDate || m.event.eventEndDate || '').startsWith(y + '-'));
+    const compareFiltered = !y ? cmpSelectedMatches
+      : cmpSelectedMatches.filter(m => (m.event.eventDate || m.event.eventEndDate || '').startsWith(y + '-'));
     if (!compareFiltered.length) {
       const p2name = (() => {
-        const c = [...lastCompareMatches].sort((a,b) =>
+        const c = [...cmpSelectedMatches].sort((a,b) =>
           (b.event.eventDate||'').localeCompare(a.event.eventDate||''))
           .find(m => m.competitor.firstName || m.competitor.lastName)?.competitor;
         return c ? `${c.firstName||''} ${c.lastName||''}`.trim() : 'le 2ᵉ pilote';
@@ -2409,16 +2631,13 @@
           <span>Comparaison</span>
           <button type="button" class="compare-close-btn" id="compareCloseResult" title="Fermer">✕</button>
         </div>
+        ${cmpPickerHtml}
         <div class="empty" style="padding:18px 0 4px">Aucun résultat pour ${escape(p2name)} en ${escape(y)}.</div>
       </div>`;
     }
     const p2Sorted = [...compareFiltered].sort((a, b) =>
       (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
-    const p2PriCmp = p2Sorted.find(m => m.competitor.firstName || m.competitor.lastName)?.competitor;
-    const p2Key = p2PriCmp ? norm(`${p2PriCmp.firstName||''} ${p2PriCmp.lastName||''}`).trim() : null;
-    const p2Primary = p2Key
-      ? compareFiltered.filter(m => norm(`${m.competitor.firstName||''} ${m.competitor.lastName||''}`).trim() === p2Key)
-      : compareFiltered;
+    const p2Primary = compareFiltered;
     const p2Stats = computeStats(p2Primary);
 
     // Identité
@@ -2490,6 +2709,7 @@
         <span>Comparaison</span>
         <button type="button" class="compare-close-btn" id="compareCloseResult" title="Fermer">✕</button>
       </div>
+      ${cmpPickerHtml}
       <div class="compare-pilots">
         <div class="compare-pilot">
           <div class="cav" style="--cp-color:${p1Color}">${avInner(p1c, p1Plate)}</div>
@@ -2512,19 +2732,40 @@
 
     const hasEventMatches = matches.length > 0;
 
-    // Pilote principal = match le plus récent ; on filtre tout sur lui si plusieurs noms distincts
-    const sortedForPrimary = [...matches].sort((a, b) =>
-      (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
-    const primaryCmp = sortedForPrimary.find(m => m.competitor.firstName || m.competitor.lastName)?.competitor;
-    const primaryKey = primaryCmp
-      ? norm(`${primaryCmp.firstName || ''} ${primaryCmp.lastName || ''}`).trim()
-      : null;
-    const primaryMatches = primaryKey
-      ? matches.filter(m => norm(`${m.competitor.firstName || ''} ${m.competitor.lastName || ''}`).trim() === primaryKey)
+    // Recense tous les pilotes distincts dans les résultats
+    const pilotMap = new Map(); // normKey → { cmp, plate, club, count, lastDate }
+    for (const m of matches) {
+      const c = m.competitor;
+      const k = norm(`${c.firstName||''} ${c.lastName||''}`).trim();
+      if (!k) continue;
+      if (!pilotMap.has(k)) {
+        pilotMap.set(k, { cmp: c, plate: c.plate || null, club: c.groupName || null, count: 0, lastDate: '' });
+      }
+      const entry = pilotMap.get(k);
+      entry.count++;
+      const d = m.event.eventDate || '';
+      if (d > entry.lastDate) {
+        entry.lastDate = d;
+        if (c.plate) entry.plate = c.plate;
+        if (c.groupName) entry.club = c.groupName;
+      }
+    }
+    const distinctPilots = [...pilotMap.entries()].sort((a, b) => b[1].lastDate.localeCompare(a[1].lastDate));
+
+    // Pilote actif : celui choisi par l'utilisateur, sinon le plus récent
+    const activeKey = selectedPilotKey && pilotMap.has(selectedPilotKey)
+      ? selectedPilotKey
+      : (distinctPilots[0]?.[0] ?? null);
+
+    const primaryMatches = activeKey
+      ? matches.filter(m => norm(`${m.competitor.firstName||''} ${m.competitor.lastName||''}`).trim() === activeKey)
       : matches;
-    const primaryPrev = primaryKey && prevYearMatches
-      ? prevYearMatches.filter(m => norm(`${m.competitor.firstName || ''} ${m.competitor.lastName || ''}`).trim() === primaryKey)
+    const primaryPrev = activeKey && prevYearMatches
+      ? prevYearMatches.filter(m => norm(`${m.competitor.firstName || ''} ${m.competitor.lastName || ''}`).trim() === activeKey)
       : prevYearMatches;
+    const primarySeriesMatches = activeKey
+      ? seriesMatches.filter(sm => norm(`${sm.competitor.firstName||''} ${sm.competitor.lastName||''}`).trim() === activeKey)
+      : seriesMatches;
 
     const stats = hasEventMatches ? computeStats(primaryMatches) : null;
     const prevStats = hasEventMatches && primaryPrev?.length ? computeStats(primaryPrev) : null;
@@ -2584,8 +2825,8 @@
       panels.stats.push(`<h2 class="section-title">Graphiques <span class="meta">visualisations des résultats</span><button type="button" class="btn btn-ghost section-toggle" id="chartsToggle" aria-controls="chartsWrap">Masquer</button></h2>`);
       panels.stats.push(`<div id="chartsWrap" role="region" aria-label="Graphiques"><div class="charts-grid">${renderCharts(primaryMatches)}</div></div>`);
     }
-    if (seriesMatches && seriesMatches.length) {
-      panels.series.push(renderChampionships(seriesMatches));
+    if (primarySeriesMatches.length) {
+      panels.series.push(renderChampionships(primarySeriesMatches));
     }
     if (hasEventMatches) {
       panels.history.push(`<h2 class="section-title">Événements <span class="meta">${sortedEvents.length} événement(s), ${sortLabel}</span><button type="button" class="btn btn-ghost section-toggle" id="historyToggle" aria-controls="historyWrap">Masquer</button></h2><div id="historyWrap" role="region" aria-label="Événements">`);
@@ -2593,14 +2834,37 @@
 
     const tabsAvailable = [];
     if (panels.stats.length)   tabsAvailable.push({ key: 'stats',   label: 'Stats',      count: null });
-    if (panels.series.length)  tabsAvailable.push({ key: 'series',  label: 'Séries',     count: seriesMatches.length });
+    if (panels.series.length)  tabsAvailable.push({ key: 'series',  label: 'Séries',     count: primarySeriesMatches.length });
     if (panels.history.length) tabsAvailable.push({ key: 'history', label: 'Événements', count: sortedEvents.length });
 
     const html = [];
     if (compareActive && lastCompareMatches.length) {
       html.push(renderCompareSection(primaryMatches, stats));
     }
-    html.push(renderPilotCard(primaryMatches, seriesMatches, stats));
+    if (distinctPilots.length > 1 && !selectedPilotKey) {
+      const items = distinctPilots.map(([k, p], idx) => {
+        const fullName = `${p.cmp.firstName||''} ${p.cmp.lastName||''}`.trim() || k;
+        const color = PILOT_COLORS[idx % PILOT_COLORS.length];
+        const avInner = p.plate
+          ? `<span style="font-size:${p.plate.length<=3?11:9}px;font-weight:900">${escape(p.plate)}</span>`
+          : escape([p.cmp.firstName?.[0], p.cmp.lastName?.[0]].filter(Boolean).join('').toUpperCase() || '?');
+        const meta = [p.plate ? `#${escape(p.plate)}` : null, p.club ? escape(p.club) : null].filter(Boolean).join(' · ');
+        const isActive = k === activeKey;
+        return `<button type="button" class="pilot-pick-btn${isActive?' active':''}" data-pilot-key="${escape(k)}">
+          <div class="ppav" style="background:${color}">${avInner}</div>
+          <div class="ppinfo">
+            <div class="ppname">${escape(fullName)}</div>
+            ${meta ? `<div class="ppmeta">${meta}</div>` : ''}
+          </div>
+          <div class="ppcount">${p.count} résultat(s)</div>
+        </button>`;
+      }).join('');
+      html.push(`<div class="pilot-picker">
+        <div class="pilot-picker-title">Plusieurs pilotes trouvés — sélectionne le bon</div>
+        <div class="pilot-picker-list">${items}</div>
+      </div>`);
+    }
+    html.push(renderPilotCard(primaryMatches, primarySeriesMatches, stats));
     if (tabsAvailable.length > 1) {
       const navHtml = tabsAvailable.map((t, i) => {
         const badge = t.count != null ? ` <span class="tab-badge">${t.count}</span>` : '';
@@ -2698,12 +2962,25 @@
     }
   }
   resultsEl.addEventListener('click', e => {
+    const pickBtn = e.target.closest('[data-pilot-key]');
+    if (pickBtn) {
+      selectedPilotKey = pickBtn.dataset.pilotKey;
+      renderFiltered();
+      return;
+    }
     if (e.target.closest('#compareCloseResult')) {
       lastCompareMatches = [];
       compareActive = false;
+      selectedComparePilotKey = null;
       document.getElementById('compareInp').value = '';
       document.getElementById('compareStatus').textContent = '';
       document.getElementById('compareInputCard').hidden = true;
+      renderFiltered();
+      return;
+    }
+    const cmpPickBtn = e.target.closest('[data-compare-pilot-key]');
+    if (cmpPickBtn) {
+      selectedComparePilotKey = cmpPickBtn.dataset.comparePilotKey;
       renderFiltered();
       return;
     }
@@ -2729,11 +3006,6 @@
       }
     }
   });
-
-  function prefetchOrg(code) {
-    // Réchauffe le cache /json/org en arrière-plan, sans bloquer ni propager les erreurs
-    fetchJsonCached('/json/org/' + encodeURIComponent(code)).catch(() => {});
-  }
 
   // Thème : cycle auto → clair → sombre → auto
   const themeBtn = document.getElementById('themeBtn');
@@ -2769,46 +3041,6 @@
     if (getThemePref() === 'auto') applyTheme('auto');
   });
 
-  clubFilter.addEventListener('input', renderClubList);
-  clubList.addEventListener('change', e => {
-    const cb = e.target;
-    if (cb.tagName !== 'INPUT' || cb.type !== 'checkbox') return;
-    if (cb.checked) {
-      selectedCodes.add(cb.value);
-      prefetchOrg(cb.value);
-    } else {
-      selectedCodes.delete(cb.value);
-    }
-    renderChips();
-    updateSearchEnabled();
-  });
-  clubChips.addEventListener('click', e => {
-    const btn = e.target.closest('button[data-code]');
-    if (!btn) return;
-    selectedCodes.delete(btn.dataset.code);
-    renderClubList();
-    renderChips();
-    updateSearchEnabled();
-  });
-  clubAllBtn.addEventListener('click', () => {
-    const q = norm(clubFilter.value);
-    for (const a of accounts) {
-      if (!q || norm(a.accountName).includes(q)) {
-        if (!selectedCodes.has(a.accountCode)) prefetchOrg(a.accountCode);
-        selectedCodes.add(a.accountCode);
-      }
-    }
-    renderClubList();
-    renderChips();
-    updateSearchEnabled();
-  });
-  clubNoneBtn.addEventListener('click', () => {
-    selectedCodes.clear();
-    renderClubList();
-    renderChips();
-    updateSearchEnabled();
-  });
-
   document.getElementById('compareToggleBtn').addEventListener('click', () => {
     const card = document.getElementById('compareInputCard');
     card.hidden = !card.hidden;
@@ -2822,6 +3054,7 @@
     document.getElementById('compareInputCard').hidden = true;
     lastCompareMatches = [];
     compareActive = false;
+    selectedComparePilotKey = null;
     document.getElementById('compareInp').value = '';
     document.getElementById('compareStatus').textContent = '';
     renderFiltered();
@@ -2841,7 +3074,7 @@
     const idx = +chip.dataset.idx;
     const r = getRecentSearches()[idx];
     if (!r) return;
-    applyStateToUi({ name: r.name, clubs: r.clubs, year: '', sort: 'date-desc' });
+    applyStateToUi({ name: r.name, year: '', sort: 'date-desc' });
     if (!searchBtn.disabled) searchSelected();
   });
 
@@ -2849,9 +3082,9 @@
   window.addEventListener('popstate', () => {
     const state = parseUrlState();
     applyStateToUi(state);
-    if (state.name && state.clubs.length && !searchBtn.disabled) {
+    if (state.name && !searchBtn.disabled) {
       searchSelected();
-    } else if (!state.name || !state.clubs.length) {
+    } else if (!state.name) {
       resultsEl.innerHTML = '';
       resultsFiltersEl.hidden = true;
       setStatus('');
@@ -2861,14 +3094,6 @@
   });
 
   function applyStateToUi(state) {
-    selectedCodes.clear();
-    const valid = new Set(accounts.map(a => a.accountCode));
-    for (const c of state.clubs || []) if (valid.has(c)) {
-      selectedCodes.add(c);
-      prefetchOrg(c);
-    }
-    renderClubList();
-    renderChips();
     nameInp.value = state.name || '';
     yearSel.value = state.year || '';
     sortSel.value = state.sort || 'date-desc';
@@ -2891,14 +3116,28 @@
 
   (async function init() {
     renderPilotsDatalist();
-    await loadClubs(FIXED_REGION);
+    await loadAccounts();
     renderRecentSearches();
     const state = parseUrlState();
-    if (state.name || state.clubs.length) {
+    if (state.name) {
       applyStateToUi(state);
-      if (state.name && state.clubs.length && !searchBtn.disabled) {
+      // Restaurer les derniers résultats instantanément si disponibles en cache
+      const cached = loadResultsCache(norm(state.name));
+      if (cached) {
+        lastMatches = cached.matches;
+        lastSeriesMatches = cached.seriesMatches;
+        resultsFiltersEl.hidden = false;
+        document.getElementById('compareToggleBtn').disabled = false;
+        renderFiltered();
+        setStatus('');
+      } else if (!searchBtn.disabled) {
+        // Pas de cache : lancer la recherche directement (plus rapide que d'attendre le chargement global)
         searchSelected();
       }
+      // Chargement global en arrière-plan (silencieux si résultats déjà affichés)
+      loadAllDataBackground(!!cached);
+    } else {
+      loadAllDataBackground();
     }
   })();
 })();
