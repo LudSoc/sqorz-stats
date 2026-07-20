@@ -945,6 +945,46 @@
   footer a{ color:var(--accent); text-decoration:none }
   footer a:hover{ text-decoration:underline }
   .footer-sep{ color:var(--line-strong) }
+
+  /* Sélecteur d'organisations */
+  .org-selector{ margin-bottom:14px }
+  .org-selector-summary{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12.5px; font-weight:600; color:var(--ink-2);
+    cursor:pointer; padding:7px 12px;
+    background:var(--card-soft); border:1px solid var(--line);
+    border-radius:8px; user-select:none;
+    transition:border-color .15s, background .15s;
+  }
+  .org-selector-summary:hover{ border-color:var(--accent); background:color-mix(in srgb,var(--accent) 8%, transparent) }
+  .org-selector-panel{
+    margin-top:8px; padding:10px 12px;
+    background:var(--card-soft); border:1px solid var(--line); border-radius:10px;
+  }
+  .org-selector-panel[hidden]{ display:none }
+  .org-selector-actions{
+    display:flex; gap:8px; margin-bottom:8px; padding-bottom:8px;
+    border-bottom:1px dashed var(--line);
+  }
+  .org-selector-actions button{
+    font:inherit; font-size:11.5px; font-weight:600;
+    padding:4px 10px; border-radius:6px; cursor:pointer;
+    background:var(--card); border:1px solid var(--line-strong); color:var(--ink-2);
+    transition:border-color .15s, background .15s;
+  }
+  .org-selector-actions button:hover{ border-color:var(--accent); color:var(--accent-hi) }
+  .org-selector-list{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+    gap:4px 12px; max-height:240px; overflow-y:auto;
+  }
+  .org-selector-item{
+    display:flex; align-items:center; gap:7px;
+    font-size:12.5px; color:var(--ink-2); cursor:pointer;
+    padding:3px 4px; border-radius:5px;
+    transition:background .1s;
+  }
+  .org-selector-item:hover{ background:color-mix(in srgb,var(--accent) 8%, transparent) }
+  .org-selector-item input[type=checkbox]{ accent-color:var(--accent); width:14px; height:14px; flex-shrink:0; cursor:pointer }
 </style>
 </head>
 <body>
@@ -979,6 +1019,19 @@
 
 <main>
   <div class="card filters">
+    <div class="org-selector" id="orgSelector">
+      <div class="org-selector-summary" id="orgSelectorSummary" role="button" tabindex="0" aria-expanded="false" aria-controls="orgSelectorPanel">
+        <span id="orgSelectorLabel">Chargement des orgas…</span>
+        <span>▾</span>
+      </div>
+      <div class="org-selector-panel" id="orgSelectorPanel" hidden>
+        <div class="org-selector-actions">
+          <button type="button" id="orgSelectAll">Tout sélectionner</button>
+          <button type="button" id="orgDeselectAll">Tout désélectionner</button>
+        </div>
+        <div class="org-selector-list" id="orgSelectorList"></div>
+      </div>
+    </div>
     <div class="grid">
       <div class="field col-name">
         <label for="nameInp">Nom du pilote</label>
@@ -1077,10 +1130,14 @@
       })),
     };
   }
+  function resultsCacheKey(query) {
+    const orgsKey = [...selectedCodes].sort().join(',');
+    return query + '|' + orgsKey;
+  }
   function saveResultsCache(query, matches, seriesMatches) {
     try {
       const payload = JSON.stringify({
-        query,
+        cacheKey: resultsCacheKey(query),
         timestamp: Date.now(),
         matches: matches.map(slimMatch),
         seriesMatches: seriesMatches.map(slimSeriesMatch),
@@ -1095,7 +1152,10 @@
       const raw = localStorage.getItem(RESULTS_CACHE_KEY);
       if (!raw) return null;
       const data = JSON.parse(raw);
-      if (data.query !== query) return null;
+      const key = resultsCacheKey(query);
+      // Support ancien format (data.query) et nouveau (data.cacheKey)
+      const storedKey = data.cacheKey ?? data.query;
+      if (storedKey !== key) return null;
       if (Date.now() - data.timestamp > RESULTS_CACHE_TTL) return null;
       return data;
     } catch { return null; }
@@ -1184,6 +1244,52 @@
   const progressBar = document.getElementById('progressBar');
 
   let accounts = [];
+  let selectedCodes = new Set();
+
+  function isDefaultOrg(accountName) {
+    const n = norm(accountName);
+    // Exclure les comités régionaux FFC BMX et Occitanie
+    if (n.includes('nord ouest') || n.includes('nordouest') ||
+        n.includes('sud est') || n.includes('sudest') ||
+        n.includes('sud ouest') || n.includes('sudouest') ||
+        n.includes('occitanie')) return false;
+    // Inclure : Bourgogne, Grand Est, FFC (principale), FFC Nord Est
+    return n.includes('bourgogne') ||
+           n.includes('grand est') ||
+           n.includes('francaise de cyclisme') ||
+           (n.includes('ffc') && n.includes('nord est')) ||
+           (n.includes('ffc') && !n.includes('bmx') && !n.includes('comite'));
+  }
+
+  function updateOrgSelectorUI() {
+    const label = document.getElementById('orgSelectorLabel');
+    if (label) label.textContent = `${selectedCodes.size} orga(s) sélectionnée(s)`;
+    const list = document.getElementById('orgSelectorList');
+    if (!list) return;
+    list.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.checked = selectedCodes.has(cb.value);
+    });
+  }
+
+  function renderOrgSelectorList() {
+    const list = document.getElementById('orgSelectorList');
+    if (!list) return;
+    list.innerHTML = accounts.map(a => {
+      const checked = selectedCodes.has(a.accountCode) ? ' checked' : '';
+      return `<label class="org-selector-item">
+        <input type="checkbox" value="${escape(a.accountCode)}"${checked}>
+        <span>${escape(a.accountName)}</span>
+      </label>`;
+    }).join('');
+    list.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) selectedCodes.add(cb.value);
+        else selectedCodes.delete(cb.value);
+        updateOrgSelectorUI();
+        updateSearchEnabled();
+      });
+    });
+  }
 
   function setStatus(msg, isError = false) {
     statusEl.textContent = msg || '';
@@ -1208,6 +1314,7 @@
       name: nameInp.value.trim(),
       year: yearSel.value || '',
       sort: sortSel.value || 'date-desc',
+      orgs: [...selectedCodes].sort().join(','),
     };
   }
   function parseUrlState() {
@@ -1216,6 +1323,7 @@
       name: u.searchParams.get('name') || '',
       year: u.searchParams.get('year') || '',
       sort: u.searchParams.get('sort') || 'date-desc',
+      orgs: u.searchParams.get('orgs') || '',
     };
   }
   function buildUrlFromState(state) {
@@ -1224,6 +1332,7 @@
     if (state.name) params.set('name', state.name);
     if (state.year) params.set('year', state.year);
     if (state.sort && state.sort !== 'date-desc') params.set('sort', state.sort);
+    if (state.orgs) params.set('orgs', state.orgs);
     const qs = params.toString();
     return u.pathname + (qs ? '?' + qs : '') + u.hash;
   }
@@ -1299,7 +1408,7 @@
 
   function updateSearchEnabled() {
     if (currentAbort) return;
-    searchBtn.disabled = !(nameInp.value.trim().length >= 2 && (globalDataReady || accounts.length > 0));
+    searchBtn.disabled = !(nameInp.value.trim().length >= 2 && selectedCodes.size > 0 && (globalDataReady || accounts.length > 0));
   }
 
   async function loadAllDataBackground(silent = false) {
@@ -1470,6 +1579,22 @@
     try {
       const data = await fetchJsonCached('/json/region/' + encodeURIComponent(FIXED_REGION));
       accounts = (data.accounts || []).slice().sort((a,b) => a.accountName.localeCompare(b.accountName));
+
+      // Pré-sélection : orgas par défaut si selectedCodes est vide (premier chargement sans URL state)
+      if (selectedCodes.size === 0) {
+        for (const a of accounts) {
+          if (isDefaultOrg(a.accountName)) selectedCodes.add(a.accountCode);
+        }
+      } else {
+        // Filtrer les codes obsolètes (sécurité)
+        const validCodes = new Set(accounts.map(a => a.accountCode));
+        for (const code of [...selectedCodes]) {
+          if (!validCodes.has(code)) selectedCodes.delete(code);
+        }
+      }
+
+      renderOrgSelectorList();
+      updateOrgSelectorUI();
       nameInp.disabled = false;
       updateSearchEnabled();
       setStatus('');
@@ -1492,10 +1617,13 @@
     pushStateUrl();
     saveRecentSearch(query);
 
+    const targets = accounts.filter(a => selectedCodes.has(a.accountCode));
+    if (!targets.length) { setStatus('Sélectionne au moins une organisation.', true); return; }
+
     // Chemin rapide : données globales prêtes, ou mêmes orgs déjà en mémoire → re-scan local, zéro requête
     const fastPath = lastEventData.size > 0 && (
       globalDataReady ||
-      (lastSearchedCodes.size === accounts.length && accounts.every(a => lastSearchedCodes.has(a.accountCode)))
+      (lastSearchedCodes.size === targets.length && targets.every(a => lastSearchedCodes.has(a.accountCode)))
     );
     const sameOrgs = fastPath;
 
@@ -1531,7 +1659,7 @@
       lastMatches = matches;
       lastSeriesMatches = seriesMatches;
       const srMsg = seriesMatches.length ? ` · ${seriesMatches.length} classement(s) de championnat` : '';
-      setStatus(`${matches.length} résultat(s) trouvé(s)${srMsg} sur ${accounts.length} org(s) — résultat instantané ⚡`);
+      setStatus(`${matches.length} résultat(s) trouvé(s)${srMsg} sur ${targets.length} org(s) sélectionnée(s) — résultat instantané ⚡`);
       resultsFiltersEl.hidden = (matches.length + seriesMatches.length) === 0;
       document.getElementById('compareToggleBtn').disabled = (matches.length + seriesMatches.length) === 0;
       renderFiltered();
@@ -1556,11 +1684,10 @@
     setSearchMode('cancel');
     resultsEl.innerHTML = renderSkeleton();
     resultsFiltersEl.hidden = true;
-    setStatus(`Récupération des événements sur ${accounts.length} organisation(s)…`);
+    setStatus(`Récupération des événements sur ${targets.length} organisation(s) sélectionnée(s)…`);
     setProgress(0, 0);
 
     try {
-      const targets = accounts;
       const orgEvents = [];
       const orgSeries = [];
       let orgErrors = 0;
@@ -1704,6 +1831,15 @@
 
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
 
+      // Fusionner les séries d'orgs non sélectionnées chargées par le background load
+      // (ex: CPP Challenge d'une org hors sélection)
+      const targetCodes = new Set(targets.map(a => a.accountCode));
+      for (const [key, entry] of lastSeriesData) {
+        if (!seriesByKey.has(key) && !targetCodes.has(entry.account.accountCode)) {
+          seriesByKey.set(key, entry);
+        }
+      }
+
       // Match pilote dans les séries consolidées (déduplication par nom de série)
       for (const entry of seriesByKey.values()) {
         const rankClasses = entry.detail.seriesRankClasses || [];
@@ -1728,7 +1864,7 @@
       }
 
       lastSeriesData = seriesByKey;
-      lastSearchedCodes = new Set(accounts.map(a => a.accountCode));
+      lastSearchedCodes = new Set(targets.map(a => a.accountCode));
       setProgress(0, 0);
       const errParts = [];
       if (orgErrors) errParts.push(`${orgErrors} organisation(s)`);
@@ -3060,6 +3196,30 @@
     renderFiltered();
   });
 
+  // Sélecteur d'organisations — toggle panel
+  const orgSelectorSummary = document.getElementById('orgSelectorSummary');
+  const orgSelectorPanel = document.getElementById('orgSelectorPanel');
+  orgSelectorSummary.addEventListener('click', () => {
+    const open = !orgSelectorPanel.hidden;
+    orgSelectorPanel.hidden = open;
+    orgSelectorSummary.setAttribute('aria-expanded', String(!open));
+  });
+  orgSelectorSummary.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); orgSelectorSummary.click(); }
+  });
+  document.getElementById('orgSelectAll').addEventListener('click', () => {
+    for (const a of accounts) selectedCodes.add(a.accountCode);
+    renderOrgSelectorList();
+    updateOrgSelectorUI();
+    updateSearchEnabled();
+  });
+  document.getElementById('orgDeselectAll').addEventListener('click', () => {
+    selectedCodes.clear();
+    renderOrgSelectorList();
+    updateOrgSelectorUI();
+    updateSearchEnabled();
+  });
+
   nameInp.addEventListener('input', updateSearchEnabled);
   nameInp.addEventListener('keydown', e => { if (e.key === 'Enter' && !searchBtn.disabled) searchBtn.click(); });
   searchBtn.addEventListener('click', searchSelected);
@@ -3097,6 +3257,13 @@
     nameInp.value = state.name || '';
     yearSel.value = state.year || '';
     sortSel.value = state.sort || 'date-desc';
+    if (state.orgs) {
+      const codes = state.orgs.split(',').filter(Boolean);
+      if (codes.length) {
+        selectedCodes = new Set(codes);
+        updateOrgSelectorUI();
+      }
+    }
     updateSearchEnabled();
   }
 
@@ -3116,9 +3283,15 @@
 
   (async function init() {
     renderPilotsDatalist();
+    // Restaurer les codes sélectionnés depuis l'URL avant loadAccounts() pour que la pré-sélection soit correcte
+    const initState = parseUrlState();
+    if (initState.orgs) {
+      const codes = initState.orgs.split(',').filter(Boolean);
+      if (codes.length) selectedCodes = new Set(codes);
+    }
     await loadAccounts();
     renderRecentSearches();
-    const state = parseUrlState();
+    const state = initState;
     if (state.name) {
       applyStateToUi(state);
       // Restaurer les derniers résultats instantanément si disponibles en cache
