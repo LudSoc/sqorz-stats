@@ -26,6 +26,7 @@
     --ink:#2c3845; --ink-2:#4a5868; --muted:#6a7886;
     --line:#e4ebf1; --line-strong:#cdd6e0;
     --accent:#6a8caf;        /* bleu acier principal */
+    --accent-vivid:#4a7ab5;
     --accent-hi:#506f8f;
     --accent-soft:#dde6ef;
     --accent-ink:#fff;
@@ -52,7 +53,8 @@
     --silver:#cdd2dc;
     --bronze:#d4a07c;
     --shadow:0 1px 2px rgba(60,90,120,.10), 0 10px 28px rgba(60,90,120,.14);
-    --radius:18px;
+    --shadow-xl:0 2px 8px rgba(60,90,120,.16), 0 24px 56px rgba(60,90,120,.22);
+    --radius:16px;
   }
   :root.dark{
     --bg:#1f262e; --card:#2a3340; --card-soft:#252e3a;
@@ -94,19 +96,38 @@
   }
   .topbar{
     position:relative; overflow:hidden;
-    color:#fff; padding:42px 24px 116px;
-    background:linear-gradient(135deg, #3f566f 0%, #6a8caf 55%, #8aa6c2 100%);
+    color:#fff; padding:48px 24px 128px;
+    background:linear-gradient(135deg, #2e4158 0%, #3f566f 35%, #6a8caf 70%, #8aa6c2 100%);
+    transition:padding .25s ease, min-height .25s ease;
   }
   .topbar::after{
     /* lueur douce en haut */
     content:""; position:absolute; inset:0; pointer-events:none;
-    background:radial-gradient(circle at 80% 0%, rgba(255,255,255,.20), transparent 55%);
+    background:radial-gradient(circle at 80% 0%, rgba(255,255,255,.22), transparent 55%),
+               radial-gradient(circle at 10% 100%, rgba(30,50,80,.35), transparent 45%);
   }
   .topbar-inner{
     max-width:1180px; margin:0 auto; position:relative; z-index:1;
   }
   .brand-row{display:flex; align-items:center; justify-content:space-between; gap:12px}
   .brand{display:flex; align-items:center; gap:12px; font-weight:600; letter-spacing:.2px; color:#fff}
+
+  /* Topbar compact — état "has-results" */
+  body.has-results .topbar{
+    position:sticky; top:0; z-index:20;
+    padding:0 24px; height:52px; overflow:hidden;
+    box-shadow:0 2px 16px rgba(0,0,0,.22);
+  }
+  body.has-results .topbar-inner{
+    height:52px; display:flex; align-items:center;
+  }
+  body.has-results .topbar h1,
+  body.has-results .topbar p{
+    display:none;
+  }
+  body.has-results .topbar .brand-row{
+    width:100%; margin:0;
+  }
   .theme-btn{
     display:inline-flex; align-items:center; justify-content:center;
     width:36px; height:36px; padding:0;
@@ -124,10 +145,11 @@
     box-shadow:inset 0 0 0 1px rgba(255,255,255,.45);
     backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
   }
-  .topbar h1{margin:18px 0 6px; font-size:30px; font-weight:700; letter-spacing:-.5px; color:#fff; text-shadow:0 2px 10px rgba(30,50,75,.35)}
-  .topbar p{margin:0; font-size:14.5px; max-width:560px; color:#e9eff5; text-shadow:0 1px 4px rgba(30,50,75,.30)}
+  .topbar h1{margin:24px 0 8px; font-size:34px; font-weight:800; letter-spacing:-1px; color:#fff; text-shadow:0 2px 14px rgba(20,35,60,.45)}
+  .topbar p{margin:0; font-size:15px; max-width:min(600px,100%); color:#dce8f2; text-shadow:0 1px 6px rgba(20,35,60,.35); line-height:1.5}
 
-  main{max-width:1180px; margin:-70px auto 40px; padding:0 24px 32px; position:relative; z-index:2;}
+  main{max-width:1180px; margin:-80px auto 40px; padding:0 24px 32px; position:relative; z-index:2;}
+  body.has-results main{margin-top:24px;}
   .card{
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     padding:18px; box-shadow:var(--shadow); margin-bottom:18px;
@@ -591,31 +613,45 @@
     .pilot-pick-btn{ padding:8px 12px; gap:10px }
   }
 
-  /* Carte pilote */
+  /* Carte pilote — Profile Hero Card */
   .pilot-card{
-    display:flex; align-items:center; gap:20px;
-    padding:22px 24px; margin-bottom:18px;
-    background:linear-gradient(135deg, var(--card) 55%, color-mix(in srgb, var(--pilot-color, var(--accent)) 8%, var(--card)));
-    border-left:4px solid var(--pilot-color, var(--accent));
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:24px; align-items:center;
+    padding:28px 32px; margin-bottom:18px;
+    background:linear-gradient(135deg,
+      var(--card) 0%,
+      color-mix(in srgb, var(--pilot-color, var(--accent)) 6%, var(--card)) 60%,
+      color-mix(in srgb, var(--pilot-color, var(--accent)) 12%, var(--card)) 100%);
+    border:1px solid color-mix(in srgb, var(--pilot-color, var(--accent)) 30%, var(--line));
+    border-radius:var(--radius);
+    box-shadow:var(--shadow-xl, var(--shadow));
     position:relative; overflow:hidden;
   }
-  .pilot-card::after{
+  .pilot-card::before{
     content:""; position:absolute; inset:0; pointer-events:none;
-    background:radial-gradient(circle at 90% 50%, color-mix(in srgb, var(--pilot-color, var(--accent)) 7%, transparent), transparent 65%);
+    background:radial-gradient(ellipse at 95% 50%,
+      color-mix(in srgb, var(--pilot-color, var(--accent)) 10%, transparent),
+      transparent 60%);
   }
   .pilot-avatar{
-    width:64px; height:64px; border-radius:50%;
+    width:72px; height:72px; border-radius:50%;
     display:grid; place-items:center;
-    font-weight:800; font-size:22px; letter-spacing:-.5px;
+    font-weight:800; font-size:24px; letter-spacing:-.5px;
     color:#fff; flex-shrink:0;
     background:var(--pilot-color, var(--accent));
-    box-shadow:0 3px 14px rgba(0,0,0,.20);
-    position:relative;
+    box-shadow:0 0 0 3px var(--card), 0 0 0 5px var(--pilot-color, var(--accent)), 0 6px 20px rgba(0,0,0,.22);
+    animation:avatar-in .3s ease both;
+    position:relative; z-index:1;
   }
-  .pilot-info{ flex:1; min-width:0; position:relative }
+  @keyframes avatar-in{
+    from{transform:scale(.8); opacity:0}
+    to{transform:scale(1); opacity:1}
+  }
+  .pilot-info{ flex:1; min-width:0; position:relative; z-index:1 }
   .pilot-name{
-    font-size:22px; font-weight:700; color:var(--ink);
-    line-height:1.15; margin-bottom:8px; letter-spacing:-.3px;
+    font-size:26px; font-weight:800; color:var(--ink);
+    line-height:1.1; margin-bottom:10px; letter-spacing:-.6px;
   }
   .pilot-badges{ display:flex; gap:8px; flex-wrap:wrap; align-items:center }
   .pilot-plate{
@@ -628,36 +664,84 @@
     font-size:12.5px; font-weight:500; color:var(--ink-2);
     padding:4px 12px; border-radius:99px;
     background:var(--card-soft); border:1px solid var(--line);
+    display:inline-flex; align-items:center; gap:5px;
   }
   .pilot-age{
     font-size:12.5px; font-weight:600; color:var(--pilot-color, var(--accent));
     padding:4px 12px; border-radius:99px;
     background:color-mix(in srgb, var(--pilot-color, var(--accent)) 12%, var(--card-soft));
     border:1px solid color-mix(in srgb, var(--pilot-color, var(--accent)) 30%, var(--line));
+    display:inline-flex; align-items:center; gap:5px;
   }
   .pilot-qs{
-    display:flex; gap:20px; flex-shrink:0; position:relative;
+    display:flex; gap:0; flex-shrink:0; position:relative; z-index:1;
     border-left:1px solid var(--line); padding-left:20px;
+    align-self:stretch; align-items:center;
   }
-  .pilot-qs-item{ text-align:center; min-width:44px }
+  .pilot-qs-item{
+    text-align:center; padding:0 16px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .pilot-qs-item:not(:last-child){ border-right:1px solid var(--line) }
   .pilot-qs-item .qv{
-    font-size:22px; font-weight:700; color:var(--ink);
+    font-size:36px; font-weight:800; color:var(--ink);
     line-height:1; font-variant-numeric:tabular-nums;
+    min-width:2ch; display:block;
   }
   .pilot-qs-item .qk{
     font-size:10px; color:var(--muted);
-    text-transform:uppercase; letter-spacing:.5px; margin-top:3px;
+    text-transform:uppercase; letter-spacing:.6px; margin-top:5px;
+  }
+  @media (max-width:860px){
+    .pilot-card{ grid-template-columns:auto 1fr; gap:16px; padding:20px 20px }
+    .pilot-qs{
+      grid-column:1/-1; border-left:none; padding-left:0;
+      border-top:1px solid var(--line); padding-top:14px;
+      justify-content:space-around;
+    }
+    .pilot-qs-item{ padding:0 12px }
+    .pilot-qs-item .qv{ font-size:28px }
   }
   @media (max-width:640px){
-    .pilot-card{ gap:14px; padding:16px }
-    .pilot-avatar{ width:52px; height:52px; font-size:18px }
-    .pilot-name{ font-size:18px; margin-bottom:6px }
-    .pilot-qs{ display:none }
+    .pilot-card{ gap:12px; padding:16px 14px }
+    .pilot-avatar{ width:56px; height:56px; font-size:18px }
+    .pilot-name{ font-size:20px; margin-bottom:8px }
+    .pilot-qs-item .qv{ font-size:22px }
   }
 
-  /* Onglets mobiles — masqués sur desktop (scroll continu) */
-  .tabs-nav{display:none}
-  .tab-panel{display:block}
+  /* Onglets — visibles sur tous les écrans */
+  .tabs-nav{
+    display:flex; gap:0; overflow-x:auto; scrollbar-width:none;
+    padding:0; margin:0;
+    background:color-mix(in srgb, var(--bg) 94%, transparent);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-bottom:2px solid var(--line);
+  }
+  .tabs-nav::-webkit-scrollbar{ display:none }
+  .tab-btn{
+    flex:0 0 auto; padding:14px 22px;
+    background:transparent; border:none;
+    border-bottom:3px solid transparent; margin-bottom:-2px;
+    color:var(--muted); font-family:inherit; font-weight:500;
+    font-size:14px; line-height:1; cursor:pointer;
+    white-space:nowrap; transition:color .15s, border-color .2s;
+    border-radius:0;
+  }
+  .tab-btn .tab-badge{
+    display:inline-block; font-weight:700; font-size:11px;
+    padding:1px 6px; margin-left:6px; border-radius:99px;
+    background:color-mix(in srgb, var(--accent) 18%, transparent);
+    color:var(--accent-hi); vertical-align:1px;
+  }
+  .tab-btn:hover{ color:var(--ink) }
+  .tab-btn.active{
+    color:var(--ink); font-weight:600;
+    border-bottom-color:var(--accent);
+  }
+  .tab-btn[disabled]{ opacity:.35; cursor:default; pointer-events:none }
+  .tab-panel{ display:none }
+  .tab-panel.active{ display:block }
+  .tab-panel > h2.section-title:first-child{ margin-top:4px }
 
   .empty{padding:36px; text-align:center; color:var(--muted)}
   .summary{font-size:13px; color:var(--muted); margin:0 0 12px}
@@ -774,46 +858,14 @@
 
     .champ-summary{font-size:12px}
 
-    /* Onglets mobiles — sticky sous le topbar avec fond flouté */
+    /* Onglets mobiles — ajustements de taille uniquement */
     .tabs-nav{
-      display:flex; position:sticky; top:0; z-index:5;
-      gap:4px; padding:6px;
-      margin:0 -16px 14px;
-      background:color-mix(in srgb, var(--bg) 92%, transparent);
-      backdrop-filter:blur(10px);
-      -webkit-backdrop-filter:blur(10px);
-      border-bottom:1px solid var(--line);
+      margin:0 -14px 16px; padding:0 4px;
+      border-radius:0;
     }
     .tab-btn{
-      flex:1; min-width:0;
-      padding:8px 8px;
-      background:transparent; border:1px solid transparent;
-      color:var(--muted); font-family:inherit; font-weight:500;
-      font-size:13px; line-height:1.2;
-      border-radius:8px;
-      cursor:pointer; text-align:center;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-      transition:background .15s, color .15s, border-color .15s;
+      padding:10px 12px; font-size:12.5px;
     }
-    .tab-btn .tab-badge{
-      display:inline-block;
-      font-weight:700; font-size:11px;
-      padding:1px 6px; margin-left:4px;
-      border-radius:99px;
-      background:color-mix(in srgb, var(--accent) 18%, transparent);
-      color:var(--accent-hi);
-      vertical-align:1px;
-    }
-    .tab-btn:hover{color:var(--ink)}
-    .tab-btn.active{
-      background:var(--card); color:var(--ink); font-weight:600;
-      border-color:var(--line-strong);
-    }
-    .tab-btn[disabled]{opacity:.35; cursor:default; pointer-events:none}
-
-    .tab-panel{display:none}
-    .tab-panel.active{display:block}
-    .tab-panel > h2.section-title:first-child{margin-top:4px}
   }
   @media (max-width:380px){
     .stats-hero{grid-template-columns:1fr}
@@ -981,6 +1033,126 @@
   }
   .org-selector-item:hover{ background:color-mix(in srgb,var(--accent) 8%, transparent) }
   .org-selector-item input[type=checkbox]{ accent-color:var(--accent); width:14px; height:14px; flex-shrink:0; cursor:pointer }
+
+  /* ===== TIMELINE VERTICALE ===== */
+  .timeline{ position:relative; margin-bottom:20px }
+  .timeline-year-sep{
+    display:flex; align-items:center; gap:14px;
+    margin:28px 0 16px; font-size:12px; font-weight:700;
+    color:var(--muted); text-transform:uppercase; letter-spacing:1px;
+  }
+  .timeline-year-sep::after{
+    content:""; flex:1; height:1px; background:var(--line-strong);
+  }
+  .timeline-line-wrap{
+    position:relative; padding-left:40px;
+  }
+  .timeline-line-wrap::before{
+    content:""; position:absolute; left:12px; top:0; bottom:0; width:2px;
+    background:linear-gradient(to bottom,
+      var(--pilot-color, var(--accent)) 0%,
+      color-mix(in srgb, var(--pilot-color, var(--accent)) 30%, var(--line)) 100%);
+    border-radius:2px;
+  }
+  .timeline-item{
+    position:relative; margin-bottom:14px;
+    opacity:0; transform:translateX(16px);
+    transition:opacity .35s ease, transform .35s ease;
+  }
+  .timeline-item.visible{ opacity:1; transform:translateX(0) }
+  .timeline-dot{
+    position:absolute; left:-29px; top:16px;
+    width:14px; height:14px; border-radius:50%;
+    background:var(--pilot-color, var(--accent));
+    border:3px solid var(--card);
+    box-shadow:0 0 0 2px var(--pilot-color, var(--accent));
+    z-index:1;
+  }
+  .timeline-dot.r1{ background:var(--gold); box-shadow:0 0 0 2px var(--gold) }
+  .timeline-dot.r2{ background:var(--silver); box-shadow:0 0 0 2px var(--silver) }
+  .timeline-dot.r3{ background:var(--bronze); box-shadow:0 0 0 2px var(--bronze) }
+
+  /* Event card: hover elevation */
+  .event{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    margin-bottom:0; overflow:hidden; box-shadow:var(--shadow);
+    transition:transform .15s ease, box-shadow .15s ease, border-color .15s;
+  }
+  .event:hover{
+    transform:translateY(-2px);
+    box-shadow:var(--shadow-xl, var(--shadow));
+    border-color:color-mix(in srgb, var(--accent) 30%, var(--line));
+  }
+
+  /* ===== STATS DASHBOARD ===== */
+  .stats-dashboard{
+    display:grid; grid-template-columns:repeat(2,1fr);
+    gap:14px; margin-bottom:20px;
+  }
+  .stats-dashboard-panel{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow);
+  }
+  .stats-dashboard-panel-title{
+    font-size:11px; font-weight:700; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.8px;
+    margin-bottom:12px; padding-bottom:8px;
+    border-bottom:1px solid var(--line);
+  }
+  .stats-dashboard-row{
+    display:flex; align-items:baseline; gap:8px; padding:7px 0;
+  }
+  .stats-dashboard-row:not(:last-child){
+    border-bottom:1px dashed var(--line);
+  }
+  .stats-dashboard-icon{ font-size:16px; line-height:1; flex-shrink:0 }
+  .stats-dashboard-val{
+    font-size:22px; font-weight:800; color:var(--ink);
+    line-height:1; font-variant-numeric:tabular-nums; min-width:2ch;
+  }
+  .stats-dashboard-label{ font-size:12px; color:var(--muted); flex:1 }
+  .stats-dashboard-pct{
+    font-size:11px; font-weight:600; color:var(--accent); margin-left:auto;
+    white-space:nowrap;
+  }
+  @media (max-width:768px){
+    .stats-dashboard{ grid-template-columns:1fr }
+  }
+
+  /* Stat card: subtle hover */
+  .stat{ transition:transform .15s ease, box-shadow .15s ease }
+  .stat:hover{ transform:translateY(-1px); box-shadow:var(--shadow-xl, var(--shadow)) }
+
+  /* Carte filtre sticky quand has-results */
+  body.has-results .card.filters{
+    margin-bottom:20px;
+  }
+  .pilot-sticky-header{
+    position:sticky; top:52px; z-index:8;
+    background:var(--bg);
+    margin-bottom:18px;
+    box-shadow:0 4px 16px rgba(60,90,120,.10);
+  }
+  .pilot-sticky-header .pilot-card{ margin-bottom:0; border-radius:var(--radius) var(--radius) 0 0 }
+  .pilot-sticky-header .tabs-nav{ border-radius:0 }
+
+  /* Mobile onglets — override au-dessus du CSS global des onglets */
+  @media (max-width:640px){
+    body.has-results .topbar{ height:48px; padding:0 16px }
+    body.has-results .topbar-inner{ height:48px }
+    .pilot-sticky-header{ top:48px }
+    .topbar{ padding:32px 18px 100px }
+    .topbar h1{ font-size:26px; margin-top:18px }
+    main{ padding:0 14px 24px; margin-top:-70px }
+    body.has-results main{ margin-top:16px }
+    .tab-btn{ padding:12px 14px; font-size:13px }
+    .timeline-line-wrap{ padding-left:32px }
+    .timeline-line-wrap::before{ left:10px }
+    .timeline-dot{ left:-23px }
+  }
+  @media (max-width:380px){
+    .stats-dashboard{ grid-template-columns:1fr }
+  }
 </style>
 </head>
 <body>
@@ -1008,8 +1180,8 @@
       </div>
       <button type="button" id="themeBtn" class="theme-btn" aria-label="Changer le thème" title="Changer le thème (auto / clair / sombre)"></button>
     </div>
-    <h1>Historique d'un pilote BMX</h1>
-    <p>Recherche d'un pilote dans les organisations françaises référencées sur our.sqorz.com. Affichage de l'historique des courses, agrégation statistique et accès direct aux résultats détaillés.</p>
+    <h1>Qui cherchez-vous ?</h1>
+    <p>Recherchez un pilote BMX parmi les organisations françaises référencées sur Sqorz — historique complet, statistiques agrégées, championnats et accès aux résultats détaillés.</p>
   </div>
 </div>
 
@@ -1527,16 +1699,8 @@
       </div>`;
     return `
       <h2 class="section-title">Statistiques <span class="meta">chargement…</span></h2>
-      <div class="stats-hero" aria-hidden="true">${heroCard.repeat(4)}</div>
-      <div class="stats-detail" aria-hidden="true">
-        <div class="stat-group">
-          <h3 class="stat-group-title">Performance</h3>
-          <div class="stats">${detailCard.repeat(4)}</div>
-        </div>
-        <div class="stat-group">
-          <h3 class="stat-group-title">Manches &amp; finales</h3>
-          <div class="stats">${detailCard.repeat(2)}</div>
-        </div>
+      <div class="stats-dashboard" aria-hidden="true">
+        ${[0,1,2,3].map(() => `<div class="stats-dashboard-panel">${detailCard.repeat(4)}</div>`).join('')}
       </div>
       <h2 class="section-title">Graphiques <span class="meta">chargement…</span></h2>
       <div class="charts-grid" aria-hidden="true">${chartCard.repeat(3)}</div>
@@ -1696,6 +1860,7 @@
 
       if (!allEvents.length && !allSeries.length) {
         resultsEl.innerHTML = '';
+        document.body.classList.remove('has-results');
         setProgress(0, 0);
         if (orgErrors === targets.length) {
           setStatus(`Impossible de récupérer les ${targets.length} organisation(s) — proxys saturés ou Sqorz indisponible. Réessaie dans une minute.`, true);
@@ -1857,6 +2022,7 @@
     } catch (e) {
       setProgress(0, 0);
       resultsEl.innerHTML = '';
+      document.body.classList.remove('has-results');
       resultsFiltersEl.hidden = true;
       lastMatches = [];
       lastSeriesMatches = [];
@@ -2322,125 +2488,45 @@
   }
 
   function renderStats(s) {
-    const podiumRate = s.entries ? Math.round(100 * s.podiums / s.entries) : 0;
-    const winRate = s.entries ? Math.round(100 * s.wins / s.entries) : 0;
-    const motoRate = s.motosRaced ? Math.round(100 * s.motoWins / s.motosRaced) : 0;
-    const motoTop4Rate = s.motosRaced ? Math.round(100 * s.motoTop4 / s.motosRaced) : 0;
-    const finaleRate = s.entries ? Math.round(100 * s.finalsReached / s.entries) : 0;
-    const finalPhasesRate = s.entries ? Math.round(100 * s.finalPhasesReached / s.entries) : 0;
+    return renderStatsDashboard(s);
+  }
 
-    const gateEntries = Object.entries(s.gateResults)
-      .map(([g, rs]) => ({ gate: +g, avg: rs.reduce((a, b) => a + b, 0) / rs.length, count: rs.length }))
-      .filter(x => x.count >= 2)
-      .sort((a, b) => a.avg - b.avg);
-    const bestGate = gateEntries[0] ?? null;
-    const worstGate = gateEntries.length > 1 ? gateEntries[gateEntries.length - 1] : null;
-    const topTenRate = s.pctCount ? Math.round(100 * s.topTen / s.pctCount) : 0;
-    const topQuarterRate = s.pctCount ? Math.round(100 * s.topQuarter / s.pctCount) : 0;
-    const dateRange = s.firstDate
-      ? (s.firstDate === s.lastDate ? fmtDate(s.firstDate) : `${fmtDate(s.firstDate)} → ${fmtDate(s.lastDate)}`)
-      : '—';
-
-    const heroCards = `
-      <div class="stat stat-hero teal" title="Nombre d'engagements (un par catégorie courue) sur la période. Compte plusieurs fois un même événement si plusieurs catégories.">
-        <div class="k">Engagements</div>
-        <div class="v">${s.entries}</div>
-        <div class="sub">${s.events.size} événement(s)</div>
-      </div>
-      <div class="stat stat-hero silver" title="Top 3 atteint en classement final de catégorie.">
-        <div class="k">Podiums</div>
-        <div class="v">${s.podiums}</div>
-        <div class="sub">dont ${s.wins} victoire(s) · ${podiumRate}% des engagements</div>
-      </div>
-      <div class="stat stat-hero sky" title="Position moyenne sur le classement de catégorie, en pourcentage. Top 1% = excellent, top 100% = dernier.">
-        <div class="k">Percentile moyen</div>
-        <div class="v">${s.avgPct != null ? 'top ' + s.avgPct.toFixed(0) + '%' : '—'}</div>
-        <div class="sub">meilleur : ${s.bestPct != null ? 'top ' + s.bestPct + '%' : '—'}</div>
-      </div>
-      <div class="stat stat-hero berry" title="Meilleur classement final atteint sur la période (1 = victoire).">
-        <div class="k">Meilleur classement</div>
-        <div class="v">${s.bestRank ?? '—'}</div>
-        <div class="sub">moyenne ${s.avgRank != null ? s.avgRank.toFixed(1) : '—'}${s.avgField != null ? ' · ' + Math.round(s.avgField) + ' pilotes/catégorie' : ''}</div>
-      </div>
-    `;
-
-    const detail = `
-      <div class="stats-detail">
-        <div class="stat-group">
-          <h3 class="stat-group-title">Performance</h3>
-          <div class="stats">
-            <div class="stat gold" title="Nombre de catégories terminées en 1ʳᵉ place du classement final.">
-              <div class="k">Victoires</div><div class="v">${s.wins}</div><div class="sub">${winRate}% des engagements</div>
-            </div>
-            <div class="stat bronze" title="Engagements terminés dans les 8 premières positions (places 1 à 8).">
-              <div class="k">Top 8</div><div class="v">${s.top8}</div><div class="sub">classement de catégorie</div>
-            </div>
-            <div class="stat mint" title="Engagements dans le premier 10% du classement de catégorie (rapporté au nombre de pilotes).">
-              <div class="k">Top 10%</div><div class="v">${s.topTen}</div><div class="sub">${topTenRate}% des engagements</div>
-            </div>
-            <div class="stat lime" title="Engagements dans le premier quart du classement de catégorie.">
-              <div class="k">Top 25%</div><div class="v">${s.topQuarter}</div><div class="sub">${topQuarterRate}% des engagements</div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-group">
-          <h3 class="stat-group-title">Manches &amp; finales</h3>
-          <div class="stats">
-            <div class="stat lilac" title="Pourcentage de manches terminées dans les 4 premières places, sur le total de manches disputées.">
-              <div class="k">Manches top 4</div><div class="v">${motoTop4Rate}%</div><div class="sub">${s.motoTop4}/${s.motosRaced} · ${motoRate}% de victoires</div>
-            </div>
-            ${s.entries ? `<div class="stat sky" title="Pourcentage d'engagements où au moins une phase éliminatoire (32ème, 16ème, 8ème, quart, demi ou finale) a été atteinte.">
-              <div class="k">Phases finales</div><div class="v">${finalPhasesRate}%</div><div class="sub">${s.finalPhasesReached}/${s.entries} engagements</div>
-            </div>` : ''}
-            <div class="stat peach" title="Pourcentage d'engagements où la finale a été atteinte.">
-              <div class="k">Finales</div><div class="v">${finaleRate}%</div><div class="sub">${s.finalsReached}/${s.entries} · ${s.finalWins} gagnée(s)</div>
-            </div>
-          </div>
-        </div>
-        ${gateEntries.length ? `<div class="stat-group">
-          <h3 class="stat-group-title">Portes de départ <span style="font-size:11px;font-weight:normal;opacity:0.6">(manches uniquement)</span></h3>
-          <div class="stats">
-            ${bestGate ? `<div class="stat mint" title="Porte depuis laquelle le résultat moyen en manche est le meilleur (sur ${bestGate.count} course(s)).">
-              <div class="k">Meilleure porte</div><div class="v">#${bestGate.gate}</div><div class="sub">moy. ${bestGate.avg.toFixed(1)} · ${bestGate.count} course(s)</div>
-            </div>` : ''}
-            ${worstGate ? `<div class="stat peach" title="Porte depuis laquelle le résultat moyen en manche est le moins bon (sur ${worstGate.count} course(s)).">
-              <div class="k">Porte difficile</div><div class="v">#${worstGate.gate}</div><div class="sub">moy. ${worstGate.avg.toFixed(1)} · ${worstGate.count} course(s)</div>
-            </div>` : ''}
-            <div class="stat grape" title="Répartition des résultats par porte de départ (minimum 2 courses par porte).">
-              <div class="k">Toutes portes</div>
-              <div class="v" style="font-size:13px; padding-top:4px">${gateEntries.map(x => `#${x.gate} → ${x.avg.toFixed(1)}`).join(' · ')}</div>
-              <div class="sub">${gateEntries.reduce((a, x) => a + x.count, 0)} courses analysées</div>
-            </div>
-          </div>
-        </div>` : ''}
-        <div class="stat-group">
-          <h3 class="stat-group-title">Contexte</h3>
-          <div class="stats">
-            <div class="stat grape" title="Plage de dates couverte et organisations concernées.">
-              <div class="k">Période</div>
-              <div class="v" style="font-size:14px; padding-top:6px">${dateRange}</div>
-              <div class="sub">${s.orgs.size} organisation(s)${s.pilots.size > 1 ? ` · ${s.pilots.size} pilotes` : ''}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-    return `<div class="stats-hero">${heroCards}</div>${detail}`;
+  function champYear(sm) {
+    let maxYear = '';
+    for (const e of sm.rankEvents || []) {
+      const y = (e.eventDate || e.eventEndDate || '').slice(0, 4);
+      if (y > maxYear) maxYear = y;
+    }
+    return maxYear || '—';
   }
 
   function renderChampionships(seriesMatches) {
     if (!seriesMatches.length) return '';
 
-    seriesMatches = [...seriesMatches].sort((a, b) => {
+    const sortByRank = (a, b) => {
       const ra = a.competitor.seriesRank;
       const rb = b.competitor.seriesRank;
       if (ra != null && rb != null && ra !== rb) return ra - rb;
       if (ra == null && rb != null) return 1;
       if (rb == null && ra != null) return -1;
       return (a.series.seriesName || '').localeCompare(b.series.seriesName || '');
-    });
+    };
 
-    const cards = seriesMatches.map(sm => {
+    // Grouper par année (desc)
+    const byYear = new Map();
+    for (const sm of seriesMatches) {
+      const y = champYear(sm);
+      if (!byYear.has(y)) byYear.set(y, []);
+      byYear.get(y).push(sm);
+    }
+    const sortedYears = [...byYear.keys()].sort((a, b) => b.localeCompare(a));
+    for (const y of sortedYears) byYear.get(y).sort(sortByRank);
+
+    const allCards = [];
+
+    for (const year of sortedYears) {
+      allCards.push(`<div class="timeline-year-sep">${year}</div>`);
+      allCards.push(...byYear.get(year).map(sm => {
       const c = sm.competitor;
       const ser = sm.series;
       const rk = c.seriesRank;
@@ -2549,9 +2635,10 @@
           </div>
         </div>
       `;
-    }).join('');
+      }));
+    }
 
-    return `<h2 class="section-title">Championnats <span class="meta">${seriesMatches.length} classement(s) de série</span><button type="button" class="btn btn-ghost section-toggle" id="seriesToggle" aria-controls="seriesWrap">Masquer</button></h2><div id="seriesWrap" role="region" aria-label="Championnats">${cards}</div>`;
+    return `<h2 class="section-title">Championnats <span class="meta">${seriesMatches.length} classement(s) de série</span><button type="button" class="btn btn-ghost section-toggle" id="seriesToggle" aria-controls="seriesWrap">Masquer</button></h2><div id="seriesWrap" role="region" aria-label="Championnats">${allCards.join('')}</div>`;
   }
 
   const PILOT_COLORS = [
@@ -2593,13 +2680,13 @@
       : escape(initials);
 
     const qsItems = stats ? [
-      { v: stats.entries, k: 'Engagements' },
-      { v: stats.wins,    k: 'Victoires'   },
-      { v: stats.podiums, k: 'Podiums'     },
+      { v: stats.entries, k: 'Courses'   },
+      { v: stats.wins,    k: 'Victoires' },
+      { v: stats.podiums, k: 'Podiums'   },
     ] : [];
     const qsHtml = qsItems.length ? `
       <div class="pilot-qs" aria-hidden="true">
-        ${qsItems.map(s => `<div class="pilot-qs-item"><div class="qv">${s.v}</div><div class="qk">${escape(s.k)}</div></div>`).join('')}
+        ${qsItems.map(s => `<div class="pilot-qs-item"><div class="qv" data-count-up="${s.v}">0</div><div class="qk">${escape(s.k)}</div></div>`).join('')}
       </div>` : '';
 
     return `
@@ -2608,8 +2695,8 @@
         <div class="pilot-info">
           <div class="pilot-name">${escape(fullName)}</div>
           <div class="pilot-badges">
-            ${age != null ? `<span class="pilot-age" title="Âge">${age} ans</span>` : ''}
-            ${club ? `<span class="pilot-club" title="Club / groupe">${escape(club)}</span>` : ''}
+            ${age != null ? `<span class="pilot-age" title="Âge">🎂 ${age} ans</span>` : ''}
+            ${club ? `<span class="pilot-club" title="Club / groupe">📍 ${escape(club)}</span>` : ''}
           </div>
         </div>
         ${qsHtml}
@@ -2808,9 +2895,215 @@
     </div>`;
   }
 
+  // ===== STATS DASHBOARD (3 panneaux) =====
+  function renderStatsDashboard(s) {
+    const podiumRate = s.entries ? Math.round(100 * s.podiums / s.entries) : 0;
+    const winRate    = s.entries ? Math.round(100 * s.wins / s.entries) : 0;
+    const topHalfRate      = s.pctCount ? Math.round(100 * s.topHalf / s.pctCount) : 0;
+    const topTenRate       = s.pctCount ? Math.round(100 * s.topTen / s.pctCount) : 0;
+    const topQuarterRate   = s.pctCount ? Math.round(100 * s.topQuarter / s.pctCount) : 0;
+    const motoTop4Rate     = s.motosRaced ? Math.round(100 * s.motoTop4 / s.motosRaced) : 0;
+    const motoWinRate      = s.motosRaced ? Math.round(100 * s.motoWins / s.motosRaced) : 0;
+    const finalPhasesRate  = s.entries ? Math.round(100 * s.finalPhasesReached / s.entries) : 0;
+    const finaleRate       = s.entries ? Math.round(100 * s.finalsReached / s.entries) : 0;
+
+    const dateRange = s.firstDate
+      ? (s.firstDate === s.lastDate ? fmtDate(s.firstDate) : `${fmtDate(s.firstDate)} → ${fmtDate(s.lastDate)}`)
+      : '—';
+
+    const gateEntries = Object.entries(s.gateResults)
+      .map(([g, rs]) => ({ gate: +g, avg: rs.reduce((a,b) => a+b, 0) / rs.length, count: rs.length }))
+      .filter(x => x.count >= 2).sort((a,b) => a.avg - b.avg);
+    const bestGate  = gateEntries[0] ?? null;
+    const worstGate = gateEntries.length > 1 ? gateEntries[gateEntries.length - 1] : null;
+
+    const row = (icon, val, label, pct = '') =>
+      `<div class="stats-dashboard-row">
+        <span class="stats-dashboard-icon">${icon}</span>
+        <span class="stats-dashboard-val">${val}</span>
+        <span class="stats-dashboard-label">${label}</span>
+        ${pct ? `<span class="stats-dashboard-pct">${pct}</span>` : ''}
+      </div>`;
+
+    return `
+      <div class="stats-dashboard">
+        <div class="stats-dashboard-panel">
+          <div class="stats-dashboard-panel-title">Palmarès</div>
+          ${row('🥇', `<span data-count-up="${s.wins}">0</span>`, `victoire${s.wins !== 1 ? 's' : ''}`, `${winRate}%`)}
+          ${row('🏅', `<span data-count-up="${s.podiums}">0</span>`, `podium${s.podiums !== 1 ? 's' : ''}`, `${podiumRate}%`)}
+          ${row('🔝', s.top8, 'top 8', s.pctCount ? `${Math.round(100*s.top8/s.pctCount)}%` : '')}
+          ${row('🏁', `<span data-count-up="${s.entries}">0</span>`, `engagement${s.entries !== 1 ? 's' : ''}`)}
+        </div>
+        <div class="stats-dashboard-panel">
+          <div class="stats-dashboard-panel-title">Performance</div>
+          ${row('📈', `${topHalfRate}%`, 'dans le top 50%')}
+          ${row('📊', s.avgPct != null ? `top ${Math.round(s.avgPct)}%` : '—', 'percentile moyen')}
+          ${row('🎯', s.avgRank != null ? s.avgRank.toFixed(1) : '—', `rang moyen${s.avgField != null ? ' · ' + Math.round(s.avgField) + ' pil./cat.' : ''}`)}
+          ${row('⭐', s.bestRank ?? '—', `meilleur rang${s.bestPct != null ? ' · top ' + s.bestPct + '%' : ''}`)}
+        </div>
+        <div class="stats-dashboard-panel">
+          <div class="stats-dashboard-panel-title">Finales</div>
+          ${s.motosRaced ? row('🔄', `${motoTop4Rate}%`, `manches top 4 · ${s.motoTop4}/${s.motosRaced}`, `${motoWinRate}% victoires`) : ''}
+          ${s.entries ? row('🔀', `${finalPhasesRate}%`, `phases finales · ${s.finalPhasesReached}/${s.entries}`) : ''}
+          ${row('🏆', `${finaleRate}%`, `finales atteintes · ${s.finalsReached}/${s.entries}`)}
+          ${row('🥇', s.finalWins, `finale${s.finalWins !== 1 ? 's' : ''} gagnée${s.finalWins !== 1 ? 's' : ''}`)}
+        </div>
+        <div class="stats-dashboard-panel">
+          <div class="stats-dashboard-panel-title">Contexte</div>
+          ${row('🗓', `<span data-count-up="${s.events.size}">0</span>`, `événement${s.events.size !== 1 ? 's' : ''} · ${s.orgs.size} org.`)}
+          ${row('📅', `<span style="font-size:13px">${escape(dateRange)}</span>`, 'période')}
+          ${bestGate  ? row('🚪', `#${bestGate.gate}`, `meilleure porte (manches) · moy. ${bestGate.avg.toFixed(1)} (${bestGate.count} courses)`) : ''}
+          ${worstGate ? row('⚠️', `#${worstGate.gate}`, `porte difficile (manches) · moy. ${worstGate.avg.toFixed(1)} (${worstGate.count} courses)`) : ''}
+          ${s.pilots.size > 1 ? row('👥', s.pilots.size, 'pilotes') : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  // ===== TIMELINE VERTICALE =====
+  function renderTimeline(sortedEvents, pilotColor) {
+    if (!sortedEvents.length) return '';
+    const colorVar = pilotColor || 'var(--accent)';
+
+    // Grouper par année (tri décroissant des années)
+    const byYear = new Map();
+    for (const grp of sortedEvents) {
+      const year = (grp.event.eventDate || grp.event.eventEndDate || '').slice(0, 4) || '—';
+      if (!byYear.has(year)) byYear.set(year, []);
+      byYear.get(year).push(grp);
+    }
+    const years = [...byYear.keys()].sort((a, b) => b.localeCompare(a));
+
+    const html = [];
+    html.push(`<div class="timeline" style="--pilot-color:${colorVar}">`);
+
+    for (const year of years) {
+      const groups = byYear.get(year);
+      html.push(`<div class="timeline-year-sep">${year}</div>`);
+      html.push(`<div class="timeline-line-wrap">`);
+
+      for (const { event, account, items } of groups) {
+        let bestRank = null;
+        for (const m of items) {
+          const r = m.competitor?.rank;
+          if (typeof r === 'number' && (bestRank === null || r < bestRank)) bestRank = r;
+        }
+        const dotClass = bestRank === 1 ? 'r1' : bestRank === 2 ? 'r2' : bestRank === 3 ? 'r3' : '';
+
+        html.push(`<div class="timeline-item">`);
+        html.push(`<div class="timeline-dot ${dotClass}"></div>`);
+
+        const evUrl = eventUrl(account.accountCode, event.eventId);
+        const evName = escape(event.eventName);
+        const evNameHtml = evUrl
+          ? `<a class="sqorz-link" href="${escape(evUrl)}" target="_blank" rel="noopener noreferrer" title="Ouvrir sur Sqorz">${evName}</a>`
+          : evName;
+
+        html.push(`<div class="event">`);
+        html.push(`<div class="event-head">
+          <div class="left">
+            <div class="name">${evNameHtml}</div>
+            <div><span class="org-badge" title="Organisateur">${escape(account.accountName)}</span></div>
+          </div>
+          <div class="right">
+            <div class="date">${escape(fmtDate(event.eventDate))}${event.eventEndDate && event.eventEndDate !== event.eventDate ? ' → ' + escape(fmtDate(event.eventEndDate)) : ''}</div>
+          </div>
+        </div>`);
+        html.push(`<div class="event-body">`);
+
+        for (const m of items) {
+          const c = m.competitor;
+          const cls = m.cls;
+          const total = m.totalParticipants;
+          const rk = c.rank;
+          const pillClass = rk === 1 ? 'r1' : rk === 2 ? 'r2' : rk === 3 ? 'r3' : (rk && rk <= 8 ? 'r8' : '');
+          const pct = percentile(rk, total);
+          const totalTxt = total ? `<div>sur ${total} pilotes</div>` : '';
+          const pctClass = pct == null ? '' : (pct <= 10 ? 'elite' : pct <= 25 ? 'good' : '');
+          const pctTxt = pct != null ? `<div><span class="top-pct ${pctClass}">top ${pct}%</span></div>` : '';
+          const phaseCtx = { accountCode: m.account.accountCode, eventId: m.event.eventId, perpetualClassCode: cls.perpetualClassCode };
+          const phases = (c.competitorRankDetails || []).map(d => phaseTag(d, phaseCtx)).join('');
+          const finalPh = (c.competitorRankDetails || []).find(isFinalPhase);
+          const finalTxt = finalPh && finalPh.result != null
+            ? `<div><span class="lbl">Finale</span> ${ordFr(finalPh.result)}</div>`
+            : '';
+          const clUrl = classUrl(m.account.accountCode, m.event.eventId, cls.perpetualClassCode);
+          const clName = escape(cls.className);
+          const clNameHtml = clUrl
+            ? `<a class="sqorz-link" href="${escape(clUrl)}" target="_blank" rel="noopener noreferrer" title="Ouvrir la catégorie sur Sqorz">${clName}</a>`
+            : clName;
+          html.push(`
+            <div class="class-line">
+              <div class="cl-info">
+                <div><span class="class-name">${clNameHtml}</span></div>
+                <div class="meta">${escape(c.firstName)} ${escape(c.lastName)}${c.plate ? ` · #${escape(c.plate)}` : ''}${c.groupName ? ` · ${escape(c.groupName)}` : ''}</div>
+                ${phases ? `<div class="phases">${phases}</div>` : ''}
+              </div>
+              <div class="cl-right">
+                <div class="cl-meta-r">
+                  <div><span class="lbl">Classement</span></div>
+                  ${totalTxt}${pctTxt}${finalTxt}
+                </div>
+                <div class="rank-pill ${pillClass}" title="Classement final de la catégorie">${rk ?? '—'}</div>
+              </div>
+            </div>
+          `);
+        }
+
+        html.push(`</div></div>`); // event-body + event
+        html.push(`</div>`);       // timeline-item
+      }
+
+      html.push(`</div>`); // timeline-line-wrap
+    }
+
+    html.push(`</div>`); // timeline
+    return html.join('');
+  }
+
+  // ===== ANIMATIONS =====
+  function countUp(el, target, duration) {
+    duration = duration || 600;
+    const start = performance.now();
+    function update(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const ease = t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t;
+      el.textContent = Math.round(target * ease);
+      if (t < 1) requestAnimationFrame(update);
+      else el.textContent = target;
+    }
+    requestAnimationFrame(update);
+  }
+
+  function initTimelineObserver() {
+    const items = document.querySelectorAll('.timeline-item');
+    if (!items.length) return;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px -10px 0px' });
+    items.forEach(item => observer.observe(item));
+  }
+
+  function initAnimations() {
+    // Count-up sur les éléments data-count-up
+    document.querySelectorAll('[data-count-up]').forEach(el => {
+      const target = parseInt(el.dataset.countUp, 10);
+      if (!isNaN(target) && target > 0) countUp(el, target, 600);
+      else el.textContent = isNaN(target) ? el.dataset.countUp : target;
+    });
+    // Timeline IntersectionObserver
+    initTimelineObserver();
+  }
+
   function render(matches, sortMode = 'date-desc', seriesMatches = []) {
     if (!matches.length && !seriesMatches.length) {
       resultsEl.innerHTML = '<div class="card empty">Aucun pilote ne correspond à cette recherche.</div>';
+      document.body.classList.remove('has-results');
       return;
     }
 
@@ -2897,10 +3190,13 @@
         break;
     }
 
+    // Couleur du pilote actif pour la timeline
+    const pilotColor = avatarColor((activeKey || '').toLowerCase());
+
     const panels = { stats: [], series: [], history: [] };
     if (hasEventMatches) {
       const statsMeta = `synthèse sur ${stats.entries} engagement(s)`;
-      panels.stats.push(`<h2 class="section-title">Statistiques <span class="meta">${statsMeta}</span><button type="button" class="btn btn-ghost section-toggle" id="statsToggle" aria-controls="statsWrap">Masquer</button></h2>`);
+      panels.stats.push(`<h2 class="section-title">📈 Vue globale <span class="meta">${statsMeta}</span><button type="button" class="btn btn-ghost section-toggle" id="statsToggle" aria-controls="statsWrap">Masquer</button></h2>`);
       panels.stats.push(`<div id="statsWrap" role="region" aria-label="Statistiques">${renderStats(stats)}</div>`);
       panels.stats.push(`<h2 class="section-title">Graphiques <span class="meta">visualisations des résultats</span><button type="button" class="btn btn-ghost section-toggle" id="chartsToggle" aria-controls="chartsWrap">Masquer</button></h2>`);
       panels.stats.push(`<div id="chartsWrap" role="region" aria-label="Graphiques"><div class="charts-grid">${renderCharts(primaryMatches)}</div></div>`);
@@ -2909,13 +3205,14 @@
       panels.series.push(renderChampionships(primarySeriesMatches));
     }
     if (hasEventMatches) {
-      panels.history.push(`<h2 class="section-title">Événements <span class="meta">${sortedEvents.length} événement(s), ${sortLabel}</span><button type="button" class="btn btn-ghost section-toggle" id="historyToggle" aria-controls="historyWrap">Masquer</button></h2><div id="historyWrap" role="region" aria-label="Événements">`);
+      const timelineHtml = renderTimeline(sortedEvents, pilotColor);
+      panels.history.push(`<h2 class="section-title">🏁 Courses <span class="meta">${sortedEvents.length} événement(s), ${sortLabel}</span><button type="button" class="btn btn-ghost section-toggle" id="historyToggle" aria-controls="historyWrap">Masquer</button></h2><div id="historyWrap" role="region" aria-label="Événements">${timelineHtml}</div>`);
     }
 
     const tabsAvailable = [];
-    if (panels.stats.length)   tabsAvailable.push({ key: 'stats',   label: 'Stats',      count: null });
-    if (panels.series.length)  tabsAvailable.push({ key: 'series',  label: 'Séries',     count: primarySeriesMatches.length });
-    if (panels.history.length) tabsAvailable.push({ key: 'history', label: 'Événements', count: sortedEvents.length });
+    if (panels.stats.length)   tabsAvailable.push({ key: 'stats',   label: '📈 Stats',       count: null });
+    if (panels.series.length)  tabsAvailable.push({ key: 'series',  label: '🏆 Championnats', count: primarySeriesMatches.length });
+    if (panels.history.length) tabsAvailable.push({ key: 'history', label: '🏁 Courses',      count: sortedEvents.length });
 
     const html = [];
     if (compareActive && lastCompareMatches.length) {
@@ -2944,85 +3241,25 @@
         <div class="pilot-picker-list">${items}</div>
       </div>`);
     }
-    html.push(renderPilotCard(primaryMatches, primarySeriesMatches, stats));
+    const pilotCardHtml = renderPilotCard(primaryMatches, primarySeriesMatches, stats);
+    let tabsNavHtml = '';
     if (tabsAvailable.length > 1) {
       const navHtml = tabsAvailable.map((t, i) => {
         const badge = t.count != null ? ` <span class="tab-badge">${t.count}</span>` : '';
-        return `<button type="button" class="tab-btn${i === 0 ? ' active' : ''}" data-tab-btn="${t.key}" role="tab" aria-selected="${i === 0}">${escape(t.label)}${badge}</button>`;
+        return `<button type="button" class="tab-btn${i === 0 ? ' active' : ''}" data-tab-btn="${t.key}" role="tab" aria-selected="${i === 0}">${t.label}${badge}</button>`;
       }).join('');
-      html.push(`<div class="tabs-nav" role="tablist">${navHtml}</div>`);
+      tabsNavHtml = `<div class="tabs-nav" role="tablist" style="--pilot-color:${pilotColor}">${navHtml}</div>`;
     }
+    html.push(`<div class="pilot-sticky-header">${pilotCardHtml}${tabsNavHtml}</div>`);
     for (let i = 0; i < tabsAvailable.length; i++) {
       const t = tabsAvailable[i];
-      html.push(`<section class="tab-panel${i === 0 ? ' active' : ''}" data-tab="${t.key}" role="tabpanel">${panels[t.key].join('')}`);
-      // Note : la balise </section> est fermée après la boucle events pour le panel "history"
-      if (t.key !== 'history') html.push(`</section>`);
+      html.push(`<section class="tab-panel${i === 0 ? ' active' : ''}" data-tab="${t.key}" role="tabpanel">${panels[t.key].join('')}</section>`);
     }
 
-    for (const { event, account, items } of sortedEvents) {
-      const evUrl = eventUrl(account.accountCode, event.eventId);
-      const evName = escape(event.eventName);
-      const evNameHtml = evUrl
-        ? `<a class="sqorz-link" href="${escape(evUrl)}" target="_blank" rel="noopener noreferrer" title="Ouvrir sur Sqorz">${evName}</a>`
-        : evName;
-      html.push(`<div class="event">`);
-      html.push(`<div class="event-head">
-        <div class="left">
-          <div class="name">${evNameHtml}</div>
-          <div><span class="org-badge" title="Organisateur">${escape(account.accountName)}</span></div>
-        </div>
-        <div class="right">
-          <div class="date">${escape(fmtDate(event.eventDate))}${event.eventEndDate && event.eventEndDate !== event.eventDate ? ' → ' + escape(fmtDate(event.eventEndDate)) : ''}</div>
-        </div>
-      </div>`);
-      html.push(`<div class="event-body">`);
-
-      for (const m of items) {
-        const c = m.competitor;
-        const cls = m.cls;
-        const total = m.totalParticipants;
-        const rk = c.rank;
-        const pillClass = rk === 1 ? 'r1' : rk === 2 ? 'r2' : rk === 3 ? 'r3' : (rk && rk <= 8 ? 'r8' : '');
-        const pct = percentile(rk, total);
-        const totalTxt = total ? `<div>sur ${total} pilotes</div>` : '';
-        const pctClass = pct == null ? '' : (pct <= 10 ? 'elite' : pct <= 25 ? 'good' : '');
-        const pctTxt = pct != null ? `<div><span class="top-pct ${pctClass}">top ${pct}%</span></div>` : '';
-        const phaseCtx = { accountCode: m.account.accountCode, eventId: m.event.eventId, perpetualClassCode: cls.perpetualClassCode };
-        const phases = (c.competitorRankDetails || []).map(d => phaseTag(d, phaseCtx)).join('');
-        const finalPh = (c.competitorRankDetails || []).find(isFinalPhase);
-        const finalTxt = finalPh && finalPh.result != null
-          ? `<div><span class="lbl">Finale</span> ${ordFr(finalPh.result)}</div>`
-          : '';
-        const clUrl = classUrl(m.account.accountCode, m.event.eventId, cls.perpetualClassCode);
-        const clName = escape(cls.className);
-        const clNameHtml = clUrl
-          ? `<a class="sqorz-link" href="${escape(clUrl)}" target="_blank" rel="noopener noreferrer" title="Ouvrir la catégorie sur Sqorz">${clName}</a>`
-          : clName;
-        html.push(`
-          <div class="class-line">
-            <div class="cl-info">
-              <div><span class="class-name">${clNameHtml}</span></div>
-              <div class="meta">${escape(c.firstName)} ${escape(c.lastName)}${c.plate ? ` · #${escape(c.plate)}` : ''}${c.groupName ? ` · ${escape(c.groupName)}` : ''}</div>
-              ${phases ? `<div class="phases">${phases}</div>` : ''}
-            </div>
-            <div class="cl-right">
-              <div class="cl-meta-r">
-                <div><span class="lbl">Classement</span></div>
-                ${totalTxt}
-                ${pctTxt}
-                ${finalTxt}
-              </div>
-              <div class="rank-pill ${pillClass}" title="Classement final de la catégorie">${rk ?? '—'}</div>
-            </div>
-          </div>
-        `);
-      }
-
-      html.push(`</div></div>`);
-    }
-    if (panels.history.length) html.push(`</div></section>`);
     resultsEl.innerHTML = html.join('');
     applySectionVisibility();
+    document.body.classList.add('has-results');
+    initAnimations();
   }
 
   const sectionState = {
@@ -3190,6 +3427,7 @@
       searchSelected();
     } else if (!state.name) {
       resultsEl.innerHTML = '';
+      document.body.classList.remove('has-results');
       resultsFiltersEl.hidden = true;
       setStatus('');
       lastMatches = [];
