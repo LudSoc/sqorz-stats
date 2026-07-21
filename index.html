@@ -629,6 +629,12 @@
     padding:4px 12px; border-radius:99px;
     background:var(--card-soft); border:1px solid var(--line);
   }
+  .pilot-age{
+    font-size:12.5px; font-weight:600; color:var(--pilot-color, var(--accent));
+    padding:4px 12px; border-radius:99px;
+    background:color-mix(in srgb, var(--pilot-color, var(--accent)) 12%, var(--card-soft));
+    border:1px solid color-mix(in srgb, var(--pilot-color, var(--accent)) 30%, var(--line));
+  }
   .pilot-qs{
     display:flex; gap:20px; flex-shrink:0; position:relative;
     border-left:1px solid var(--line); padding-left:20px;
@@ -2576,6 +2582,7 @@
     const club  = sortedEv.find(m => m.competitor.groupName)?.competitor.groupName
                || seriesMatches.find(m => m.competitor.groupName)?.competitor.groupName
                || null;
+    const age   = sortedEv.find(m => m.competitor.age != null)?.competitor.age ?? null;
 
     const initials = [firstName[0], lastName[0]].filter(Boolean).join('').toUpperCase() || '?';
     const color    = avatarColor(fullName.toLowerCase());
@@ -2601,6 +2608,7 @@
         <div class="pilot-info">
           <div class="pilot-name">${escape(fullName)}</div>
           <div class="pilot-badges">
+            ${age != null ? `<span class="pilot-age" title="Âge">${age} ans</span>` : ''}
             ${club ? `<span class="pilot-club" title="Club / groupe">${escape(club)}</span>` : ''}
           </div>
         </div>
