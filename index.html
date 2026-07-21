@@ -1078,8 +1078,18 @@
   <span>Données issues de <a href="https://our.sqorz.com/orgs" target="_blank" rel="noopener noreferrer">Sqorz</a></span>
   <span class="footer-sep">·</span>
   <span>© <span id="footerYear"></span></span>
+  <span class="footer-sep">·</span>
+  <button type="button" id="clearCacheBtn" class="btn btn-ghost" style="font-size:12px;padding:4px 10px">Vider le cache</button>
 </footer>
-<script>document.getElementById('footerYear').textContent = new Date().getFullYear();</script>
+<script>
+  document.getElementById('footerYear').textContent = new Date().getFullYear();
+  document.getElementById('clearCacheBtn').addEventListener('click', () => {
+    if (confirm('Vider tout le cache local ? La prochaine recherche rechargera toutes les données depuis Sqorz.')) {
+      localStorage.clear();
+      location.reload();
+    }
+  });
+</script>
 
 <script>
 (() => {
@@ -1592,8 +1602,10 @@
       document.getElementById('compareInp').value = '';
       document.getElementById('compareStatus').textContent = '';
 
+      const targetCodes = new Set(targets.map(a => a.accountCode));
       const matches = [];
       for (const { account, event, detail } of lastEventData.values()) {
+        if (!targetCodes.has(account.accountCode)) continue;
         for (const cls of (detail.classRanks || [])) {
           const summaries = cls.competitorRankSummaries || [];
           for (const c of summaries) {
