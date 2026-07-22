@@ -1514,7 +1514,7 @@
 
   async function loadPilotsIndex() {
     nameInp.disabled = true;
-    setStatus('Chargement de l\'index…');
+    setStatus('Chargement des données…');
     try {
       const res = await fetch('./pilots-index.json');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
