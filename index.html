@@ -1512,13 +1512,44 @@
   }
   let currentAbort = null;
 
+  function expandIndex(idx) {
+    for (const ev of (idx.events || [])) {
+      for (const cls of (ev.classes || [])) {
+        for (const c of (cls.competitors || [])) {
+          c.firstName = c.fn; c.lastName = c.ln; c.groupName = c.gn;
+          c.competitorRankDetails = (c.d || []).map(d => ({
+            phaseName: d.n, result: d.r,
+            ...(d.rp  != null ? { racePosition:  d.rp  } : {}),
+            ...(d.pc         ? { phaseCode:      d.pc  } : {}),
+            ...(d.pbc        ? { phaseBlockCode: d.pbc } : {}),
+            ...(d.rn  != null ? { raceName:       d.rn  } : {}),
+          }));
+        }
+      }
+    }
+    for (const sr of (idx.series || [])) {
+      for (const cls of (sr.classes || [])) {
+        for (const c of (cls.competitors || [])) {
+          c.firstName = c.fn; c.lastName = c.ln; c.groupName = c.gn;
+          c.seriesRank = c.sr; c.seriesPoints = c.sp;
+          c.seriesRankCompetitorEvents = (c.ev || []).map(e => e == null ? null : ({
+            ...(e.er != null ? { eventRank:   e.er } : {}),
+            ...(e.ep != null ? { eventPoints: e.ep } : {}),
+            ...(e.t         ? { tallied: true }      : {}),
+          }));
+        }
+      }
+    }
+    return idx;
+  }
+
   async function loadPilotsIndex() {
     nameInp.disabled = true;
     setStatus('Chargement des données…');
     try {
       const res = await fetch('./pilots-index.json');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      pilotsIndex = await res.json();
+      pilotsIndex = expandIndex(await res.json());
       nameInp.disabled = false;
       updateSearchEnabled();
       setStatus('');

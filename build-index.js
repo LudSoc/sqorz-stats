@@ -18,30 +18,41 @@ const norm = s => (s || '').toLowerCase()
   .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 
 
+// Clés courtes : fn=firstName, ln=lastName, gn=groupName, d=competitorRankDetails
+// Dans chaque detail : n=phaseName, r=result, rp=racePosition, pc=phaseCode, pbc=phaseBlockCode, rn=raceName
 function slimCompetitor(c) {
   const out = {
-    firstName: c.firstName, lastName: c.lastName,
-    rank: c.rank, plate: c.plate, age: c.age, groupName: c.groupName,
+    fn: c.firstName, ln: c.lastName,
+    rank: c.rank, plate: c.plate, age: c.age, gn: c.groupName,
   };
   const details = (c.competitorRankDetails || [])
     .filter(d => d.phaseName && d.result != null)
     .map(d => {
-      const p = { phaseName: d.phaseName, result: d.result };
-      if (d.racePosition  != null) p.racePosition  = d.racePosition;
-      if (d.phaseCode)             p.phaseCode     = d.phaseCode;
-      if (d.phaseBlockCode)        p.phaseBlockCode = d.phaseBlockCode;
-      if (d.raceName != null)      p.raceName      = d.raceName;
+      const p = { n: d.phaseName, r: d.result };
+      if (d.racePosition  != null) p.rp  = d.racePosition;
+      if (d.phaseCode)             p.pc  = d.phaseCode;
+      if (d.phaseBlockCode)        p.pbc = d.phaseBlockCode;
+      if (d.raceName != null)      p.rn  = d.raceName;
       return p;
     });
-  if (details.length) out.competitorRankDetails = details;
+  if (details.length) out.d = details;
   return out;
 }
 
+// Clés courtes : fn=firstName, ln=lastName, gn=groupName, sr=seriesRank, sp=seriesPoints, ev=seriesRankCompetitorEvents
 function slimSeriesCompetitor(c) {
+  const ev = (c.seriesRankCompetitorEvents || []).map(e => {
+    if (!e) return null;
+    const o = {};
+    if (e.eventRank   != null) o.er = e.eventRank;
+    if (e.eventPoints != null) o.ep = e.eventPoints;
+    if (e.tallied)             o.t  = true;
+    return o;
+  });
   return {
-    firstName: c.firstName, lastName: c.lastName,
-    seriesRank: c.seriesRank, seriesPoints: c.seriesPoints, groupName: c.groupName,
-    seriesRankCompetitorEvents: c.seriesRankCompetitorEvents,
+    fn: c.firstName, ln: c.lastName,
+    sr: c.seriesRank, sp: c.seriesPoints, gn: c.groupName,
+    ev,
   };
 }
 
