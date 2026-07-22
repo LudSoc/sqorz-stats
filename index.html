@@ -2543,10 +2543,6 @@
           const pctTxt = pct != null ? `<div><span class="top-pct ${pctClass}">top ${pct}%</span></div>` : '';
           const phaseCtx = { accountCode: m.account.accountCode, eventId: m.event.eventId, perpetualClassCode: cls.perpetualClassCode };
           const phases = (c.competitorRankDetails || []).map(d => phaseTag(d, phaseCtx)).join('');
-          const finalPh = (c.competitorRankDetails || []).find(isFinalPhase);
-          const finalTxt = finalPh && finalPh.result != null
-            ? `<div><span class="lbl">Finale</span> ${ordFr(finalPh.result)}</div>`
-            : '';
           const clUrl = classUrl(m.account.accountCode, m.event.eventId, cls.perpetualClassCode);
           const clName = escape(cls.className);
           const clNameHtml = clUrl
@@ -2562,7 +2558,7 @@
               <div class="cl-right">
                 <div class="cl-meta-r">
                   <div><span class="lbl">Classement</span></div>
-                  ${totalTxt}${pctTxt}${finalTxt}
+                  ${totalTxt}${pctTxt}
                 </div>
                 <div class="rank-pill ${pillClass}" title="Classement final de la catégorie">${rk ?? '—'}</div>
               </div>
