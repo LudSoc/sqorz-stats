@@ -1246,7 +1246,7 @@
       account: { accountCode: m.account.accountCode, accountName: m.account.accountName },
       event: { eventId: m.event.eventId, eventName: m.event.eventName,
                eventDate: m.event.eventDate, eventEndDate: m.event.eventEndDate },
-      cls: { className: m.cls?.className || '' },
+      cls: { className: m.cls?.className || '', perpetualClassCode: m.cls?.perpetualClassCode || null },
       competitor: m.competitor,
       totalParticipants: m.totalParticipants,
     };
@@ -1612,7 +1612,9 @@
 
   function isFinalPhase(d) {
     const n = (d.phaseName || '').toLowerCase();
-    return /final/.test(n) && !/semi|quarter|1\/|eighth|repech/.test(n);
+    if (!/final/.test(n)) return false;
+    if (/semi|demi|quarter|quart|\d+\/|\d+.?[èe]me|eighth|repech|petit|last.chance/.test(n)) return false;
+    return true;
   }
   function isMotoPhase(d) {
     return /^moto/i.test(d.phaseName || '');
@@ -1622,7 +1624,8 @@
   }
   function isKnockoutPhase(d) {
     const n = (d.phaseName || '').toLowerCase();
-    return (/final/.test(n) || /1\/\d+/.test(n)) && !/repech/.test(n);
+    if (/repech|last.chance/.test(n)) return false;
+    return /final/.test(n) || /\d+\/\d+/.test(n) || /de finale/.test(n);
   }
 
   function frPhaseName(raw) {
@@ -2341,6 +2344,8 @@
     const p2Plate = p2Sorted.find(m => m.competitor.plate)?.competitor.plate || null;
     const p1Club = p1Sorted.find(m => m.competitor.groupName)?.competitor.groupName || null;
     const p2Club = p2Sorted.find(m => m.competitor.groupName)?.competitor.groupName || null;
+    const p1Age  = p1Sorted.find(m => m.competitor.age != null)?.competitor.age ?? null;
+    const p2Age  = p2Sorted.find(m => m.competitor.age != null)?.competitor.age ?? null;
     const p1Color = avatarColor(p1Name.toLowerCase());
     const _p2ColorRaw = avatarColor(p2Name.toLowerCase());
     const p2Color = _p2ColorRaw === p1Color
@@ -2355,6 +2360,8 @@
     const mtr2 = p2Stats.motosRaced ? Math.round(100*p2Stats.motoTop4/p2Stats.motosRaced) : 0;
     const fin1 = p1Stats.entries ? Math.round(100*p1Stats.finalsReached/p1Stats.entries) : 0;
     const fin2 = p2Stats.entries ? Math.round(100*p2Stats.finalsReached/p2Stats.entries) : 0;
+    const fp1  = p1Stats.entries ? Math.round(100*p1Stats.finalPhasesReached/p1Stats.entries) : 0;
+    const fp2  = p2Stats.entries ? Math.round(100*p2Stats.finalPhasesReached/p2Stats.entries) : 0;
     const pod1 = p1Stats.entries ? Math.round(100*p1Stats.podiums/p1Stats.entries) : 0;
     const pod2 = p2Stats.entries ? Math.round(100*p2Stats.podiums/p2Stats.entries) : 0;
 
@@ -2363,12 +2370,12 @@
       { label:'Victoires',      v1:p1Stats.wins,     v2:p2Stats.wins,     hi:true  },
       { label:'Podiums',        v1:p1Stats.podiums,  v2:p2Stats.podiums,  hi:true  },
       { label:'% podium',       v1:pod1,             v2:pod2,             hi:true,  s:'%' },
-      { label:'Top 10%',        v1:p1Stats.topTen,   v2:p2Stats.topTen,   hi:true  },
       { label:'Percentile moy.',v1:p1Stats.avgPct!=null?Math.round(p1Stats.avgPct):null, v2:p2Stats.avgPct!=null?Math.round(p2Stats.avgPct):null, hi:false, s:'%' },
       { label:'Meilleur rang',  v1:p1Stats.bestRank, v2:p2Stats.bestRank, hi:false },
       { label:'Rang moyen',     v1:p1Stats.avgRank!=null?+p1Stats.avgRank.toFixed(1):null, v2:p2Stats.avgRank!=null?+p2Stats.avgRank.toFixed(1):null, hi:false },
-      { label:'Finales',        v1:fin1,             v2:fin2,             hi:true,  s:'%' },
-      { label:'Manches top 4',  v1:mtr1,             v2:mtr2,             hi:true,  s:'%' },
+      { label:'% qualification', v1:fp1,              v2:fp2,              hi:true,  s:'%' },
+      { label:'% finales',      v1:fin1,             v2:fin2,             hi:true,  s:'%' },
+      { label:'% manches top 4',v1:mtr1,             v2:mtr2,             hi:true,  s:'%' },
     ];
 
     function barW(v1, v2, hi) {
@@ -2404,11 +2411,11 @@
       <div class="compare-pilots">
         <div class="compare-pilot">
           <div class="cav" style="--cp-color:${p1Color}">${avInner(p1c, p1Plate)}</div>
-          <div><div class="cpname">${escape(p1Name)}</div><div class="cpsub">${escape(p1Club||'—')}</div></div>
+          <div><div class="cpname">${escape(p1Name)}</div><div class="cpsub">${escape(p1Club||'—')}</div>${p1Age != null ? `<div class="cpsub">${p1Age} ans</div>` : ''}</div>
         </div>
         <div class="compare-pilot">
           <div class="cav" style="--cp-color:${p2Color}">${avInner(p2c, p2Plate)}</div>
-          <div><div class="cpname">${escape(p2Name)}</div><div class="cpsub">${escape(p2Club||'—')}</div></div>
+          <div><div class="cpname">${escape(p2Name)}</div><div class="cpsub">${escape(p2Club||'—')}</div>${p2Age != null ? `<div class="cpsub">${p2Age} ans</div>` : ''}</div>
         </div>
       </div>
       <div class="compare-rows">${rowsHtml}</div>
@@ -2450,8 +2457,7 @@
         <div class="stats-dashboard-panel">
           <div class="stats-dashboard-panel-title">Palmarès</div>
           ${row('🥇', `<span data-count-up="${s.wins}">0</span>`, `victoire${s.wins !== 1 ? 's' : ''}`, `${winRate}%`)}
-          ${row('🏅', `<span data-count-up="${s.podiums}">0</span>`, `podium${s.podiums !== 1 ? 's' : ''}`, `${podiumRate}%`)}
-          ${row('🔝', s.top8, 'top 8', s.pctCount ? `${Math.round(100*s.top8/s.pctCount)}%` : '')}
+          ${row('<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><rect x="7" y="9" width="10" height="11" rx="1"/><rect x="1" y="13" width="7" height="7" rx="1"/><rect x="16" y="11" width="7" height="9" rx="1"/></svg>', `<span data-count-up="${s.podiums}">0</span>`, `podium${s.podiums !== 1 ? 's' : ''}`, `${podiumRate}%`)}
           ${row('🏁', `<span data-count-up="${s.entries}">0</span>`, `engagement${s.entries !== 1 ? 's' : ''}`)}
         </div>
         <div class="stats-dashboard-panel">
@@ -2959,6 +2965,7 @@
       if (cached) {
         lastMatches = cached.matches;
         lastSeriesMatches = cached.seriesMatches;
+        lastSearchKey = norm(state.name);
         resultsFiltersEl.hidden = false;
         document.getElementById('compareToggleBtn').disabled = false;
         renderFiltered();

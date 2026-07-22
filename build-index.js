@@ -27,7 +27,10 @@ function slimCompetitor(c) {
     .filter(d => d.phaseName && d.result != null)
     .map(d => {
       const p = { phaseName: d.phaseName, result: d.result };
-      if (d.racePosition != null) p.racePosition = d.racePosition;
+      if (d.racePosition  != null) p.racePosition  = d.racePosition;
+      if (d.phaseCode)             p.phaseCode     = d.phaseCode;
+      if (d.phaseBlockCode)        p.phaseBlockCode = d.phaseBlockCode;
+      if (d.raceName != null)      p.raceName      = d.raceName;
       return p;
     });
   if (details.length) out.competitorRankDetails = details;
