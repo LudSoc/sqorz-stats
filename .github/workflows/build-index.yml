@@ -1,0 +1,34 @@
+name: Build pilots index
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'  # chaque lundi à 3h UTC
+  workflow_dispatch:       # déclenchement manuel possible
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Générer pilots-index.json
+        run: node build-index.js
+
+      - name: Commit si changements
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pilots-index.json
+          if git diff --cached --quiet; then
+            echo "Aucun changement — rien à commiter."
+          else
+            git commit -m "chore: mise à jour de l'index pilotes"
+            git push
+          fi

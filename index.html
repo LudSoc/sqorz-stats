@@ -943,27 +943,6 @@
   .compare-input-row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap}
   .compare-input-row .field{flex:1 1 180px}
 
-  /* Barre de chargement global en fond */
-  #globalLoadBar{
-    position:fixed; top:0; left:0; right:0; z-index:200;
-    height:3px; background:transparent; pointer-events:none;
-  }
-  #globalLoadBar .glb-fill{
-    height:100%; background:var(--accent);
-    transition:width .3s ease; width:0%;
-  }
-  #globalLoadBanner{
-    background:color-mix(in srgb,var(--accent) 12%,var(--card));
-    border-bottom:1px solid var(--accent-soft);
-    padding:6px 24px; font-size:12px; color:var(--ink-2);
-    display:flex; align-items:center; gap:8px;
-  }
-  #globalLoadBanner.hidden{display:none}
-  .glb-spinner{
-    width:12px; height:12px; border:2px solid var(--accent-soft);
-    border-top-color:var(--accent); border-radius:50%;
-    animation:spin .7s linear infinite; flex-shrink:0;
-  }
   @keyframes spin{to{transform:rotate(360deg)}}
 
   /* Bouton retour en haut */
@@ -994,45 +973,6 @@
   footer a:hover{ text-decoration:underline }
   .footer-sep{ color:var(--line-strong) }
 
-  /* Sélecteur d'organisations */
-  .org-selector{ margin-bottom:14px }
-  .org-selector-summary{
-    display:inline-flex; align-items:center; gap:6px;
-    font-size:12.5px; font-weight:600; color:var(--ink-2);
-    cursor:pointer; padding:7px 12px;
-    background:var(--card-soft); border:1px solid var(--line);
-    border-radius:8px; user-select:none;
-    transition:border-color .15s, background .15s;
-  }
-  .org-selector-summary:hover{ border-color:var(--accent); background:color-mix(in srgb,var(--accent) 8%, transparent) }
-  .org-selector-panel{
-    margin-top:8px; padding:10px 12px;
-    background:var(--card-soft); border:1px solid var(--line); border-radius:10px;
-  }
-  .org-selector-panel[hidden]{ display:none }
-  .org-selector-actions{
-    display:flex; gap:8px; margin-bottom:8px; padding-bottom:8px;
-    border-bottom:1px dashed var(--line);
-  }
-  .org-selector-actions button{
-    font:inherit; font-size:11.5px; font-weight:600;
-    padding:4px 10px; border-radius:6px; cursor:pointer;
-    background:var(--card); border:1px solid var(--line-strong); color:var(--ink-2);
-    transition:border-color .15s, background .15s;
-  }
-  .org-selector-actions button:hover{ border-color:var(--accent); color:var(--accent-hi) }
-  .org-selector-list{
-    display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
-    gap:4px 12px; max-height:240px; overflow-y:auto;
-  }
-  .org-selector-item{
-    display:flex; align-items:center; gap:7px;
-    font-size:12.5px; color:var(--ink-2); cursor:pointer;
-    padding:3px 4px; border-radius:5px;
-    transition:background .1s;
-  }
-  .org-selector-item:hover{ background:color-mix(in srgb,var(--accent) 8%, transparent) }
-  .org-selector-item input[type=checkbox]{ accent-color:var(--accent); width:14px; height:14px; flex-shrink:0; cursor:pointer }
 
   /* ===== TIMELINE VERTICALE ===== */
   .timeline{ position:relative; margin-bottom:20px }
@@ -1156,11 +1096,6 @@
 </style>
 </head>
 <body>
-<div id="globalLoadBar"><div class="glb-fill" id="globalLoadFill"></div></div>
-<div id="globalLoadBanner" class="hidden">
-  <div class="glb-spinner"></div>
-  <span id="globalLoadMsg">Chargement des données…</span>
-</div>
 <div class="topbar">
   <div class="topbar-inner">
     <div class="brand-row">
@@ -1187,19 +1122,7 @@
 
 <main>
   <div class="card filters">
-    <div class="org-selector" id="orgSelector">
-      <div class="org-selector-summary" id="orgSelectorSummary" role="button" tabindex="0" aria-expanded="false" aria-controls="orgSelectorPanel">
-        <span id="orgSelectorLabel">Chargement des orgas…</span>
-        <span>▾</span>
-      </div>
-      <div class="org-selector-panel" id="orgSelectorPanel" hidden>
-        <div class="org-selector-actions">
-          <button type="button" id="orgSelectAll">Tout sélectionner</button>
-          <button type="button" id="orgDeselectAll">Tout désélectionner</button>
-        </div>
-        <div class="org-selector-list" id="orgSelectorList"></div>
-      </div>
-    </div>
+
     <div class="grid">
       <div class="field col-name">
         <label for="nameInp">Nom du pilote</label>
@@ -1271,12 +1194,47 @@
 
 <script>
 (() => {
-  const API_BASE = 'https://sqorz-proxy.ludovicsocie.workers.dev';
+  let pilotsIndex = null;
 
-  async function fetchJson(path, signal) {
-    const r = await fetch(API_BASE + path, signal ? { signal } : {});
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
+  function searchLocal(query) {
+    const tokens = norm(query).split(' ').filter(Boolean);
+    if (!tokens.length || !pilotsIndex) return { events: [], series: [] };
+
+    const events = [];
+    for (const evEntry of (pilotsIndex.events || [])) {
+      for (const cls of evEntry.classes) {
+        for (const c of cls.competitors) {
+          if (!matchPilot(c.firstName, c.lastName, tokens)) continue;
+          events.push({
+            account: evEntry.account,
+            event: evEntry.event,
+            cls: { className: cls.className, perpetualClassCode: cls.perpetualClassCode },
+            competitor: c,
+            totalParticipants: cls.total,
+          });
+        }
+      }
+    }
+
+    const series = [];
+    for (const srEntry of (pilotsIndex.series || [])) {
+      for (const cls of srEntry.classes) {
+        for (const c of cls.competitors) {
+          if (!matchPilot(c.firstName, c.lastName, tokens)) continue;
+          series.push({
+            account: srEntry.account,
+            coOrgs: srEntry.coOrgs || [],
+            series: srEntry.series,
+            rankEvents: srEntry.rankEvents,
+            cls: { className: cls.className },
+            competitor: c,
+            totalCompetitors: cls.total,
+          });
+        }
+      }
+    }
+
+    return { events, series };
   }
 
   // --- Cache des derniers résultats de recherche ---
@@ -1308,8 +1266,7 @@
     };
   }
   function resultsCacheKey(query) {
-    const orgsKey = [...selectedCodes].sort().join(',');
-    return query + '|' + orgsKey;
+    return query;
   }
   function saveResultsCache(query, matches, seriesMatches) {
     try {
@@ -1409,7 +1366,7 @@
     return queryTokens.every(t => hay.includes(t));
   }
 
-  const FIXED_REGION = 'FR';
+
   const yearSel = document.getElementById('yearSel');
   const sortSel = document.getElementById('sortSel');
   const resultsFiltersEl = document.getElementById('resultsFilters');
@@ -1420,53 +1377,6 @@
   const progressWrap = document.getElementById('progressWrap');
   const progressBar = document.getElementById('progressBar');
 
-  let accounts = [];
-  let selectedCodes = new Set();
-
-  function isDefaultOrg(accountName) {
-    const n = norm(accountName);
-    // Exclure les comités régionaux FFC BMX et Occitanie
-    if (n.includes('nord ouest') || n.includes('nordouest') ||
-        n.includes('sud est') || n.includes('sudest') ||
-        n.includes('sud ouest') || n.includes('sudouest') ||
-        n.includes('occitanie')) return false;
-    // Inclure : Bourgogne, Grand Est, FFC (principale), FFC Nord Est
-    return n.includes('bourgogne') ||
-           n.includes('grand est') ||
-           n.includes('francaise de cyclisme') ||
-           (n.includes('ffc') && n.includes('nord est')) ||
-           (n.includes('ffc') && !n.includes('bmx') && !n.includes('comite'));
-  }
-
-  function updateOrgSelectorUI() {
-    const label = document.getElementById('orgSelectorLabel');
-    if (label) label.textContent = `${selectedCodes.size} orga(s) sélectionnée(s)`;
-    const list = document.getElementById('orgSelectorList');
-    if (!list) return;
-    list.querySelectorAll('input[type=checkbox]').forEach(cb => {
-      cb.checked = selectedCodes.has(cb.value);
-    });
-  }
-
-  function renderOrgSelectorList() {
-    const list = document.getElementById('orgSelectorList');
-    if (!list) return;
-    list.innerHTML = accounts.map(a => {
-      const checked = selectedCodes.has(a.accountCode) ? ' checked' : '';
-      return `<label class="org-selector-item">
-        <input type="checkbox" value="${escape(a.accountCode)}"${checked}>
-        <span>${escape(a.accountName)}</span>
-      </label>`;
-    }).join('');
-    list.querySelectorAll('input[type=checkbox]').forEach(cb => {
-      cb.addEventListener('change', () => {
-        if (cb.checked) selectedCodes.add(cb.value);
-        else selectedCodes.delete(cb.value);
-        updateOrgSelectorUI();
-        updateSearchEnabled();
-      });
-    });
-  }
 
   function setStatus(msg, isError = false) {
     statusEl.textContent = msg || '';
@@ -1491,7 +1401,6 @@
       name: nameInp.value.trim(),
       year: yearSel.value || '',
       sort: sortSel.value || 'date-desc',
-      orgs: [...selectedCodes].sort().join(','),
     };
   }
   function parseUrlState() {
@@ -1500,7 +1409,6 @@
       name: u.searchParams.get('name') || '',
       year: u.searchParams.get('year') || '',
       sort: u.searchParams.get('sort') || 'date-desc',
-      orgs: u.searchParams.get('orgs') || '',
     };
   }
   function buildUrlFromState(state) {
@@ -1509,7 +1417,6 @@
     if (state.name) params.set('name', state.name);
     if (state.year) params.set('year', state.year);
     if (state.sort && state.sort !== 'date-desc') params.set('sort', state.sort);
-    if (state.orgs) params.set('orgs', state.orgs);
     const qs = params.toString();
     return u.pathname + (qs ? '?' + qs : '') + u.hash;
   }
@@ -1557,111 +1464,8 @@
     { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
   ));
 
-  let globalDataReady = false; // true quand lastEventData est complet pour toutes les orgs
-
   function updateSearchEnabled() {
-    if (currentAbort) return;
-    searchBtn.disabled = !(nameInp.value.trim().length >= 2 && selectedCodes.size > 0 && (globalDataReady || accounts.length > 0));
-  }
-
-  async function loadAllDataBackground(silent = false) {
-    const fill = document.getElementById('globalLoadFill');
-    const banner = document.getElementById('globalLoadBanner');
-    const msg = document.getElementById('globalLoadMsg');
-    const setGlb = (done, total) => {
-      if (silent) return;
-      if (fill) fill.style.width = total ? Math.round(100 * done / total) + '%' : '0%';
-    };
-
-    try {
-      if (!silent) {
-        banner.classList.remove('hidden');
-        msg.textContent = `Chargement des ${accounts.length} organisation(s)…`;
-      }
-      setGlb(0, 1);
-
-      // 1. Récupère tous les événements de toutes les orgs
-      const allEvents = [], allSeries = [];
-      let orgDone = 0;
-      await Promise.all(accounts.map(async a => {
-        try {
-          const orgData = await fetchJsonCached('/json/org/' + encodeURIComponent(a.accountCode));
-          for (const e of (orgData.events || [])) if (e.publish !== false) allEvents.push({ account: a, event: e });
-          for (const s of (orgData.series || [])) if (s.publish !== false && s.seriesId) allSeries.push({ account: a, series: s });
-        } catch {}
-        orgDone++;
-        setGlb(orgDone, accounts.length);
-      }));
-
-      // 2. Charge les détails de chaque événement
-      const total = allEvents.length + allSeries.length;
-      let done = 0;
-      msg.textContent = `Chargement de ${allEvents.length} événement(s)…`;
-      setGlb(0, total);
-
-      const CONC = 25;
-      const evQueue = allEvents.slice();
-      async function evWorker() {
-        while (evQueue.length) {
-          const item = evQueue.shift();
-          try {
-            const detail = await fetchJsonCached(
-              '/json/event/' + encodeURIComponent(item.event.eventId),
-              null,
-              item.event.eventEndDate || item.event.eventDate
-            );
-            lastEventData.set(item.event.eventId, { account: item.account, event: item.event, detail });
-          } catch {}
-          done++;
-          setGlb(done, total);
-        }
-      }
-
-      // 3. Séries
-      const srByKey = new Map();
-      const srQueue = allSeries.slice();
-      async function srWorker() {
-        while (srQueue.length) {
-          const item = srQueue.shift();
-          try {
-            const detail = await fetchJsonCached('/json/series/' + encodeURIComponent(item.series.seriesId));
-            const rankEvents = detail.seriesRankEvents || [];
-            const key = norm(item.series.seriesName || '') || item.series.seriesId;
-            if (!srByKey.has(key)) {
-              srByKey.set(key, { account: item.account, coOrgs: [], series: item.series, detail, rankEvents });
-            } else {
-              const ex = srByKey.get(key);
-              if (rankEvents.length > ex.rankEvents.length) {
-                ex.account = item.account; ex.series = item.series; ex.detail = detail; ex.rankEvents = rankEvents;
-              } else if (!ex.coOrgs.some(a => a.accountCode === item.account.accountCode)) {
-                ex.coOrgs.push(item.account);
-              }
-            }
-          } catch {}
-          done++;
-          setGlb(done, total);
-        }
-      }
-
-      const workers = [];
-      for (let i = 0; i < Math.min(CONC, allEvents.length || 1); i++) workers.push(evWorker());
-      for (let i = 0; i < Math.min(2, allSeries.length || 1); i++) workers.push(srWorker());
-      await Promise.all(workers);
-
-      lastSeriesData = srByKey;
-      lastSearchedCodes = new Set(accounts.map(a => a.accountCode));
-      globalDataReady = true;
-      updateSearchEnabled();
-      if (!silent) {
-        setGlb(1, 1);
-        setTimeout(() => {
-          banner.classList.add('hidden');
-          fill.style.width = '0%';
-        }, 800);
-      }
-    } catch {
-      if (!silent) banner.classList.add('hidden');
-    }
+    searchBtn.disabled = !(pilotsIndex && nameInp.value.trim().length >= 2);
   }
 
   function setSearchMode(mode) {
@@ -1708,106 +1512,34 @@
   }
   let currentAbort = null;
 
-  async function loadAccounts() {
+  async function loadPilotsIndex() {
     nameInp.disabled = true;
-    accounts = [];
-    setStatus('Chargement des organisations…');
+    setStatus('Chargement de l\'index…');
     try {
-      const data = await fetchJsonCached('/json/region/' + encodeURIComponent(FIXED_REGION));
-      accounts = (data.accounts || []).slice().sort((a,b) => a.accountName.localeCompare(b.accountName));
-
-      // Pré-sélection : orgas par défaut si selectedCodes est vide (premier chargement sans URL state)
-      if (selectedCodes.size === 0) {
-        for (const a of accounts) {
-          if (isDefaultOrg(a.accountName)) selectedCodes.add(a.accountCode);
-        }
-      } else {
-        // Filtrer les codes obsolètes (sécurité)
-        const validCodes = new Set(accounts.map(a => a.accountCode));
-        for (const code of [...selectedCodes]) {
-          if (!validCodes.has(code)) selectedCodes.delete(code);
-        }
-      }
-
-      renderOrgSelectorList();
-      updateOrgSelectorUI();
+      const res = await fetch('./pilots-index.json');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      pilotsIndex = await res.json();
       nameInp.disabled = false;
       updateSearchEnabled();
       setStatus('');
     } catch (e) {
-      setStatus('Impossible de charger la liste : ' + humanError(e), true);
+      setStatus('Impossible de charger l\'index : ' + humanError(e), true);
     }
   }
 
-  async function searchSelected() {
-    // Si déjà en cours → annulation
-    if (currentAbort) {
-      currentAbort.abort();
-      return;
-    }
-
+  function searchSelected() {
     const query = nameInp.value.trim();
-    const queryTokens = norm(query).split(' ').filter(Boolean);
-    if (!queryTokens.length) { setStatus('Saisir un nom à chercher.', true); return; }
+    if (!norm(query)) { setStatus('Saisir un nom à chercher.', true); return; }
 
     pushStateUrl();
     saveRecentSearch(query);
 
-    const targets = accounts.filter(a => selectedCodes.has(a.accountCode));
-    if (!targets.length) { setStatus('Sélectionne au moins une organisation.', true); return; }
-
-    // Chemin rapide : données globales prêtes, ou mêmes orgs déjà en mémoire → re-scan local, zéro requête
-    const fastPath = lastEventData.size > 0 && (
-      globalDataReady ||
-      (lastSearchedCodes.size === targets.length && targets.every(a => lastSearchedCodes.has(a.accountCode)))
-    );
-    const sameOrgs = fastPath;
-
-    if (sameOrgs) {
-      lastCompareMatches = [];
-      compareActive = false;
-      selectedPilotKey = null;
-      selectedComparePilotKey = null;
-      document.getElementById('compareInputCard').hidden = true;
-      document.getElementById('compareInp').value = '';
-      document.getElementById('compareStatus').textContent = '';
-
-      const targetCodes = new Set(targets.map(a => a.accountCode));
-      const matches = [];
-      for (const { account, event, detail } of lastEventData.values()) {
-        if (!targetCodes.has(account.accountCode)) continue;
-        for (const cls of (detail.classRanks || [])) {
-          const summaries = cls.competitorRankSummaries || [];
-          for (const c of summaries) {
-            if (matchPilot(c.firstName, c.lastName, queryTokens))
-              matches.push({ account, event, cls, competitor: c, totalParticipants: summaries.length });
-          }
-        }
-      }
-      const seriesMatches = [];
-      for (const entry of lastSeriesData.values()) {
-        for (const cls of (entry.detail.seriesRankClasses || [])) {
-          const competitors = cls.seriesRankCompetitors || [];
-          for (const c of competitors) {
-            if (matchPilot(c.firstName, c.lastName, queryTokens))
-              seriesMatches.push({ account: entry.account, coOrgs: entry.coOrgs, series: entry.series, seriesDetail: entry.detail, rankEvents: entry.rankEvents, cls, competitor: c, totalCompetitors: competitors.length });
-          }
-        }
-      }
-      lastMatches = matches;
-      lastSeriesMatches = seriesMatches;
-      const srMsg = seriesMatches.length ? ` · ${seriesMatches.length} classement(s) de championnat` : '';
-      setStatus(`${matches.length} résultat(s) trouvé(s)${srMsg} sur ${targets.length} org(s) sélectionnée(s) — résultat instantané ⚡`);
-      resultsFiltersEl.hidden = (matches.length + seriesMatches.length) === 0;
-      document.getElementById('compareToggleBtn').disabled = (matches.length + seriesMatches.length) === 0;
+    const searchKey = norm(query);
+    if (searchKey === lastSearchKey && (lastMatches.length || lastSeriesMatches.length)) {
       renderFiltered();
-      if (matches.length || seriesMatches.length) saveResultsCache(norm(nameInp.value.trim()), matches, seriesMatches);
       return;
     }
 
-    lastEventData.clear();
-    lastSeriesData.clear();
-    lastSearchedCodes.clear();
     lastCompareMatches = [];
     compareActive = false;
     selectedPilotKey = null;
@@ -1817,231 +1549,27 @@
     document.getElementById('compareStatus').textContent = '';
     document.getElementById('compareToggleBtn').disabled = true;
 
-    currentAbort = new AbortController();
-    const signal = currentAbort.signal;
-    setSearchMode('cancel');
     resultsEl.innerHTML = renderSkeleton();
     resultsFiltersEl.hidden = true;
-    setStatus(`Récupération des événements sur ${targets.length} organisation(s) sélectionnée(s)…`);
     setProgress(0, 0);
 
-    try {
-      const orgEvents = [];
-      const orgSeries = [];
-      let orgErrors = 0;
-      let orgDone = 0;
-      setProgress(0, targets.length);
-      await Promise.all(targets.map(async a => {
-        try {
-          if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-          const orgData = await fetchJsonCached('/json/org/' + encodeURIComponent(a.accountCode), signal);
-          const events = (orgData.events || []).filter(e => e.publish !== false);
-          const series = (orgData.series || []).filter(s => s.publish !== false);
-          orgEvents.push({ account: a, events });
-          orgSeries.push({ account: a, series });
-        } catch (e) {
-          if (e.name !== 'AbortError') orgErrors++;
-        } finally {
-          orgDone++;
-          setProgress(orgDone, targets.length);
-        }
-      }));
-      if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    const { events: matches, series: seriesMatches } = searchLocal(query);
 
-      const allEvents = [];
-      for (const oe of orgEvents) for (const ev of oe.events) allEvents.push({ account: oe.account, event: ev });
-      const allSeries = [];
-      for (const os of orgSeries) {
-        for (const sr of os.series) {
-          if (!sr.seriesId) continue;
-          allSeries.push({ account: os.account, series: sr });
-        }
-      }
+    lastMatches = matches;
+    lastSeriesMatches = seriesMatches;
+    lastSearchKey = searchKey;
 
-      if (!allEvents.length && !allSeries.length) {
-        resultsEl.innerHTML = '';
-        document.body.classList.remove('has-results');
-        setProgress(0, 0);
-        if (orgErrors === targets.length) {
-          setStatus(`Impossible de récupérer les ${targets.length} organisation(s) — proxys saturés ou Sqorz indisponible. Réessaie dans une minute.`, true);
-        } else {
-          const ok = targets.length - orgErrors;
-          setStatus(`Aucun événement ou championnat publié dans les ${ok} organisation(s) répondues${orgErrors ? ` (${orgErrors} en échec)` : ''}.`);
-        }
-        return;
-      }
-
-      const totalUnits = allEvents.length + allSeries.length;
-      const srLabel = allSeries.length ? ` et ${allSeries.length} championnat(s)` : '';
-      setStatus(`Analyse de ${allEvents.length} événement(s)${srLabel} sur ${targets.length} organisation(s)…`);
-      let done = 0;
-      setProgress(0, totalUnits);
-
-      const CONCURRENCY = 25;
-      const matches = [];
-      const seriesMatches = [];
-      const eventQueue = allEvents.slice();
-      const seriesQueue = allSeries.slice();
-      const eventErrors = [];
-      const seriesErrors = [];
-
-      async function eventWorker() {
-        while (eventQueue.length) {
-          if (signal.aborted) break;
-          const item = eventQueue.shift();
-          try {
-            const detail = await fetchJsonCached('/json/event/' + encodeURIComponent(item.event.eventId), signal, item.event.eventEndDate || item.event.eventDate);
-            lastEventData.set(item.event.eventId, { account: item.account, event: item.event, detail });
-            const classRanks = detail.classRanks || [];
-            for (const cls of classRanks) {
-              const summaries = cls.competitorRankSummaries || [];
-              const totalParticipants = summaries.length;
-              for (const c of summaries) {
-                if (matchPilot(c.firstName, c.lastName, queryTokens)) {
-                  matches.push({ account: item.account, event: item.event, cls, competitor: c, totalParticipants });
-                }
-              }
-            }
-          } catch (e) {
-            if (e.name === 'AbortError') return;
-            eventErrors.push({ event: item.event, error: e.message });
-          } finally {
-            done++;
-            setProgress(done, totalUnits);
-          }
-        }
-      }
-
-      const seriesByKey = new Map();
-      async function seriesWorker() {
-        while (seriesQueue.length) {
-          if (signal.aborted) break;
-          const item = seriesQueue.shift();
-          try {
-            const detail = await fetchJsonCached('/json/series/' + encodeURIComponent(item.series.seriesId), signal);
-            const rankEvents = detail.seriesRankEvents || [];
-            const key = norm(item.series.seriesName || '') || item.series.seriesId;
-            const existing = seriesByKey.get(key);
-            if (!existing) {
-              seriesByKey.set(key, {
-                account: item.account,
-                coOrgs: [],
-                series: item.series,
-                detail,
-                rankEvents,
-              });
-            } else {
-              const knownCode = new Set([existing.account.accountCode, ...existing.coOrgs.map(a => a.accountCode)]);
-              if (rankEvents.length > existing.rankEvents.length) {
-                if (!knownCode.has(existing.account.accountCode)) knownCode.add(existing.account.accountCode);
-                const newCoOrgs = [...existing.coOrgs];
-                if (existing.account.accountCode !== item.account.accountCode) {
-                  if (!newCoOrgs.some(a => a.accountCode === existing.account.accountCode)) {
-                    newCoOrgs.unshift(existing.account);
-                  }
-                }
-                const filtered = newCoOrgs.filter(a => a.accountCode !== item.account.accountCode);
-                existing.account = item.account;
-                existing.series = item.series;
-                existing.detail = detail;
-                existing.rankEvents = rankEvents;
-                existing.coOrgs = filtered;
-              } else if (item.account.accountCode !== existing.account.accountCode &&
-                         !existing.coOrgs.some(a => a.accountCode === item.account.accountCode)) {
-                existing.coOrgs.push(item.account);
-              }
-            }
-          } catch (e) {
-            if (e.name === 'AbortError') return;
-            seriesErrors.push({ series: item.series, error: e.message });
-          } finally {
-            done++;
-            setProgress(done, totalUnits);
-          }
-        }
-      }
-
-      const workers = [];
-      const evWorkers = Math.min(CONCURRENCY, allEvents.length);
-      const srWorkers = Math.min(2, allSeries.length);
-      for (let i = 0; i < evWorkers; i++) workers.push(eventWorker());
-      for (let i = 0; i < srWorkers; i++) workers.push(seriesWorker());
-      await Promise.all(workers);
-
-      if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-
-      // Fusionner les séries d'orgs non sélectionnées chargées par le background load
-      // (ex: CPP Challenge d'une org hors sélection)
-      const targetCodes = new Set(targets.map(a => a.accountCode));
-      for (const [key, entry] of lastSeriesData) {
-        if (!seriesByKey.has(key) && !targetCodes.has(entry.account.accountCode)) {
-          seriesByKey.set(key, entry);
-        }
-      }
-
-      // Match pilote dans les séries consolidées (déduplication par nom de série)
-      for (const entry of seriesByKey.values()) {
-        const rankClasses = entry.detail.seriesRankClasses || [];
-        for (const cls of rankClasses) {
-          const competitors = cls.seriesRankCompetitors || [];
-          const totalCompetitors = competitors.length;
-          for (const c of competitors) {
-            if (matchPilot(c.firstName, c.lastName, queryTokens)) {
-              seriesMatches.push({
-                account: entry.account,
-                coOrgs: entry.coOrgs,
-                series: entry.series,
-                seriesDetail: entry.detail,
-                rankEvents: entry.rankEvents,
-                cls,
-                competitor: c,
-                totalCompetitors,
-              });
-            }
-          }
-        }
-      }
-
-      lastSeriesData = seriesByKey;
-      lastSearchedCodes = new Set(targets.map(a => a.accountCode));
-      setProgress(0, 0);
-      const errParts = [];
-      if (orgErrors) errParts.push(`${orgErrors} organisation(s)`);
-      if (eventErrors.length) errParts.push(`${eventErrors.length} événement(s)`);
-      if (seriesErrors.length) errParts.push(`${seriesErrors.length} championnat(s)`);
-      const errMsg = errParts.length ? ` — ${errParts.join(', ')} en erreur` : '';
-      const srMsg = seriesMatches.length ? ` · ${seriesMatches.length} classement(s) de championnat` : '';
-      setStatus(`${matches.length} résultat(s) trouvé(s)${srMsg}${errMsg}.`);
-      lastMatches = matches;
-      lastSeriesMatches = seriesMatches;
-      resultsFiltersEl.hidden = (matches.length + seriesMatches.length) === 0;
-      document.getElementById('compareToggleBtn').disabled = (matches.length + seriesMatches.length) === 0;
-      renderFiltered();
-      if (matches.length || seriesMatches.length) saveResultsCache(norm(nameInp.value.trim()), matches, seriesMatches);
-
-    } catch (e) {
-      setProgress(0, 0);
-      resultsEl.innerHTML = '';
-      document.body.classList.remove('has-results');
-      resultsFiltersEl.hidden = true;
-      lastMatches = [];
-      lastSeriesMatches = [];
-      if (e.name === 'AbortError') {
-        setStatus('Recherche annulée.');
-      } else {
-        setStatus(humanError(e), true);
-      }
-    } finally {
-      currentAbort = null;
-      setSearchMode('search');
-    }
+    const srMsg = seriesMatches.length ? ` · ${seriesMatches.length} classement(s) de championnat` : '';
+    setStatus(`${matches.length} résultat(s) trouvé(s)${srMsg}.`);
+    resultsFiltersEl.hidden = (matches.length + seriesMatches.length) === 0;
+    document.getElementById('compareToggleBtn').disabled = (matches.length + seriesMatches.length) === 0;
+    renderFiltered();
+    if (matches.length || seriesMatches.length) saveResultsCache(norm(nameInp.value.trim()), matches, seriesMatches);
   }
 
   let lastMatches = [];
   let lastSeriesMatches = [];
-  let lastEventData = new Map(); // eventId → {account, event, detail}
-  let lastSeriesData = new Map(); // seriesKey → entry (pour re-scan instantané)
-  let lastSearchedCodes = new Set(); // orgs du dernier fetch complet
+  let lastSearchKey = null; // clé du dernier appel API (query|orgs)
   let lastCompareMatches = [];
   let compareActive = false;
   let selectedPilotKey = null; // null = auto (plus récent), sinon clé norm() du pilote choisi
@@ -2707,25 +2235,17 @@
     const query = document.getElementById('compareInp').value.trim();
     const st = document.getElementById('compareStatus');
     if (!query) { st.textContent = 'Saisir un nom.'; return; }
-    if (!lastEventData.size) { st.textContent = 'Lance d\'abord une recherche principale.'; return; }
-    const queryTokens = norm(query).split(' ').filter(Boolean);
-    const found = [];
-    for (const { account, event, detail } of lastEventData.values()) {
-      for (const cls of (detail.classRanks || [])) {
-        const summaries = cls.competitorRankSummaries || [];
-        for (const c of summaries) {
-          if (matchPilot(c.firstName, c.lastName, queryTokens))
-            found.push({ account, event, cls, competitor: c, totalParticipants: summaries.length });
-        }
-      }
-    }
+    if (!lastSearchKey) { st.textContent = 'Lance d\'abord une recherche principale.'; return; }
+
+    const { events: found } = searchLocal(query);
+
     if (!found.length) {
       st.textContent = `Aucun résultat pour « ${query} » dans les mêmes organisations.`;
       return;
     }
     st.textContent = '';
     lastCompareMatches = found;
-    selectedComparePilotKey = null; // réinitialiser la sélection à chaque nouvelle recherche
+    selectedComparePilotKey = null;
     compareActive = true;
     renderFiltered();
   }
@@ -3377,30 +2897,6 @@
     renderFiltered();
   });
 
-  // Sélecteur d'organisations — toggle panel
-  const orgSelectorSummary = document.getElementById('orgSelectorSummary');
-  const orgSelectorPanel = document.getElementById('orgSelectorPanel');
-  orgSelectorSummary.addEventListener('click', () => {
-    const open = !orgSelectorPanel.hidden;
-    orgSelectorPanel.hidden = open;
-    orgSelectorSummary.setAttribute('aria-expanded', String(!open));
-  });
-  orgSelectorSummary.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); orgSelectorSummary.click(); }
-  });
-  document.getElementById('orgSelectAll').addEventListener('click', () => {
-    for (const a of accounts) selectedCodes.add(a.accountCode);
-    renderOrgSelectorList();
-    updateOrgSelectorUI();
-    updateSearchEnabled();
-  });
-  document.getElementById('orgDeselectAll').addEventListener('click', () => {
-    selectedCodes.clear();
-    renderOrgSelectorList();
-    updateOrgSelectorUI();
-    updateSearchEnabled();
-  });
-
   nameInp.addEventListener('input', updateSearchEnabled);
   nameInp.addEventListener('keydown', e => { if (e.key === 'Enter' && !searchBtn.disabled) searchBtn.click(); });
   searchBtn.addEventListener('click', searchSelected);
@@ -3439,13 +2935,6 @@
     nameInp.value = state.name || '';
     yearSel.value = state.year || '';
     sortSel.value = state.sort || 'date-desc';
-    if (state.orgs) {
-      const codes = state.orgs.split(',').filter(Boolean);
-      if (codes.length) {
-        selectedCodes = new Set(codes);
-        updateOrgSelectorUI();
-      }
-    }
     updateSearchEnabled();
   }
 
@@ -3464,18 +2953,12 @@
   })();
 
   (async function init() {
-    // Restaurer les codes sélectionnés depuis l'URL avant loadAccounts() pour que la pré-sélection soit correcte
     const initState = parseUrlState();
-    if (initState.orgs) {
-      const codes = initState.orgs.split(',').filter(Boolean);
-      if (codes.length) selectedCodes = new Set(codes);
-    }
-    await loadAccounts();
+    await loadPilotsIndex();
     renderRecentSearches();
     const state = initState;
     if (state.name) {
       applyStateToUi(state);
-      // Restaurer les derniers résultats instantanément si disponibles en cache
       const cached = loadResultsCache(norm(state.name));
       if (cached) {
         lastMatches = cached.matches;
@@ -3485,13 +2968,8 @@
         renderFiltered();
         setStatus('');
       } else if (!searchBtn.disabled) {
-        // Pas de cache : lancer la recherche directement (plus rapide que d'attendre le chargement global)
         searchSelected();
       }
-      // Chargement global en arrière-plan (silencieux si résultats déjà affichés)
-      loadAllDataBackground(!!cached);
-    } else {
-      loadAllDataBackground();
     }
   })();
 })();
