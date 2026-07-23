@@ -881,8 +881,9 @@
 
   /* Comparaison de pilotes */
   .compare-section{
-    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
-    padding:18px 20px; margin-bottom:18px; box-shadow:var(--shadow);
+    padding:14px 0 4px;
+    border-top:1px solid var(--line);
+    margin-top:12px;
   }
   .compare-section-hd{
     display:flex; align-items:center; justify-content:space-between;
@@ -947,7 +948,7 @@
     .cbar-wrap{order:-1}
   }
   .compare-input-card{padding:14px 18px}
-  .compare-input-row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap}
+.compare-input-row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap}
   .compare-input-row .field{flex:1 1 180px}
 
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -1177,6 +1178,7 @@
       <button type="button" class="btn btn-danger" id="compareCloseBtn" style="padding:11px 14px" title="Fermer">✕</button>
     </div>
     <div class="status" id="compareStatus" role="status" aria-live="polite"></div>
+    <div id="compareResults"></div>
   </div>
 
   <div id="results" aria-live="polite" aria-busy="false"></div>
@@ -2378,7 +2380,6 @@
       return `<div class="compare-section" id="compareSection">
         <div class="compare-section-hd">
           <span>Comparaison</span>
-          <button type="button" class="compare-close-btn" id="compareCloseResult" title="Fermer">✕</button>
         </div>
         ${cmpPickerHtml}
         <div class="empty" style="padding:18px 0 4px">Aucun résultat pour ${escape(p2name)} en ${escape(y)}.</div>
@@ -2460,7 +2461,6 @@
     return `<div class="compare-section" id="compareSection">
       <div class="compare-section-hd">
         <span>Comparaison</span>
-        <button type="button" class="compare-close-btn" id="compareCloseResult" title="Fermer">✕</button>
       </div>
       ${cmpPickerHtml}
       <div class="compare-pilots">
@@ -2790,10 +2790,13 @@
     if (panels.series.length)  tabsAvailable.push({ key: 'series',  label: '🏆 Championnats', count: primarySeriesMatches.length });
     if (panels.history.length) tabsAvailable.push({ key: 'history', label: '🏁 Courses',      count: sortedEvents.length });
 
-    const html = [];
-    if (compareActive && lastCompareMatches.length) {
-      html.push(renderCompareSection(primaryMatches, stats));
+    const compareResultsEl = document.getElementById('compareResults');
+    if (compareResultsEl) {
+      compareResultsEl.innerHTML = (compareActive && lastCompareMatches.length)
+        ? renderCompareSection(primaryMatches, stats) : '';
     }
+
+    const html = [];
     if (distinctPilots.length > 1 && !selectedPilotKey) {
       const items = distinctPilots.map(([k, p], idx) => {
         const fullName = `${p.cmp.firstName||''} ${p.cmp.lastName||''}`.trim() || k;
@@ -2836,6 +2839,7 @@
     applySectionVisibility();
     document.body.classList.add('has-results');
     initAnimations();
+
   }
 
   const sectionState = {
