@@ -251,6 +251,9 @@
   .hint{font-size:12px; color:var(--muted); margin-top:6px}
   .status{font-size:13px; color:var(--muted); margin-top:14px; min-height:18px}
   .status.error{color:var(--bad)}
+  .status.loading{font-size:15px; color:var(--accent); font-weight:600; display:flex; align-items:center; gap:8px}
+  .status.loading::before{content:''; display:inline-block; width:16px; height:16px; border:2px solid color-mix(in srgb,var(--accent) 30%,transparent); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0}
+  @keyframes spin{to{transform:rotate(360deg)}}
   .progress{
     height:6px; background:var(--card-soft); border:1px solid var(--line);
     border-radius:99px; overflow:hidden; margin-top:10px;
@@ -836,7 +839,7 @@
       font-weight:600; color:var(--ink-2);
     }
     .champ-stages .st-rank::before{
-      content:"Rang "; font-weight:400; color:var(--muted); font-size:11px;
+      content:"Classement "; font-weight:400; color:var(--muted); font-size:11px;
       text-transform:uppercase; letter-spacing:.4px; margin-right:2px;
     }
     .champ-stages .st-pts{
@@ -1151,8 +1154,8 @@
       <select id="sortSel" class="control">
         <option value="date-desc">Date (plus récent → plus ancien)</option>
         <option value="date-asc">Date (plus ancien → plus récent)</option>
-        <option value="rank-asc">Rang final (meilleur → moins bon)</option>
-        <option value="rank-desc">Rang final (moins bon → meilleur)</option>
+        <option value="rank-asc">Classement final (meilleur → moins bon)</option>
+        <option value="rank-desc">Classement final (moins bon → meilleur)</option>
       </select>
     </div>
     <div class="field" style="flex:0 0 auto; align-self:flex-end">
@@ -1545,6 +1548,7 @@
 
   async function loadPilotsIndex() {
     nameInp.disabled = true;
+    statusEl.classList.add('loading');
     setStatus('Chargement des données…');
     try {
       const res = await fetch('./pilots-index.json');
@@ -1552,8 +1556,10 @@
       pilotsIndex = expandIndex(await res.json());
       nameInp.disabled = false;
       updateSearchEnabled();
+      statusEl.classList.remove('loading');
       setStatus('');
     } catch (e) {
+      statusEl.classList.remove('loading');
       setStatus('Impossible de charger l\'index : ' + humanError(e), true);
     }
   }
@@ -1644,7 +1650,7 @@
   function isFinalPhase(d) {
     const n = (d.phaseName || '').toLowerCase();
     if (!/final/.test(n)) return false;
-    if (/semi|demi|quarter|quart|\d+\/|\d+.?[èe]me|eighth|repech|petit|last.chance/.test(n)) return false;
+    if (/semi|demi|quarter|quart|\d+\/|\d+.?[èe]me|\d+°|eighth|repech|petit|last.chance/.test(n)) return false;
     return true;
   }
   function isMotoPhase(d) {
@@ -2148,7 +2154,7 @@
         ? `<details class="champ-details">
             <summary><span class="sum-show">Voir le détail des ${stageCount} manche(s)</span><span class="sum-hide">Masquer le détail des ${stageCount} manche(s)</span></summary>
             <table class="champ-stages">
-              <thead><tr><th>Date</th><th>Manche</th><th>Rang</th><th>Points</th><th title="Manche comptabilisée dans le total">Tallied</th></tr></thead>
+              <thead><tr><th>Date</th><th>Manche</th><th>Classement</th><th>Points</th><th title="Manche comptabilisée dans le total">Tallied</th></tr></thead>
               <tbody>${stageRows}</tbody>
             </table>
           </details>`
@@ -2402,8 +2408,8 @@
       { label:'Podiums',        v1:p1Stats.podiums,  v2:p2Stats.podiums,  hi:true  },
       { label:'% podium',       v1:pod1,             v2:pod2,             hi:true,  s:'%' },
       { label:'Percentile moy.',v1:p1Stats.avgPct!=null?Math.round(p1Stats.avgPct):null, v2:p2Stats.avgPct!=null?Math.round(p2Stats.avgPct):null, hi:false, s:'%' },
-      { label:'Meilleur rang',  v1:p1Stats.bestRank, v2:p2Stats.bestRank, hi:false },
-      { label:'Rang moyen',     v1:p1Stats.avgRank!=null?+p1Stats.avgRank.toFixed(1):null, v2:p2Stats.avgRank!=null?+p2Stats.avgRank.toFixed(1):null, hi:false },
+      { label:'Meilleur classement',  v1:p1Stats.bestRank, v2:p2Stats.bestRank, hi:false },
+      { label:'Classement moyen',     v1:p1Stats.avgRank!=null?+p1Stats.avgRank.toFixed(1):null, v2:p2Stats.avgRank!=null?+p2Stats.avgRank.toFixed(1):null, hi:false },
       { label:'% qualification', v1:fp1,              v2:fp2,              hi:true,  s:'%' },
       { label:'% finales',      v1:fin1,             v2:fin2,             hi:true,  s:'%' },
       { label:'% manches top 4',v1:mtr1,             v2:mtr2,             hi:true,  s:'%' },
@@ -2495,8 +2501,8 @@
           <div class="stats-dashboard-panel-title">Performance</div>
           ${row('📈', `${topHalfRate}%`, 'dans le top 50%')}
           ${row('📊', s.avgPct != null ? `top ${Math.round(s.avgPct)}%` : '—', 'percentile moyen')}
-          ${row('🎯', s.avgRank != null ? s.avgRank.toFixed(1) : '—', `rang moyen${s.avgField != null ? ' · ' + Math.round(s.avgField) + ' pil./cat.' : ''}`)}
-          ${row('⭐', s.bestRank ?? '—', `meilleur rang${s.bestPct != null ? ' · top ' + s.bestPct + '%' : ''}`)}
+          ${row('🎯', s.avgRank != null ? s.avgRank.toFixed(1) : '—', `classement moyen${s.avgField != null ? ' · en moyenne ' + Math.round(s.avgField) + ' pilotes dans la catégorie' : ''}`)}
+          ${row('⭐', s.bestRank ?? '—', `meilleur classement${s.bestPct != null ? ' · top ' + s.bestPct + '%' : ''}`)}
         </div>
         <div class="stats-dashboard-panel">
           <div class="stats-dashboard-panel-title">Finales</div>
@@ -2509,8 +2515,8 @@
           <div class="stats-dashboard-panel-title">Contexte</div>
           ${row('🗓', `<span data-count-up="${s.events.size}">0</span>`, `événement${s.events.size !== 1 ? 's' : ''} · ${s.orgs.size} org.`)}
           ${row('📅', `<span style="font-size:13px">${escape(dateRange)}</span>`, 'période')}
-          ${bestGate  ? row('🚪', `#${bestGate.gate}`, `meilleure porte (manches) · moy. ${bestGate.avg.toFixed(1)} (${bestGate.count} courses)`) : ''}
-          ${worstGate ? row('⚠️', `#${worstGate.gate}`, `porte difficile (manches) · moy. ${worstGate.avg.toFixed(1)} (${worstGate.count} courses)`) : ''}
+          ${bestGate  ? row('🚪', `#${bestGate.gate}`, `meilleure ligne de départ en manche · classement moyen ${bestGate.avg.toFixed(1)} (${bestGate.count} courses)`) : ''}
+          ${worstGate ? row('⚠️', `#${worstGate.gate}`, `ligne de départ difficile en manche · classement moyen ${worstGate.avg.toFixed(1)} (${worstGate.count} courses)`) : ''}
           ${s.pilots.size > 1 ? row('👥', s.pilots.size, 'pilotes') : ''}
         </div>
       </div>
@@ -2732,8 +2738,8 @@
           return (b.event.eventDate || '').localeCompare(a.event.eventDate || '');
         });
         sortLabel = sortMode === 'rank-asc'
-          ? 'meilleur rang final en premier'
-          : 'moins bon rang final en premier';
+          ? 'meilleur classement final en premier'
+          : 'moins bon classement final en premier';
         break;
       }
       case 'date-desc':
