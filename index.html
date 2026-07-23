@@ -2840,6 +2840,13 @@
     document.body.classList.add('has-results');
     initAnimations();
 
+    if (compareActive && lastCompareMatches.length) {
+      const card = document.getElementById('compareInputCard');
+      if (card && !card.hidden) {
+        requestAnimationFrame(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+      }
+    }
+
   }
 
   const sectionState = {
