@@ -949,7 +949,8 @@
   }
   .compare-input-card{padding:14px 18px}
 .compare-input-row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap}
-  .compare-input-row .field{flex:1 1 180px}
+  .compare-input-row .field{flex:1 1 140px; min-width:0}
+  .compare-input-row .compare-btn-group{display:flex; gap:10px; align-items:flex-end; flex-shrink:0}
 
   @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -1174,8 +1175,10 @@
         <label for="compareInp">2ᵉ pilote à comparer</label>
         <input id="compareInp" class="control" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off">
       </div>
-      <button type="button" class="btn" id="compareSearchBtn">Comparer</button>
-      <button type="button" class="btn btn-danger" id="compareCloseBtn" style="padding:11px 14px" title="Fermer">✕</button>
+      <div class="compare-btn-group">
+        <button type="button" class="btn" id="compareSearchBtn">Comparer</button>
+        <button type="button" class="btn btn-danger" id="compareCloseBtn" style="padding:11px 14px" title="Fermer">✕</button>
+      </div>
     </div>
     <div class="status" id="compareStatus" role="status" aria-live="polite"></div>
     <div id="compareResults"></div>
@@ -2308,6 +2311,11 @@
     selectedComparePilotKey = null;
     compareActive = true;
     renderFiltered();
+    const card = document.getElementById('compareInputCard');
+    if (card) {
+      card.hidden = false;
+      setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
   }
 
   function renderCompareSection(p1Matches, p1Stats) {
@@ -2792,8 +2800,8 @@
 
     const compareResultsEl = document.getElementById('compareResults');
     if (compareResultsEl) {
-      compareResultsEl.innerHTML = (compareActive && lastCompareMatches.length)
-        ? renderCompareSection(primaryMatches, stats) : '';
+      const hasCompare = compareActive && lastCompareMatches.length;
+      compareResultsEl.innerHTML = hasCompare ? renderCompareSection(primaryMatches, stats) : '';
     }
 
     const html = [];
@@ -2840,13 +2848,6 @@
     document.body.classList.add('has-results');
     initAnimations();
 
-    if (compareActive && lastCompareMatches.length) {
-      const card = document.getElementById('compareInputCard');
-      if (card && !card.hidden) {
-        requestAnimationFrame(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
-      }
-    }
-
   }
 
   const sectionState = {
@@ -2872,17 +2873,7 @@
       renderFiltered();
       return;
     }
-    if (e.target.closest('#compareCloseResult')) {
-      lastCompareMatches = [];
-      compareActive = false;
-      selectedComparePilotKey = null;
-      document.getElementById('compareInp').value = '';
-      document.getElementById('compareStatus').textContent = '';
-      document.getElementById('compareInputCard').hidden = true;
-      renderFiltered();
-      return;
-    }
-    const cmpPickBtn = e.target.closest('[data-compare-pilot-key]');
+const cmpPickBtn = e.target.closest('[data-compare-pilot-key]');
     if (cmpPickBtn) {
       selectedComparePilotKey = cmpPickBtn.dataset.comparePilotKey;
       renderFiltered();
