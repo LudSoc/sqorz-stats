@@ -443,9 +443,13 @@
     color:color-mix(in srgb,var(--peach) 55%, var(--ink));
     font-weight:500;
   }
-  a.phase{text-decoration:none; cursor:pointer; transition:border-color .15s, background .15s, transform .05s}
+  a.phase{text-decoration:none; cursor:pointer; transition:border-color .15s, background .15s, transform .05s; border-color:color-mix(in srgb,var(--accent) 35%, var(--line))}
+  a.phase::after{content:'↗'; font-size:10px; opacity:.5; margin-left:1px; line-height:1}
   a.phase:hover{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 10%, transparent)}
+  a.phase:hover::after{opacity:1}
+  a.phase.is-moto{border-color:color-mix(in srgb,var(--lavender) 45%, var(--line))}
   a.phase.is-moto:hover{border-color:var(--lavender); background:color-mix(in srgb,var(--lavender) 18%, transparent)}
+  a.phase.is-final{border-color:color-mix(in srgb,var(--peach) 55%, var(--line))}
   a.phase.is-final:hover{border-color:var(--peach); background:color-mix(in srgb,var(--peach) 20%, transparent)}
 
   .rank-pill{
@@ -1229,7 +1233,7 @@
             coOrgs: srEntry.coOrgs || [],
             series: srEntry.series,
             rankEvents: srEntry.rankEvents,
-            cls: { className: cls.className },
+            cls: { className: cls.className, perpetualClassCode: cls.perpetualClassCode || null },
             competitor: c,
             totalCompetitors: cls.total,
           });
@@ -1261,7 +1265,7 @@
       series: { seriesId: sm.series.seriesId, seriesName: sm.series.seriesName },
       competitor: sm.competitor,
       totalCompetitors: sm.totalCompetitors,
-      cls: sm.cls ? { className: sm.cls.className } : null,
+      cls: sm.cls ? { className: sm.cls.className, perpetualClassCode: sm.cls.perpetualClassCode || null } : null,
       rankEvents: (sm.rankEvents || []).map(e => ({
         eventId: e.eventId, eventName: e.eventName, eventShortName: e.eventShortName,
         eventDate: e.eventDate, eventEndDate: e.eventEndDate,
@@ -1633,9 +1637,8 @@
   function ordFr(n){ return n === 1 ? '1er' : `${n}e`; }
 
   function percentile(rank, total){
-    if (!total || total < 2 || typeof rank !== 'number') return null;
-    const p = 100 * rank / total;
-    return Math.max(1, Math.round(p));
+    if (!total || total < 10 || typeof rank !== 'number') return null;
+    return Math.max(1, Math.round(100 * rank / total));
   }
 
   // Z-score du rang sous l'hypothèse uniforme : positif = mieux que la médiane du plateau, borné par ±√3.
@@ -1792,6 +1795,10 @@
   function seriesUrl(accountCode, seriesId) {
     if (!accountCode || !seriesId) return null;
     return `${SQORZ_WEB_BASE}/org/${encodeURIComponent(accountCode)}/series/${encodeURIComponent(seriesId)}/classes`;
+  }
+  function seriesClassUrl(accountCode, seriesId, perpetualClassCode) {
+    if (!accountCode || !seriesId || !perpetualClassCode) return seriesUrl(accountCode, seriesId);
+    return `${SQORZ_WEB_BASE}/org/${encodeURIComponent(accountCode)}/series/${encodeURIComponent(seriesId)}/class/${encodeURIComponent(perpetualClassCode)}`;
   }
   function classUrl(accountCode, eventId, perpetualClassCode) {
     const base = eventUrl(accountCode, eventId);
@@ -2102,16 +2109,27 @@
       const pillClass = rk === 1 ? 'r1' : rk === 2 ? 'r2' : rk === 3 ? 'r3' : (rk && rk <= 8 ? 'r8' : '');
       const pct = percentile(rk, total);
       const pctClass = pct == null ? '' : (pct <= 10 ? 'elite' : pct <= 25 ? 'good' : '');
-      const pctTxt = pct != null ? `<span class="top-pct ${pctClass}">top ${pct}%</span>` : '';
-      const totalTxt = total ? `sur ${total} pilote(s)` : '';
+      const pctTxt = pct != null
+        ? `<span class="top-pct ${pctClass}">top ${pct}%</span>`
+        : (rk != null && total ? `<span class="top-pct">${ordFr(rk)} / ${total}</span>` : '');
+      const totalTxt = total && pct != null ? `sur ${total} pilote(s)` : '';
 
-      const rankEvents = sm.rankEvents || [];
-      const compEvents = c.seriesRankCompetitorEvents || [];
+      const allRankEvents = sm.rankEvents || [];
+      const allCompEvents = c.seriesRankCompetitorEvents || [];
+      // Filtrer les manches sans nom ni date (manches futures/vides dans Sqorz)
+      const { rankEvents, compEvents } = allRankEvents.reduce((acc, ev, i) => {
+        if (ev.eventName || ev.eventDate) {
+          acc.rankEvents.push(ev);
+          acc.compEvents.push(allCompEvents[i] || {});
+        }
+        return acc;
+      }, { rankEvents: [], compEvents: [] });
       const stageCount = rankEvents.length;
       const talliedCount = compEvents.filter(e => e && e.tallied).length;
       const ranEvents = compEvents.filter(e => e && (e.eventRank != null || e.eventPoints != null)).length;
 
       const sUrl = seriesUrl(sm.account.accountCode, ser.seriesId);
+      const sClassUrl = seriesClassUrl(sm.account.accountCode, ser.seriesId, sm.cls.perpetualClassCode);
       const serName = escape(ser.seriesName || '—');
       const serNameHtml = sUrl
         ? `<a class="sqorz-link" href="${escape(sUrl)}" target="_blank" rel="noopener noreferrer" title="Ouvrir le championnat sur Sqorz">${serName}</a>`
@@ -2189,7 +2207,7 @@
               <div class="champ-rank">
                 <div class="rank-pill ${pillClass}" title="Classement général du championnat">${rk != null ? rk : '—'}</div>
                 <div class="champ-rank-text">
-                  <div class="lbl">Classement général</div>
+                  <div class="lbl">${sClassUrl ? `<a class="sqorz-link" href="${escape(sClassUrl)}" target="_blank" rel="noopener noreferrer" title="Voir le classement général sur Sqorz">Classement général</a>` : 'Classement général'}</div>
                   <div class="champ-rank-sub">${[totalTxt, pctTxt].filter(Boolean).join(' · ')}</div>
                 </div>
               </div>
@@ -2499,8 +2517,7 @@
         </div>
         <div class="stats-dashboard-panel">
           <div class="stats-dashboard-panel-title">Performance</div>
-          ${row('📈', `${topHalfRate}%`, 'dans le top 50%')}
-          ${row('📊', s.avgPct != null ? `top ${Math.round(s.avgPct)}%` : '—', 'percentile moyen')}
+          ${row('📊', s.avgPct != null ? `top ${Math.round(s.avgPct)}%` : '—', s.avgPct != null ? `percentile moyen · meilleur que ${100 - Math.round(s.avgPct)}% du plateau` : 'percentile moyen')}
           ${row('🎯', s.avgRank != null ? s.avgRank.toFixed(1) : '—', `classement moyen${s.avgField != null ? ' · en moyenne ' + Math.round(s.avgField) + ' pilotes dans la catégorie' : ''}`)}
           ${row('⭐', s.bestRank ?? '—', `meilleur classement${s.bestPct != null ? ' · top ' + s.bestPct + '%' : ''}`)}
         </div>
@@ -2509,11 +2526,9 @@
           ${s.motosRaced ? row('🔄', `${motoTop4Rate}%`, `manches top 4 · ${s.motoTop4}/${s.motosRaced}`, `${motoWinRate}% victoires`) : ''}
           ${s.entries ? row('🔀', `${finalPhasesRate}%`, `phases finales · ${s.finalPhasesReached}/${s.entries}`) : ''}
           ${row('🏆', `${finaleRate}%`, `finales atteintes · ${s.finalsReached}/${s.entries}`)}
-          ${row('🥇', s.finalWins, `finale${s.finalWins !== 1 ? 's' : ''} gagnée${s.finalWins !== 1 ? 's' : ''}`)}
         </div>
         <div class="stats-dashboard-panel">
-          <div class="stats-dashboard-panel-title">Contexte</div>
-          ${row('🗓', `<span data-count-up="${s.events.size}">0</span>`, `événement${s.events.size !== 1 ? 's' : ''} · ${s.orgs.size} org.`)}
+          <div class="stats-dashboard-panel-title">Conditions</div>
           ${row('📅', `<span style="font-size:13px">${escape(dateRange)}</span>`, 'période')}
           ${bestGate  ? row('🚪', `#${bestGate.gate}`, `meilleure ligne de départ en manche · classement moyen ${bestGate.avg.toFixed(1)} (${bestGate.count} courses)`) : ''}
           ${worstGate ? row('⚠️', `#${worstGate.gate}`, `ligne de départ difficile en manche · classement moyen ${worstGate.avg.toFixed(1)} (${worstGate.count} courses)`) : ''}
@@ -2581,9 +2596,11 @@
           const rk = c.rank;
           const pillClass = rk === 1 ? 'r1' : rk === 2 ? 'r2' : rk === 3 ? 'r3' : (rk && rk <= 8 ? 'r8' : '');
           const pct = percentile(rk, total);
-          const totalTxt = total ? `<div>sur ${total} pilotes</div>` : '';
+          const totalTxt = total && pct != null ? `<div>sur ${total} pilotes</div>` : '';
           const pctClass = pct == null ? '' : (pct <= 10 ? 'elite' : pct <= 25 ? 'good' : '');
-          const pctTxt = pct != null ? `<div><span class="top-pct ${pctClass}">top ${pct}%</span></div>` : '';
+          const pctTxt = pct != null
+            ? `<div><span class="top-pct ${pctClass}">top ${pct}%</span></div>`
+            : (rk != null && total ? `<div><span class="top-pct">${ordFr(rk)} / ${total}</span></div>` : '');
           const phaseCtx = { accountCode: m.account.accountCode, eventId: m.event.eventId, perpetualClassCode: cls.perpetualClassCode };
           const phases = (c.competitorRankDetails || []).map(d => phaseTag(d, phaseCtx)).join('');
           const clUrl = classUrl(m.account.accountCode, m.event.eventId, cls.perpetualClassCode);

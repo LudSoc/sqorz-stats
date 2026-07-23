@@ -136,12 +136,14 @@ async function main() {
         continue;
       }
 
-      const rankEvents = (detail.seriesRankEvents || []).map(e => ({
-        eventId: e.eventId,
-        eventName: e.eventName || e.eventShortName || '',
-        eventDate: e.eventDate || '',
-        eventEndDate: e.eventEndDate || '',
-      }));
+      const rankEvents = (detail.seriesRankEvents || [])
+        .filter(e => e.eventName || e.eventShortName || e.eventDate)
+        .map(e => ({
+          eventId: e.eventId,
+          eventName: e.eventName || e.eventShortName || '',
+          eventDate: e.eventDate || '',
+          eventEndDate: e.eventEndDate || '',
+        }));
 
       const key = norm(sr.seriesName || '') || sr.seriesId;
       if (!seriesByKey.has(key)) {
@@ -165,6 +167,7 @@ async function main() {
         const competitors = cls.seriesRankCompetitors || [];
         return {
           className: cls.className || '',
+          perpetualClassCode: cls.perpetualClassCode || null,
           total: competitors.length,
           competitors: competitors.map(slimSeriesCompetitor),
         };
