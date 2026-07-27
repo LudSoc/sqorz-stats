@@ -571,6 +571,10 @@
   .champ-stages tr.absent td{color:var(--muted); font-style:italic}
   .champ-stages tr.absent .st-name{font-style:normal}
   .champ-stages .muted{color:var(--muted)}
+  .special-result{font-size:.85em; font-weight:700; letter-spacing:.04em}
+  .phase.dnx{background:#fff1f2; color:#9f1239; border-color:#fecdd3}
+  a.phase.dnx,a.phase.dnx:hover{border-color:#fecdd3; background:#fff1f2}
+  .phase.dnx b{color:#9f1239}
 
   .tally{
     display:inline-block; min-width:18px; height:18px; line-height:18px; text-align:center;
@@ -1102,6 +1106,24 @@
   @media (max-width:380px){
     .stats-dashboard{ grid-template-columns:1fr }
   }
+
+  /* Autocomplete */
+  .autocomplete-wrap { position:relative }
+  .autocomplete-dropdown {
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:100;
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    box-shadow:var(--shadow-xl, var(--shadow)); max-height:240px; overflow-y:auto;
+    display:none;
+  }
+  .autocomplete-dropdown.open { display:block }
+  .ac-item {
+    padding:10px 14px; cursor:pointer; display:flex; flex-direction:column; gap:2px;
+    border-bottom:1px solid var(--line); transition:background .1s;
+  }
+  .ac-item:last-child { border-bottom:none }
+  .ac-item:hover, .ac-item.focused { background:var(--accent-soft) }
+  .ac-item .ac-name { font-weight:600; font-size:14px; color:var(--ink) }
+  .ac-item .ac-meta { font-size:11.5px; color:var(--muted) }
 </style>
 </head>
 <body>
@@ -1135,7 +1157,10 @@
     <div class="grid">
       <div class="field col-name">
         <label for="nameInp">Nom du pilote</label>
-        <input id="nameInp" class="control" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off" aria-describedby="nameHint" disabled>
+        <div class="autocomplete-wrap">
+          <input id="nameInp" class="control" style="width:100%" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off" aria-describedby="nameHint" disabled>
+          <div class="autocomplete-dropdown" id="nameInpDropdown"></div>
+        </div>
         <span class="hint" id="nameHint">Insensible à la casse et aux accents.</span>
       </div>
       <div class="field col-btn">
@@ -1173,7 +1198,10 @@
     <div class="compare-input-row">
       <div class="field">
         <label for="compareInp">2ᵉ pilote à comparer</label>
-        <input id="compareInp" class="control" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off">
+        <div class="autocomplete-wrap">
+          <input id="compareInp" class="control" style="width:100%" type="text" placeholder="Dupont ou Jean Dupont" autocomplete="off">
+          <div class="autocomplete-dropdown" id="compareInpDropdown"></div>
+        </div>
       </div>
       <div class="compare-btn-group">
         <button type="button" class="btn" id="compareSearchBtn">Comparer</button>
@@ -1480,6 +1508,83 @@
     searchBtn.disabled = !(pilotsIndex && nameInp.value.trim().length >= 2);
   }
 
+  function searchPilotsForAc(query) {
+    if (!pilotsIndex || !norm(query)) return [];
+    const tokens = norm(query).split(' ').filter(Boolean);
+    const map = new Map();
+    for (const evEntry of (pilotsIndex.events || [])) {
+      for (const cls of (evEntry.classes || [])) {
+        for (const c of (cls.competitors || [])) {
+          const key = norm((c.firstName || '') + ' ' + (c.lastName || '')).trim();
+          if (!key) continue;
+          if (!tokens.every(t => key.includes(t))) continue;
+          if (!map.has(key)) {
+            map.set(key, { firstName: c.firstName || '', lastName: c.lastName || '', groupName: c.groupName || '', normKey: key, count: 0 });
+          }
+          map.get(key).count++;
+        }
+      }
+    }
+    return [...map.values()]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+  }
+
+  function setupAutocomplete(input, dropdown, onSelect) {
+    let focusedIdx = -1;
+
+    function updateDropdown(items) {
+      focusedIdx = -1;
+      if (!items.length) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; return; }
+      dropdown.innerHTML = items.map((p, i) =>
+        `<div class="ac-item" data-idx="${i}" tabindex="-1">
+          <span class="ac-name">${escape(p.firstName + ' ' + p.lastName)}</span>
+          ${p.groupName ? `<span class="ac-meta">${escape(p.groupName)}</span>` : ''}
+        </div>`
+      ).join('');
+      dropdown.classList.add('open');
+      dropdown._items = items;
+      dropdown.querySelectorAll('.ac-item').forEach((el, i) => {
+        el.addEventListener('mousedown', e => { e.preventDefault(); onSelect(items[i]); closeDropdown(); });
+      });
+    }
+
+    function closeDropdown() { dropdown.classList.remove('open'); dropdown.innerHTML = ''; focusedIdx = -1; }
+
+    function moveFocus(delta) {
+      const items = dropdown.querySelectorAll('.ac-item');
+      if (!items.length) return;
+      items[focusedIdx]?.classList.remove('focused');
+      focusedIdx = (focusedIdx + delta + items.length) % items.length;
+      items[focusedIdx]?.classList.add('focused');
+      items[focusedIdx]?.scrollIntoView({ block: 'nearest' });
+    }
+
+    input.addEventListener('input', () => {
+      updateDropdown(searchPilotsForAc(input.value));
+    });
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); moveFocus(1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); moveFocus(-1); }
+      else if (e.key === 'Enter') {
+        const focused = dropdown.querySelector('.ac-item.focused') || dropdown.querySelector('.ac-item');
+        if (focused) {
+          const idx = +focused.dataset.idx;
+          onSelect(dropdown._items[idx]);
+          closeDropdown();
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+      else if (e.key === 'Escape') closeDropdown();
+    });
+
+    document.addEventListener('click', e => {
+      if (!input.contains(e.target) && !dropdown.contains(e.target)) closeDropdown();
+    });
+  }
+
   function setSearchMode(mode) {
     if (mode === 'cancel') {
       searchBtn.textContent = 'Annuler';
@@ -1641,6 +1746,18 @@
 
   function ordFr(n){ return n === 1 ? '1er' : `${n}e`; }
 
+  function specialResultLabel(r) {
+    if (r == null || r < 100000) return null;
+    if (r >= 103000) return 'DSQ';
+    if (r >= 101000) return 'DNS';
+    return 'DNF';
+  }
+  function fmtResult(n) {
+    if (n == null) return null;
+    const s = specialResultLabel(n);
+    return s ? `<span class="special-result">${s}</span>` : ordFr(n);
+  }
+
   function percentile(rank, total){
     if (!total || total < 10 || typeof rank !== 'number') return null;
     return Math.max(1, Math.round(100 * rank / total));
@@ -1681,10 +1798,11 @@
     const pos = d.result;
     const gate = d.racePosition;
     const label = escape(frPhaseName(d.phaseName || d.phaseCode || ''));
-    const posClass = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : '';
+    const isDnx = specialResultLabel(pos) != null;
+    const posClass = !isDnx && pos === 1 ? 'pos-1' : !isDnx && pos === 2 ? 'pos-2' : !isDnx && pos === 3 ? 'pos-3' : '';
     const typeClass = isFinalPhase(d) ? 'is-final' : isMotoPhase(d) ? 'is-moto' : '';
-    const cls = ['phase', posClass, typeClass].filter(Boolean).join(' ');
-    const posTxt = pos != null ? `<b>${ordFr(pos)}</b>` : '<b>—</b>';
+    const cls = ['phase', posClass, typeClass, isDnx ? 'dnx' : ''].filter(Boolean).join(' ');
+    const posTxt = pos != null ? `<b>${fmtResult(pos)}</b>` : '<b>—</b>';
     const gateTxt = gate != null ? `<span class="gate">gr.${gate}</span>` : '';
     const url = ctx ? raceUrl(ctx.accountCode, ctx.eventId, ctx.perpetualClassCode, d.phaseBlockCode, d.phaseCode, d.raceName) : null;
     const inner = `${label} ${posTxt} ${gateTxt}`;
@@ -2154,7 +2272,7 @@
         const ce = compEvents[i] || {};
         const evDate = ev.eventDate || ev.eventEndDate || '';
         const hasResult = ce.eventRank != null || ce.eventPoints != null;
-        const rkTxt = ce.eventRank != null ? ordFr(ce.eventRank) : '<span class="muted">—</span>';
+        const rkTxt = ce.eventRank != null ? fmtResult(ce.eventRank) : '<span class="muted">—</span>';
         const ptsTxt = ce.eventPoints != null ? `${ce.eventPoints} pts` : '<span class="muted">—</span>';
         const tallyBadge = ce.tallied
           ? '<span class="tally tally-on" title="Manche comptabilisée dans le total">✓</span>'
@@ -2628,7 +2746,7 @@
                   <div><span class="lbl">Classement</span></div>
                   ${totalTxt}${pctTxt}
                 </div>
-                <div class="rank-pill ${pillClass}" title="Classement final de la catégorie">${rk ?? '—'}</div>
+                <div class="rank-pill ${pillClass}" title="Classement final de la catégorie">${specialResultLabel(rk) ?? rk ?? '—'}</div>
               </div>
             </div>
           `);
@@ -2958,6 +3076,17 @@ const cmpPickBtn = e.target.closest('[data-compare-pilot-key]');
   nameInp.addEventListener('input', updateSearchEnabled);
   nameInp.addEventListener('keydown', e => { if (e.key === 'Enter' && !searchBtn.disabled) searchBtn.click(); });
   searchBtn.addEventListener('click', searchSelected);
+
+  setupAutocomplete(
+    nameInp,
+    document.getElementById('nameInpDropdown'),
+    pilot => { nameInp.value = pilot.firstName + ' ' + pilot.lastName; updateSearchEnabled(); searchSelected(); }
+  );
+  setupAutocomplete(
+    document.getElementById('compareInp'),
+    document.getElementById('compareInpDropdown'),
+    pilot => { document.getElementById('compareInp').value = pilot.firstName + ' ' + pilot.lastName; searchCompare(); }
+  );
   yearSel.addEventListener('change', () => { replaceStateUrl(); if (lastMatches.length) renderFiltered(); });
   sortSel.addEventListener('change', () => { replaceStateUrl(); if (lastMatches.length) renderFiltered(); });
 
