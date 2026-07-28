@@ -132,6 +132,8 @@
   .theme-btn:active{transform:scale(.95)}
   .hub-back{display:inline-block;margin-top:10px;font-size:12px;color:rgba(255,255,255,.65);text-decoration:none;letter-spacing:.1px}
   .hub-back:hover{color:#fff}
+  #retryBtn{display:block;margin:8px auto 0;padding:6px 18px;background:var(--accent,#4e80ee);color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer}
+  #retryBtn:hover{opacity:.85}
   .brand .logo{
     width:40px; height:40px; border-radius:12px;
     background:rgba(255,255,255,.22); color:#fff;
@@ -1155,6 +1157,7 @@
     </div>
     <div class="progress" id="progressWrap" role="progressbar" aria-label="Progression de la recherche" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div id="progressBar"></div></div>
     <div class="status" id="status" role="status" aria-live="polite"></div>
+    <button id="retryBtn" hidden>Réessayer</button>
     <div class="recent-row" id="recentSearches" aria-label="Recherches récentes" hidden></div>
   </div>
 
@@ -1395,7 +1398,8 @@
   const yearSel = document.getElementById('yearSel');
   const sortSel = document.getElementById('sortSel');
   const resultsFiltersEl = document.getElementById('resultsFilters');
-  const nameInp = document.getElementById('nameInp');
+  const nameInp  = document.getElementById('nameInp');
+  const retryBtn = document.getElementById('retryBtn');
   const searchBtn = document.getElementById('searchBtn');
   const statusEl = document.getElementById('status');
   const resultsEl = document.getElementById('results');
@@ -1646,6 +1650,7 @@
   }
 
   async function loadPilotsIndex() {
+    retryBtn.hidden = true;
     nameInp.disabled = true;
     statusEl.classList.add('loading');
     setStatus('Chargement des données…');
@@ -1660,8 +1665,10 @@
     } catch (e) {
       statusEl.classList.remove('loading');
       setStatus('Impossible de charger l\'index : ' + humanError(e), true);
+      retryBtn.hidden = false;
     }
   }
+  retryBtn.onclick = loadPilotsIndex;
 
   function searchSelected() {
     const query = nameInp.value.trim();
