@@ -112,22 +112,6 @@
   .brand-row{display:flex; align-items:center; justify-content:space-between; gap:12px}
   .brand{display:flex; align-items:center; gap:12px; font-weight:600; letter-spacing:.2px; color:#fff}
 
-  /* Topbar compact — état "has-results" */
-  body.has-results .topbar{
-    position:sticky; top:0; z-index:20;
-    padding:0 24px; height:52px; overflow:hidden;
-    box-shadow:0 2px 16px rgba(0,0,0,.22);
-  }
-  body.has-results .topbar-inner{
-    height:52px; display:flex; align-items:center;
-  }
-  body.has-results .topbar h1,
-  body.has-results .topbar p{
-    display:none;
-  }
-  body.has-results .topbar .brand-row{
-    width:100%; margin:0;
-  }
   .theme-btn{
     display:inline-flex; align-items:center; justify-content:center;
     width:36px; height:36px; padding:0;
@@ -148,8 +132,7 @@
   .topbar h1{margin:24px 0 8px; font-size:34px; font-weight:800; letter-spacing:-1px; color:#fff; text-shadow:0 2px 14px rgba(20,35,60,.45)}
   .topbar p{margin:0; font-size:15px; max-width:min(600px,100%); color:#dce8f2; text-shadow:0 1px 6px rgba(20,35,60,.35); line-height:1.5}
 
-  main{max-width:1180px; margin:-80px auto 40px; padding:0 24px 32px; position:relative; z-index:2;}
-  body.has-results main{margin-top:24px;}
+  main{max-width:1180px; margin:-80px auto 40px; padding:0 24px 32px; position:relative;}
   .card{
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     padding:18px; box-shadow:var(--shadow); margin-bottom:18px;
@@ -1076,12 +1059,12 @@
   .stat{ transition:transform .15s ease, box-shadow .15s ease }
   .stat:hover{ transform:translateY(-1px); box-shadow:var(--shadow-xl, var(--shadow)) }
 
-  /* Carte filtre sticky quand has-results */
+  /* Carte filtre — aucun changement en has-results */
   body.has-results .card.filters{
     margin-bottom:20px;
   }
   .pilot-sticky-header{
-    position:sticky; top:52px; z-index:8;
+    position:sticky; top:0; z-index:8;
     background:var(--bg);
     margin-bottom:18px;
     box-shadow:0 4px 16px rgba(60,90,120,.10);
@@ -1091,13 +1074,9 @@
 
   /* Mobile onglets — override au-dessus du CSS global des onglets */
   @media (max-width:640px){
-    body.has-results .topbar{ height:48px; padding:0 16px }
-    body.has-results .topbar-inner{ height:48px }
-    .pilot-sticky-header{ top:48px }
     .topbar{ padding:32px 18px 100px }
     .topbar h1{ font-size:26px; margin-top:18px }
     main{ padding:0 14px 24px; margin-top:-70px }
-    body.has-results main{ margin-top:16px }
     .tab-btn{ padding:12px 14px; font-size:13px }
     .timeline-line-wrap{ padding-left:32px }
     .timeline-line-wrap::before{ left:10px }
@@ -1133,13 +1112,8 @@
       <div class="brand">
         <span class="logo" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="9"/>
-            <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>
-            <line x1="12" y1="12" x2="12" y2="3.5"/>
-            <line x1="12" y1="12" x2="20.08" y2="9.37"/>
-            <line x1="12" y1="12" x2="16.99" y2="18.88"/>
-            <line x1="12" y1="12" x2="7.01" y2="18.88"/>
-            <line x1="12" y1="12" x2="3.92" y2="9.37"/>
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
           </svg>
         </span>
         Sqorz Stats
