@@ -1436,7 +1436,7 @@
       return;
     }
     progressWrap.hidden = false;
-    const pct = Math.round(100 * done / total);
+    const pct = Math.min(99, Math.round(100 * done / total));
     progressBar.style.width = pct + '%';
     progressWrap.setAttribute('aria-valuenow', String(pct));
   }
@@ -1677,7 +1677,8 @@
 
       const compressed = !!res.headers.get('Content-Encoding');
       const rawTotal = parseInt(res.headers.get('Content-Length') || '0', 10);
-      const total = compressed ? 0 : rawTotal;
+      const ESTIMATED = 83_000_000; // ~79 Mo décompressé
+      const total = compressed ? ESTIMATED : (rawTotal || ESTIMATED);
       const reader = res.body.getReader();
       const chunks = [];
       let received = 0;
