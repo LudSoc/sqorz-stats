@@ -1674,12 +1674,37 @@
     try {
       const res = await fetch('./pilots-index.json');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      pilotsIndex = expandIndex(await res.json());
+
+      const total = parseInt(res.headers.get('Content-Length') || '0', 10);
+      const reader = res.body.getReader();
+      const chunks = [];
+      let received = 0;
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        if (total) {
+          setProgress(received, total);
+          const mb = (received / 1048576).toFixed(0);
+          const mbTotal = (total / 1048576).toFixed(0);
+          setStatus(`Chargement… ${mb} / ${mbTotal} Mo`);
+        }
+      }
+
+      setProgress(0, 0);
+      const allBytes = new Uint8Array(received);
+      let offset = 0;
+      for (const chunk of chunks) { allBytes.set(chunk, offset); offset += chunk.length; }
+      pilotsIndex = expandIndex(JSON.parse(new TextDecoder().decode(allBytes)));
+
       nameInp.disabled = false;
       updateSearchEnabled();
       statusEl.classList.remove('loading');
       setStatus('');
     } catch (e) {
+      setProgress(0, 0);
       statusEl.classList.remove('loading');
       setStatus('Impossible de charger l\'index : ' + humanError(e), true);
       retryBtn.hidden = false;
