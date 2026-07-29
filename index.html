@@ -947,6 +947,13 @@
     .cv.p2{text-align:left}
     .cbar-wrap{order:-1}
   }
+  .compare-h2h-link{margin-top:14px; padding-top:12px; border-top:1px dashed var(--line); text-align:center}
+  .compare-h2h-link a{
+    font-size:12px; font-weight:600; color:var(--accent); text-decoration:none;
+    padding:6px 16px; border:1px solid var(--accent); border-radius:99px;
+    display:inline-block; transition:background .15s, color .15s;
+  }
+  .compare-h2h-link a:hover{background:var(--accent); color:#fff}
   .compare-input-card{padding:14px 18px}
 .compare-input-row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap}
   .compare-input-row .field{flex:1 1 140px; min-width:0}
@@ -1906,6 +1913,9 @@
   }
 
   const SQORZ_WEB_BASE = 'https://our.sqorz.com';
+  const H2H_BASE = window.location.protocol === 'file:'
+    ? '../h2h_stats/index.html'
+    : 'https://ludsoc.github.io/sqorz-head2head/';
   function eventUrl(accountCode, eventId) {
     if (!accountCode || !eventId) return null;
     return `${SQORZ_WEB_BASE}/org/${encodeURIComponent(accountCode)}/event/${encodeURIComponent(eventId)}`;
@@ -2595,6 +2605,9 @@
         </div>
       </div>
       <div class="compare-rows">${rowsHtml}</div>
+      <div class="compare-h2h-link">
+        <a href="${escape(`${H2H_BASE}?a=${encodeURIComponent(norm(p1Name))}&b=${encodeURIComponent(cmpActiveKey || norm(p2Name))}`)}" target="_blank" rel="noopener noreferrer">Voir les confrontations directes →</a>
+      </div>
     </div>`;
   }
 
