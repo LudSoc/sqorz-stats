@@ -337,6 +337,9 @@
   .chart-card.chart-full{grid-column:1 / -1}
   .chart-title{font-weight:600; font-size:14px; color:var(--ink); margin-bottom:2px}
   .chart-sub{font-size:11px; color:var(--muted); margin-bottom:10px; text-transform:uppercase; letter-spacing:.5px}
+  .chart-legend{display:flex; flex-wrap:wrap; gap:8px 16px; margin-bottom:12px}
+  .chart-legend-item{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-2); font-weight:500}
+  .chart-legend-swatch{width:14px; height:14px; border-radius:3px; flex-shrink:0}
   .chart{width:100%; height:auto; display:block; font-family:inherit}
   .chart .grid{stroke:var(--line-strong); stroke-width:1; opacity:.6}
   .chart .axis{stroke:var(--ink-2); stroke-width:1.25}
@@ -678,7 +681,9 @@
     padding:4px 12px; border-radius:99px;
     background:var(--card-soft); border:1px solid var(--line);
     display:inline-flex; align-items:center; gap:5px;
+    text-decoration:none;
   }
+  a.pilot-club:hover{ background:var(--hover); border-color:var(--accent); color:var(--accent); }
   .pilot-age{
     font-size:12.5px; font-weight:600; color:var(--pilot-color, var(--accent));
     padding:4px 12px; border-radius:99px;
@@ -1952,6 +1957,9 @@
   const H2H_BASE = window.location.protocol === 'file:'
     ? '../h2h_stats/index.html'
     : 'https://ludsoc.github.io/sqorz-head2head/';
+  const CLUB_BASE = window.location.protocol === 'file:'
+    ? '../club_stats/index.html'
+    : 'https://ludsoc.github.io/sqorz-club/';
   function eventUrl(accountCode, eventId) {
     if (!accountCode || !eventId) return null;
     return `${SQORZ_WEB_BASE}/org/${encodeURIComponent(accountCode)}/event/${encodeURIComponent(eventId)}`;
@@ -2005,7 +2013,7 @@
     if (points.length < 2) {
       return `<div class="chart-card"><h3 class="chart-title">Évolution de la performance</h3><div class="chart-empty">Pas assez de données (au moins 2 engagements classés requis).</div></div>`;
     }
-    const W = 600, H = 260, PAD = { top: 16, right: 18, bottom: 40, left: 52 };
+    const W = 600, H = 260, PAD = { top: 16, right: 18, bottom: 40, left: 68 };
     const innerW = W - PAD.left - PAD.right;
     const innerH = H - PAD.top - PAD.bottom;
     const t0 = new Date(points[0].date).getTime();
@@ -2218,8 +2226,114 @@
     `;
   }
 
+  function renderYearlyChart(matches) {
+    const byYear = new Map();
+    for (const m of matches) {
+      const y = (m.event.eventDate || '').slice(0, 4);
+      if (!y) continue;
+      if (!byYear.has(y)) byYear.set(y, { rankSum: 0, rankCount: 0, wins: 0, finals: 0, entries: 0 });
+      const s = byYear.get(y);
+      s.entries++;
+      const r = m.competitor && m.competitor.rank;
+      if (typeof r === 'number') { s.rankSum += r; s.rankCount++; if (r === 1) s.wins++; }
+      const details = (m.competitor && m.competitor.competitorRankDetails) || [];
+      if (details.find(isFinalPhase)) s.finals++;
+    }
+    const years = [...byYear.keys()].sort();
+    const points = years
+      .map(y => {
+        const s = byYear.get(y);
+        if (!s.rankCount) return null;
+        return { y, avg: s.rankSum / s.rankCount, wins: s.wins, entries: s.entries, n: s.rankCount,
+                 finalPct: s.entries > 0 ? Math.round(100 * s.finals / s.entries) : null };
+      })
+      .filter(Boolean);
+    if (points.length < 2) return '';
+
+    const W = 800, H = 280, PAD = { top: 28, right: 60, bottom: 44, left: 52 };
+    const innerW = W - PAD.left - PAD.right;
+    const innerH = H - PAD.top - PAD.bottom;
+
+    const avgMax = Math.max(...points.map(p => p.avg));
+    const rankMax = Math.ceil(avgMax * 1.2) || 10;
+    const rankTicks = niceTicks(rankMax, 4).filter(t => t >= 1);
+
+    const xPos = i => PAD.left + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
+    // Rang : Y inversé (1 = haut)
+    const yRank = avg => PAD.top + ((avg - 1) / Math.max(1, rankMax - 1)) * innerH;
+    // % finales : Y direct (100% = haut)
+    const yPct = pct => PAD.top + (1 - pct / 100) * innerH;
+
+    const gridLines = rankTicks.map(t => {
+      const yy = yRank(t);
+      return `<line x1="${PAD.left}" y1="${yy.toFixed(1)}" x2="${PAD.left + innerW}" y2="${yy.toFixed(1)}" class="grid"/>
+              <text x="${PAD.left - 8}" y="${(yy + 4).toFixed(1)}" class="axis-label muted" text-anchor="end">${Math.round(t)}</text>`;
+    }).join('');
+
+    const pctTicks = [0, 25, 50, 75, 100];
+    const pctAxisLabels = pctTicks.map(t =>
+      `<text x="${PAD.left + innerW + 10}" y="${(yPct(t) + 4).toFixed(1)}" class="axis-label muted" text-anchor="start" style="fill:var(--teal)">${t}%</text>`
+    ).join('');
+
+    // Courbe rang moyen
+    const rankPath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i).toFixed(1)} ${yRank(p.avg).toFixed(1)}`).join(' ');
+    const rankArea = `${rankPath} L ${xPos(points.length - 1).toFixed(1)} ${(PAD.top + innerH).toFixed(1)} L ${xPos(0).toFixed(1)} ${(PAD.top + innerH).toFixed(1)} Z`;
+    const minLabelSpacing = 38; // px minimum entre deux labels consécutifs
+    const rankDots = points.map((p, i) => {
+      const cx = xPos(i), cy = yRank(p.avg);
+      const winsLabel = p.wins > 0 ? ` · ${p.wins} victoire(s)` : '';
+      // Alterner haut/bas ; supprimer si trop proche du voisin
+      const tooClose = i > 0 && (xPos(i) - xPos(i - 1)) < minLabelSpacing;
+      const above = i % 2 === 0;
+      const ly = above ? cy - 11 : cy + 18;
+      const labelEl = tooClose ? '' : `<text x="${cx.toFixed(1)}" y="${ly.toFixed(1)}" class="axis-label" text-anchor="middle" style="font-size:11px;font-weight:700">${p.avg.toFixed(1)}</text>`;
+      return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" class="point"><title>${p.y} · rang moy. ${p.avg.toFixed(1)} · ${p.n} résultat(s)${winsLabel}</title></circle>
+              ${labelEl}`;
+    }).join('');
+
+    // Courbe % finales
+    const pctPoints = points.filter(p => p.finalPct !== null);
+    const pctPath = pctPoints.map((p, i) => {
+      const idx = points.indexOf(p);
+      return `${i === 0 ? 'M' : 'L'} ${xPos(idx).toFixed(1)} ${yPct(p.finalPct).toFixed(1)}`;
+    }).join(' ');
+    const pctDots = pctPoints.map(p => {
+      const idx = points.indexOf(p);
+      const cx = xPos(idx), cy = yPct(p.finalPct);
+      return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="var(--card)" stroke="var(--teal)" stroke-width="2"><title>${p.y} · ${p.finalPct}% de finales (${p.entries} engagement(s))</title></circle>`;
+    }).join('');
+
+    const xLabels = points.map((p, i) =>
+      `<text x="${xPos(i).toFixed(1)}" y="${(PAD.top + innerH + 22).toFixed(1)}" class="axis-label muted" text-anchor="middle" style="font-size:14px">${p.y}</text>`
+    ).join('');
+
+    const xAxis = `<line x1="${PAD.left}" y1="${PAD.top + innerH}" x2="${PAD.left + innerW}" y2="${PAD.top + innerH}" class="axis"/>`;
+
+    return `
+      <div class="chart-card chart-full">
+        <h3 class="chart-title">Progression par saison</h3>
+        <div class="chart-legend">
+          <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--accent)"></span>Rang moyen (axe gauche, bas = meilleur)</span>
+          <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--teal)"></span>% de finales atteintes (axe droit)</span>
+        </div>
+        <svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">
+          ${gridLines}
+          <path d="${rankArea}" class="area"/>
+          ${xAxis}
+          <path d="${rankPath}" class="line"/>
+          ${rankDots}
+          ${pctPoints.length >= 2 ? `<path d="${pctPath}" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 3"/>` : ''}
+          ${pctDots}
+          ${pctAxisLabels}
+          ${xLabels}
+        </svg>
+      </div>
+    `;
+  }
+
   function renderCharts(matches) {
     return [
+      renderYearlyChart(matches),
       renderEvolutionChart(matches),
       renderRankHistogram(matches),
       renderOrgDonut(matches),
@@ -2446,7 +2560,7 @@
           <div class="pilot-name">${escape(fullName)}</div>
           <div class="pilot-badges">
             ${age != null ? `<span class="pilot-age" title="Âge">🎂 ${age} ans</span>` : ''}
-            ${club ? `<span class="pilot-club" title="Club / groupe">📍 ${escape(club)}</span>` : ''}
+            ${club ? `<a class="pilot-club" href="${CLUB_BASE}?club=${encodeURIComponent(norm(club))}" target="_blank" rel="noopener noreferrer" title="Stats du club">📍 ${escape(club)}</a>` : ''}
           </div>
         </div>
         ${qsHtml}
