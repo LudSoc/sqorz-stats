@@ -67,7 +67,7 @@
   }
   :root.dark{
     --bg:#1f262e; --card:#2a3340; --card-soft:#252e3a;
-    --ink:#e4ebf2; --ink-2:#c2ccd8; --muted:#a4afbb;
+    --ink:#e4ebf2; --ink-2:#c2ccd8; --muted:#b8c4d0;
     --line:#3a4250; --line-strong:#4d5666;
     --accent:#9bb5cf; --accent-hi:#b6cce0; --accent-soft:#3a4250;
     --rose:#f4b8cb; --coral:#f4b4a4; --peach:#f5cdac; --apricot:#f5dab0;
@@ -131,6 +131,12 @@
   }
   .theme-btn:hover{background:rgba(255,255,255,.2); border-color:rgba(255,255,255,.4)}
   .theme-btn:active{transform:scale(.95)}
+  .share-btn{
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22);
+    color:#fff; border-radius:6px; padding:6px 12px;
+    font-size:0.82rem; cursor:pointer; transition:background .15s;
+  }
+  .share-btn:hover{background:rgba(255,255,255,.2)}
   .hub-back{display:inline-block;margin-top:10px;font-size:12px;color:rgba(255,255,255,.65);text-decoration:none;letter-spacing:.1px}
   .hub-back:hover{color:#fff}
   #retryBtn:not([hidden]){display:block;margin:8px auto 0;padding:6px 18px;background:var(--accent,#4e80ee);color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer}
@@ -1138,6 +1144,7 @@
         </span>
         Sqorz Stats
       </div>
+      <button type="button" id="shareBtn" class="share-btn" onclick="copyLink()">Copier le lien</button>
       <button type="button" id="themeBtn" class="theme-btn" aria-label="Changer le thème" title="Changer le thème (auto / clair / sombre)"></button>
     </div>
     <a class="hub-back" id="hubBackLink" href="#" aria-label="Retour au Sqorz Hub">← Sqorz Hub</a>
@@ -3178,6 +3185,21 @@ const cmpPickBtn = e.target.closest('[data-compare-pilot-key]');
 })();
 </script>
 <button id="backToTop" aria-label="Retour en haut" title="Retour en haut">↑</button>
+<script>
+  function copyLink() {
+    const btn = document.getElementById('shareBtn');
+    const url = window.location.href;
+    const restore = () => { btn.textContent = 'Copier le lien'; };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => { btn.textContent = '✓ Lien copié !'; setTimeout(restore, 2000); });
+    } else {
+      const el = document.createElement('textarea');
+      el.value = url; document.body.appendChild(el); el.select();
+      document.execCommand('copy'); document.body.removeChild(el);
+      btn.textContent = '✓ Lien copié !'; setTimeout(restore, 2000);
+    }
+  }
+</script>
 <script>
   (() => {
     const btn = document.getElementById('backToTop');
