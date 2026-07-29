@@ -1675,7 +1675,9 @@
       const res = await fetch('./pilots-index.json');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const total = parseInt(res.headers.get('Content-Length') || '0', 10);
+      const compressed = !!res.headers.get('Content-Encoding');
+      const rawTotal = parseInt(res.headers.get('Content-Length') || '0', 10);
+      const total = compressed ? 0 : rawTotal;
       const reader = res.body.getReader();
       const chunks = [];
       let received = 0;
@@ -1685,11 +1687,12 @@
         if (done) break;
         chunks.push(value);
         received += value.length;
+        const mb = (received / 1048576).toFixed(0);
         if (total) {
           setProgress(received, total);
-          const mb = (received / 1048576).toFixed(0);
-          const mbTotal = (total / 1048576).toFixed(0);
-          setStatus(`Chargement… ${mb} / ${mbTotal} Mo`);
+          setStatus(`Chargement… ${mb} / ${(total / 1048576).toFixed(0)} Mo`);
+        } else {
+          setStatus(`Chargement… ${mb} Mo`);
         }
       }
 
