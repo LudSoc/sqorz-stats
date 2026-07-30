@@ -328,8 +328,9 @@
   /* Graphiques (SVG natif) */
   .charts-grid{
     display:grid; gap:14px; margin-bottom:20px;
-    grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));
+    grid-template-columns:1fr 1fr;
   }
+  @media(max-width:600px){ .charts-grid{ grid-template-columns:1fr; } }
   .chart-card{
     background:var(--card); border:1px solid var(--line); border-radius:14px;
     padding:16px 18px; box-shadow:var(--shadow);
@@ -2011,7 +2012,7 @@
       .filter(p => p.date && p.z != null)
       .sort((a, b) => a.date.localeCompare(b.date));
     if (points.length < 2) {
-      return `<div class="chart-card"><h3 class="chart-title">Évolution de la performance</h3><div class="chart-empty">Pas assez de données (au moins 2 engagements classés requis).</div></div>`;
+      return `<div class="chart-card chart-full"><h3 class="chart-title">Évolution de la performance</h3><div class="chart-empty">Pas assez de données (au moins 2 engagements classés requis).</div></div>`;
     }
     const W = 600, H = 260, PAD = { top: 16, right: 18, bottom: 40, left: 68 };
     const innerW = W - PAD.left - PAD.right;
@@ -2047,10 +2048,22 @@
     const avgZ = points.reduce((a, p) => a + p.z, 0) / points.length;
     const avgY = y(avgZ);
     const fmtZ = v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}`;
-    const avgLine = `
-      <line x1="${PAD.left}" y1="${avgY.toFixed(1)}" x2="${PAD.left + innerW}" y2="${avgY.toFixed(1)}" class="line-mean"/>
-      <text x="${(PAD.left + innerW - 6).toFixed(1)}" y="${(avgY - 6).toFixed(1)}" class="axis-label" text-anchor="end" style="fill:var(--accent-hi); font-weight:600">moy. ${fmtZ(avgZ)}</text>
-    `;
+    const avgLineEl = `<line x1="${PAD.left}" y1="${avgY.toFixed(1)}" x2="${PAD.left + innerW}" y2="${avgY.toFixed(1)}" class="line-mean"/>`;
+    // Trouver la position x la plus éloignée des points pour le label "moy."
+    // Le label fait ~65px de large (text-anchor="end"), on teste 20 candidats sur la largeur
+    const labelW = 70, labelH = 16;
+    const candidates = Array.from({ length: 20 }, (_, i) =>
+      PAD.left + labelW + (innerW - labelW) * (i / 19)
+    );
+    const dotPositions = points.map(p => ({ cx: x(p), cy: y(p.z) }));
+    const bestLabelX = candidates.reduce((best, cx) => {
+      const minDist = dotPositions.reduce((d, dp) => {
+        const dx = Math.abs(dp.cx - cx), dy = Math.abs(dp.cy - avgY);
+        return Math.min(d, Math.hypot(Math.max(0, dx - labelW / 2), Math.max(0, dy - labelH / 2)));
+      }, Infinity);
+      return minDist > best.dist ? { x: cx, dist: minDist } : best;
+    }, { x: PAD.left + innerW - 6, dist: -1 }).x;
+    const avgLabelEl = `<text x="${bestLabelX.toFixed(1)}" y="${(avgY - 6).toFixed(1)}" class="axis-label" text-anchor="middle" style="fill:var(--accent-hi);font-weight:600;paint-order:stroke;stroke:var(--card);stroke-width:3px">moy. ${fmtZ(avgZ)}</text>`;
 
     const dots = points.map(p =>
       `<circle cx="${x(p).toFixed(1)}" cy="${y(p.z).toFixed(1)}" r="4" class="point"><title>${escape(fmtDate(p.date))} — ${escape(p.ev)} (${escape(p.cls)}) : ${p.rank}${p.rank===1?'er':'e'}/${p.total} · z = ${fmtZ(p.z)}</title></circle>`
@@ -2061,16 +2074,17 @@
     const xEnd = `<text x="${PAD.left + innerW}" y="${baseY + 20}" class="axis-label muted" text-anchor="end">${escape(fmtDate(points[points.length - 1].date))}</text>`;
 
     return `
-      <div class="chart-card">
+      <div class="chart-card chart-full">
         <h3 class="chart-title">Évolution de la performance</h3>
-        <div class="chart-sub">${points.length} engagement(s) classés · z-score (0 = médiane du plateau, plus haut = meilleur)</div>
+        <div class="chart-sub">${points.length} engagement(s) classés · z-score : mesure l'écart à la médiane du plateau — 0 = dans la moyenne, +1 = meilleur que ~84 % des concurrents, −1 = moins bien que ~84 % · plus haut = meilleur</div>
         <svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">
           ${zones}
           ${gridLines}
           ${xAxis}
           <path d="${path}" class="line"/>
-          ${avgLine}
+          ${avgLineEl}
           ${dots}
+          ${avgLabelEl}
           ${xStart}${xEnd}
         </svg>
       </div>
@@ -2279,19 +2293,8 @@
     const rankPath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i).toFixed(1)} ${yRank(p.avg).toFixed(1)}`).join(' ');
     const rankArea = `${rankPath} L ${xPos(points.length - 1).toFixed(1)} ${(PAD.top + innerH).toFixed(1)} L ${xPos(0).toFixed(1)} ${(PAD.top + innerH).toFixed(1)} Z`;
     const minLabelSpacing = 38; // px minimum entre deux labels consécutifs
-    const rankDots = points.map((p, i) => {
-      const cx = xPos(i), cy = yRank(p.avg);
-      const winsLabel = p.wins > 0 ? ` · ${p.wins} victoire(s)` : '';
-      // Alterner haut/bas ; supprimer si trop proche du voisin
-      const tooClose = i > 0 && (xPos(i) - xPos(i - 1)) < minLabelSpacing;
-      const above = i % 2 === 0;
-      const ly = above ? cy - 11 : cy + 18;
-      const labelEl = tooClose ? '' : `<text x="${cx.toFixed(1)}" y="${ly.toFixed(1)}" class="axis-label" text-anchor="middle" style="font-size:11px;font-weight:700">${p.avg.toFixed(1)}</text>`;
-      return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" class="point"><title>${p.y} · rang moy. ${p.avg.toFixed(1)} · ${p.n} résultat(s)${winsLabel}</title></circle>
-              ${labelEl}`;
-    }).join('');
 
-    // Courbe % finales
+    // Courbe % finales — calculée avant les labels pour détecter les collisions
     const pctPoints = points.filter(p => p.finalPct !== null);
     const pctPath = pctPoints.map((p, i) => {
       const idx = points.indexOf(p);
@@ -2301,6 +2304,34 @@
       const idx = points.indexOf(p);
       const cx = xPos(idx), cy = yPct(p.finalPct);
       return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="var(--card)" stroke="var(--teal)" stroke-width="2"><title>${p.y} · ${p.finalPct}% de finales (${p.entries} engagement(s))</title></circle>`;
+    }).join('');
+
+    // Map année → Y du point teal (pour éviter les collisions de labels)
+    const pctYByYear = new Map(pctPoints.map(p => [p.y, yPct(p.finalPct)]));
+
+    // Cercles rang — rendus avant les labels (z-order SVG)
+    const rankCircles = points.map((p, i) => {
+      const cx = xPos(i), cy = yRank(p.avg);
+      const winsLabel = p.wins > 0 ? ` · ${p.wins} victoire(s)` : '';
+      return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" class="point"><title>${p.y} · rang moy. ${p.avg.toFixed(1)} · ${p.n} résultat(s)${winsLabel}</title></circle>`;
+    }).join('');
+
+    // Labels rang — rendus après tous les cercles, positionnés pour éviter les points teal
+    const rankLabels = points.map((p, i) => {
+      const cx = xPos(i), cy = yRank(p.avg);
+      const tooClose = i > 0 && (xPos(i) - xPos(i - 1)) < minLabelSpacing;
+      if (tooClose) return '';
+      const pctY = pctYByYear.get(p.y);
+      // Choisir le côté (haut ou bas) le plus éloigné du point teal
+      const aboveY = cy - 13, belowY = cy + 20;
+      let above = i % 2 === 0;
+      if (pctY != null) {
+        const distAbove = Math.abs(aboveY - pctY);
+        const distBelow = Math.abs(belowY - pctY);
+        above = distAbove >= distBelow;
+      }
+      const ly = above ? aboveY : belowY;
+      return `<text x="${cx.toFixed(1)}" y="${ly.toFixed(1)}" class="axis-label" text-anchor="middle" style="font-size:11px;font-weight:700;paint-order:stroke;stroke:var(--card);stroke-width:3px">${p.avg.toFixed(1)}</text>`;
     }).join('');
 
     const xLabels = points.map((p, i) =>
@@ -2321,9 +2352,10 @@
           <path d="${rankArea}" class="area"/>
           ${xAxis}
           <path d="${rankPath}" class="line"/>
-          ${rankDots}
+          ${rankCircles}
           ${pctPoints.length >= 2 ? `<path d="${pctPath}" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 3"/>` : ''}
           ${pctDots}
+          ${rankLabels}
           ${pctAxisLabels}
           ${xLabels}
         </svg>
