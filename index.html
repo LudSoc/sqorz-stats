@@ -330,7 +330,7 @@
     display:grid; gap:14px; margin-bottom:20px;
     grid-template-columns:1fr 1fr;
   }
-  @media(max-width:600px){ .charts-grid{ grid-template-columns:1fr; } }
+  @media(max-width:640px){ .charts-grid{ grid-template-columns:1fr; } }
   .chart-card{
     background:var(--card); border:1px solid var(--line); border-radius:14px;
     padding:16px 18px; box-shadow:var(--shadow);
@@ -914,7 +914,7 @@
   .compare-pilots{
     display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;
   }
-  @media(max-width:520px){.compare-pilots{grid-template-columns:1fr}}
+  @media(max-width:480px){.compare-pilots{grid-template-columns:1fr}}
   .compare-pilot{
     display:flex; align-items:center; gap:10px; padding:10px 12px;
     background:var(--card-soft); border-radius:10px; border:1px solid var(--line);
@@ -1136,6 +1136,7 @@
   .ac-item:hover, .ac-item.focused { background:var(--accent-soft) }
   .ac-item .ac-name { font-weight:600; font-size:14px; color:var(--ink) }
   .ac-item .ac-meta { font-size:11.5px; color:var(--muted) }
+  .ac-more { font-size:12px; color:var(--muted); padding:6px 12px; text-align:center; }
 </style>
 </head>
 <body>
@@ -1214,7 +1215,7 @@
         </div>
       </div>
       <div class="compare-btn-group">
-        <button type="button" class="btn" id="compareSearchBtn">Comparer</button>
+        <button type="button" class="btn" id="compareSearchBtn" aria-label="Comparer avec un autre pilote">Comparer</button>
         <button type="button" class="btn btn-danger" id="compareCloseBtn" style="padding:11px 14px" title="Fermer">✕</button>
       </div>
     </div>
@@ -1521,8 +1522,9 @@
     searchBtn.disabled = !(pilotsIndex && nameInp.value.trim().length >= 2);
   }
 
+  const AC_MAX = 12;
   function searchPilotsForAc(query) {
-    if (!pilotsIndex || !norm(query)) return [];
+    if (!pilotsIndex || !norm(query)) return { items: [], total: 0 };
     const tokens = norm(query).split(' ').filter(Boolean);
     const map = new Map();
     for (const evEntry of (pilotsIndex.events || [])) {
@@ -1538,23 +1540,26 @@
         }
       }
     }
-    return [...map.values()]
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 12);
+    const all = [...map.values()].sort((a, b) => b.count - a.count);
+    return { items: all.slice(0, AC_MAX), total: all.length };
   }
 
   function setupAutocomplete(input, dropdown, onSelect) {
     let focusedIdx = -1;
 
-    function updateDropdown(items) {
+    function updateDropdown({ items, total }) {
       focusedIdx = -1;
       if (!items.length) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; return; }
+      const moreCount = total - items.length;
+      const moreHtml = moreCount > 0
+        ? `<div class="ac-more">+${moreCount} autre${moreCount > 1 ? 's' : ''} résultat${moreCount > 1 ? 's' : ''} — affinez la recherche</div>`
+        : '';
       dropdown.innerHTML = items.map((p, i) =>
         `<div class="ac-item" data-idx="${i}" tabindex="-1">
           <span class="ac-name">${escape(p.firstName + ' ' + p.lastName)}</span>
           ${p.groupName ? `<span class="ac-meta">${escape(p.groupName)}</span>` : ''}
         </div>`
-      ).join('');
+      ).join('') + moreHtml;
       dropdown.classList.add('open');
       dropdown._items = items;
       dropdown.querySelectorAll('.ac-item').forEach((el, i) => {
@@ -1574,7 +1579,7 @@
     }
 
     input.addEventListener('input', () => {
-      updateDropdown(searchPilotsForAc(input.value));
+      updateDropdown(searchPilotsForAc(input.value) );
     });
 
     input.addEventListener('keydown', e => {
@@ -1879,6 +1884,7 @@
       byClass: {},
     };
     for (const m of matches) {
+      if (!m?.competitor) continue;
       const c = m.competitor;
       const ev = m.event;
       s.events.add(ev.eventId);
@@ -2263,7 +2269,7 @@
                  finalPct: s.entries > 0 ? Math.round(100 * s.finals / s.entries) : null };
       })
       .filter(Boolean);
-    if (points.length < 2) return '';
+    if (points.length < 2) return `<div class="chart-card chart-full"><h3 class="chart-title">Progression par saison</h3><div class="chart-empty">Pas assez de données (au moins 2 saisons requises).</div></div>`;
 
     const W = 800, H = 280, PAD = { top: 28, right: 60, bottom: 44, left: 52 };
     const innerW = W - PAD.left - PAD.right;
@@ -2587,10 +2593,10 @@
       </div>` : '';
 
     return `
-      <div class="pilot-card card" style="--pilot-color:${color}" role="region" aria-label="Identité du pilote">
+      <div class="pilot-card card" style="--pilot-color:${color}" role="region" aria-labelledby="pilotNameHeading">
         <div class="pilot-avatar" aria-hidden="true">${avatarInner}</div>
         <div class="pilot-info">
-          <div class="pilot-name">${escape(fullName)}</div>
+          <div class="pilot-name" id="pilotNameHeading">${escape(fullName)}</div>
           <div class="pilot-badges">
             ${age != null ? `<span class="pilot-age" title="Âge">🎂 ${age} ans</span>` : ''}
             ${club ? `<a class="pilot-club" href="${CLUB_BASE}?club=${encodeURIComponent(norm(club))}" target="_blank" rel="noopener noreferrer" title="Stats du club">📍 ${escape(club)}</a>` : ''}
@@ -3360,7 +3366,7 @@ const cmpPickBtn = e.target.closest('[data-compare-pilot-key]');
   })();
 })();
 </script>
-<button id="backToTop" aria-label="Retour en haut" title="Retour en haut">↑</button>
+<button id="backToTop" aria-label="Retour en haut" title="Retour en haut"><span aria-hidden="true">↑</span></button>
 <script>
   function copyLink() {
     const btn = document.getElementById('shareBtn');
