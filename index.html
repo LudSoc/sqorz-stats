@@ -2078,7 +2078,7 @@
       <div class="chart-card chart-full">
         <h3 class="chart-title">Évolution de la performance</h3>
         <div class="chart-sub">${points.length} engagement(s) classés · z-score : mesure l'écart à la médiane du plateau — 0 = dans la moyenne, +1 = meilleur que ~84 % des concurrents, −1 = moins bien que ~84 % · plus haut = meilleur</div>
-        <svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">
+        <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="chart" preserveAspectRatio="xMidYMid meet">
           ${zones}
           ${gridLines}
           ${xAxis}
@@ -2149,7 +2149,7 @@
       <div class="chart-card">
         <h3 class="chart-title">Distribution des classements</h3>
         <div class="chart-sub">Sur ${classified} engagement(s) classés</div>
-        <svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">
+        <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="chart" preserveAspectRatio="xMidYMid meet">
           ${gridLines}
           ${xAxis}
           ${bars}
@@ -2348,7 +2348,7 @@
           <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--accent)"></span>Rang moyen (axe gauche, bas = meilleur)</span>
           <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--teal)"></span>% de finales atteintes (axe droit)</span>
         </div>
-        <svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">
+        <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="chart" preserveAspectRatio="xMidYMid meet">
           ${gridLines}
           <path d="${rankArea}" class="area"/>
           ${xAxis}
