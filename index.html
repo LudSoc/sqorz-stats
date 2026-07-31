@@ -131,6 +131,11 @@
   }
   .theme-btn:hover{background:rgba(255,255,255,.2); border-color:rgba(255,255,255,.4)}
   .theme-btn:active{transform:scale(.95)}
+  .donate-btn{display:inline-flex;align-items:center;gap:5px;padding:0 12px;height:36px;background:linear-gradient(135deg,rgba(255,210,150,.9),rgba(251,146,60,.75));border:1px solid rgba(251,146,60,.6);color:#7c3405;box-shadow:0 2px 8px rgba(251,146,60,.35),inset 0 1px 0 rgba(255,255,255,.3);border-radius:10px;font-size:.8rem;font-weight:600;text-decoration:none;transition:background .15s,border-color .15s,transform .15s;white-space:nowrap}
+  .donate-btn:hover{background:linear-gradient(135deg,rgba(255,210,150,1),rgba(251,146,60,.95));border-color:rgba(251,146,60,.9);box-shadow:0 3px 10px rgba(251,146,60,.45),inset 0 1px 0 rgba(255,255,255,.3);}
+  .donate-btn:active{transform:scale(.95)}
+  .donate-icon{font-size:1.15rem;display:inline-flex;align-items:center}
+  @media(max-width:520px){.donate-btn .donate-label{display:none}}
   .share-btn{
     background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22);
     color:#fff; border-radius:6px; padding:6px 12px;
@@ -534,6 +539,8 @@
   .champ-summary b{font-weight:700; color:var(--ink)}
   .champ-summary .sep{color:var(--line-strong)}
   .champ-summary .muted{color:var(--muted); font-size:12px}
+
+
 
   .champ-details{
     grid-area:details;
@@ -1159,6 +1166,7 @@
         Sqorz Stats
       </div>
       <button type="button" id="shareBtn" class="share-btn" onclick="copyLink()">Copier le lien</button>
+      <a href="https://ko-fi.com/sqorz_tools" target="_blank" rel="noopener noreferrer" class="donate-btn" title="Soutenir le projet sur Ko-fi"><span class="donate-icon">☕</span><span class="donate-label">Soutenir</span></a>
       <button type="button" id="themeBtn" class="theme-btn" aria-label="Changer le thème" title="Changer le thème (auto / clair / sombre)"></button>
     </div>
     <a class="hub-back" id="hubBackLink" href="#" aria-label="Retour au Sqorz Hub">← Sqorz Hub</a>
