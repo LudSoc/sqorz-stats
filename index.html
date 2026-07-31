@@ -729,6 +729,12 @@
     .pilot-qs-item .qv{ font-size:22px }
   }
 
+  .pilot-dnx { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .dnx-badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; }
+  .dnx-badge.dnf { background:rgba(251,146,60,.15); color:#ea580c; border:1px solid rgba(251,146,60,.3); }
+  .dnx-badge.dns { background:rgba(148,163,184,.15); color:var(--ink-2); border:1px solid var(--line); }
+  .dnx-badge.dsq { background:rgba(239,68,68,.12); color:#dc2626; border:1px solid rgba(239,68,68,.25); }
+
   /* Onglets — visibles sur tous les écrans */
   .tabs-nav{
     display:flex; gap:0; overflow-x:auto; scrollbar-width:none;
@@ -1869,6 +1875,7 @@
       orgs: new Set(),
       pilots: new Set(),
       wins: 0, podiums: 0, top8: 0,
+      dnf: 0, dns: 0, dsq: 0,
       finalsReached: 0, finalWins: 0, finalPodiums: 0,
       semiFinalsReached: 0, semiFinalWins: 0,
       finalPhasesReached: 0,
@@ -1892,15 +1899,22 @@
       s.pilots.add(`${c.firstName} ${c.lastName}`);
 
       if (typeof c.rank === 'number') {
-        if (c.rank === 1) s.wins++;
-        if (c.rank <= 3) s.podiums++;
-        if (c.rank <= 8) s.top8++;
-        if (s.bestRank == null || c.rank < s.bestRank) s.bestRank = c.rank;
-        s.rankSum += c.rank;
-        s.rankCount++;
+        if (c.rank >= 100000) {
+          const lbl = specialResultLabel(c.rank);
+          if (lbl === 'DNF') s.dnf++;
+          else if (lbl === 'DNS') s.dns++;
+          else if (lbl === 'DSQ') s.dsq++;
+        } else {
+          if (c.rank === 1) s.wins++;
+          if (c.rank <= 3) s.podiums++;
+          if (c.rank <= 8) s.top8++;
+          if (s.bestRank == null || c.rank < s.bestRank) s.bestRank = c.rank;
+          s.rankSum += c.rank;
+          s.rankCount++;
+        }
       }
 
-      const pct = percentile(c.rank, m.totalParticipants);
+      const pct = (typeof c.rank === 'number' && c.rank >= 100000) ? null : percentile(c.rank, m.totalParticipants);
       if (pct != null) {
         s.pctSum += pct;
         s.pctCount++;
@@ -2083,7 +2097,7 @@
     return `
       <div class="chart-card chart-full">
         <h3 class="chart-title">Évolution de la performance</h3>
-        <div class="chart-sub">${points.length} engagement(s) classés · z-score : mesure l'écart à la médiane du plateau — 0 = dans la moyenne, +1 = meilleur que ~84 % des concurrents, −1 = moins bien que ~84 % · plus haut = meilleur</div>
+        <div class="chart-sub">${points.length} engagement(s) classés · z-score : mesure l'écart à la médiane du plateau — 0 = dans la moyenne, +1 = meilleur que ~84 % des concurrents, −1 = moins bien que ~84 % · plus haut = meilleur${(() => { const excl = matches.filter(m => m.competitor && typeof m.competitor.rank === 'number' && m.competitor.rank >= 100000).length; return excl > 0 ? ` · ${excl} résultat(s) exclu(s) (DNS/DNF/DSQ)` : ''; })()}</div>
         <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="chart" preserveAspectRatio="xMidYMid meet">
           ${zones}
           ${gridLines}
@@ -2592,6 +2606,13 @@
         ${qsItems.map(s => `<div class="pilot-qs-item"><div class="qv" data-count-up="${s.v}">0</div><div class="qk">${escape(s.k)}</div></div>`).join('')}
       </div>` : '';
 
+    const dnxHtml = stats && (stats.dnf > 0 || stats.dns > 0 || stats.dsq > 0) ? `
+      <div class="pilot-dnx">
+        ${stats.dnf > 0 ? `<span class="dnx-badge dnf">${stats.dnf} DNF</span>` : ''}
+        ${stats.dns > 0 ? `<span class="dnx-badge dns">${stats.dns} DNS</span>` : ''}
+        ${stats.dsq > 0 ? `<span class="dnx-badge dsq">${stats.dsq} DSQ</span>` : ''}
+      </div>` : '';
+
     return `
       <div class="pilot-card card" style="--pilot-color:${color}" role="region" aria-labelledby="pilotNameHeading">
         <div class="pilot-avatar" aria-hidden="true">${avatarInner}</div>
@@ -2601,6 +2622,7 @@
             ${age != null ? `<span class="pilot-age" title="Âge">🎂 ${age} ans</span>` : ''}
             ${club ? `<a class="pilot-club" href="${CLUB_BASE}?club=${encodeURIComponent(norm(club))}" target="_blank" rel="noopener noreferrer" title="Stats du club">📍 ${escape(club)}</a>` : ''}
           </div>
+          ${dnxHtml}
         </div>
         ${qsHtml}
       </div>`;
