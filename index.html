@@ -1911,6 +1911,20 @@
           if (s.bestRank == null || c.rank < s.bestRank) s.bestRank = c.rank;
           s.rankSum += c.rank;
           s.rankCount++;
+          // chercher aussi les DNS/DNF/DSQ au niveau des phases
+          const phDetails = c.competitorRankDetails || [];
+          let hasDnf = false, hasDns = false, hasDsq = false;
+          for (const ph of phDetails) {
+            if (typeof ph.result === 'number' && ph.result >= 100000) {
+              const pl = specialResultLabel(ph.result);
+              if (pl === 'DNF') hasDnf = true;
+              else if (pl === 'DNS') hasDns = true;
+              else if (pl === 'DSQ') hasDsq = true;
+            }
+          }
+          if (hasDnf) s.dnf++;
+          if (hasDns) s.dns++;
+          if (hasDsq) s.dsq++;
         }
       }
 
