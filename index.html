@@ -746,14 +746,25 @@
   .dnx-badge.dsq { background:rgba(239,68,68,.12); color:#dc2626; border:1px solid rgba(239,68,68,.25); }
 
   /* Onglets — visibles sur tous les écrans */
+  .tabs-wrap{ position:relative }
   .tabs-nav{
     display:flex; gap:0; overflow-x:auto; scrollbar-width:none;
     padding:0; margin:0;
     background:color-mix(in srgb, var(--bg) 94%, transparent);
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
     border-bottom:2px solid var(--line);
+    scroll-snap-type:x proximity;
+    -webkit-overflow-scrolling:touch;
   }
   .tabs-nav::-webkit-scrollbar{ display:none }
+  /* Indicateurs de défilement horizontal (fondu gauche/droite) */
+  .tabs-fade{
+    position:absolute; top:0; bottom:2px; width:28px; z-index:2;
+    pointer-events:none; opacity:0; transition:opacity .18s ease;
+  }
+  .tabs-fade.left{ left:0; background:linear-gradient(to right, var(--bg), transparent) }
+  .tabs-fade.right{ right:0; background:linear-gradient(to left, var(--bg), transparent) }
+  .tabs-fade.on{ opacity:1 }
   .tab-btn{
     flex:0 0 auto; padding:14px 22px;
     background:transparent; border:none;
@@ -899,8 +910,10 @@
       margin:0 -14px 16px; padding:0 4px;
       border-radius:0;
     }
+    .tabs-fade{ width:24px }
     .tab-btn{
       padding:10px 12px; font-size:12.5px;
+      scroll-snap-align:start;
     }
   }
   @media (max-width:380px){
@@ -1952,18 +1965,24 @@
       if (m.totalParticipants) s.totalParticipantsSum += m.totalParticipants;
 
       const details = c.competitorRankDetails || [];
+      // Un classement final valide (< 100000) prouve le passage en phases finales :
+      // certains événements (ex. Mondiaux UCI) ne publient pas toujours les phases de
+      // knock-out (rang classé avec uniquement les manches enregistrées, par ex.).
+      const classified = typeof c.rank === 'number' && c.rank < 100000;
       const finalPh = details.find(isFinalPhase);
-      if (finalPh && finalPh.result != null) {
+      if ((finalPh && finalPh.result != null) || (classified && c.rank <= 8)) {
         s.finalsReached++;
-        if (finalPh.result === 1) s.finalWins++;
-        if (finalPh.result <= 3) s.finalPodiums++;
+        if (finalPh && finalPh.result != null) {
+          if (finalPh.result === 1) s.finalWins++;
+          if (finalPh.result <= 3) s.finalPodiums++;
+        }
       }
       const semiPh = details.find(isSemiPhase);
       if (semiPh && semiPh.result != null) {
         s.semiFinalsReached++;
         if (semiPh.result === 1) s.semiFinalWins++;
       }
-      if (details.some(d => isKnockoutPhase(d) && d.result != null)) {
+      if (details.some(d => isKnockoutPhase(d) && d.result != null) || classified) {
         s.finalPhasesReached++;
       }
       let hasMoto = false;
@@ -2298,7 +2317,7 @@
       const r = m.competitor && m.competitor.rank;
       if (typeof r === 'number') { s.rankSum += r; s.rankCount++; if (r === 1) s.wins++; }
       const details = (m.competitor && m.competitor.competitorRankDetails) || [];
-      if (details.find(isFinalPhase)) s.finals++;
+      if (details.find(isFinalPhase) || (typeof r === 'number' && r >= 1 && r <= 8)) s.finals++;
     }
     const years = [...byYear.keys()].sort();
     const points = years
@@ -3078,6 +3097,29 @@
     initTimelineObserver();
   }
 
+  // Gère les indicateurs de défilement horizontal de la barre d'onglets
+  function initTabsScroll() {
+    const nav = resultsEl.querySelector('.tabs-nav');
+    if (!nav) return;
+    const fLeft = resultsEl.querySelector('.tabs-fade.left');
+    const fRight = resultsEl.querySelector('.tabs-fade.right');
+    const update = () => {
+      const scrollable = nav.scrollWidth > nav.clientWidth + 4;
+      if (!scrollable) {
+        if (fLeft) fLeft.classList.remove('on');
+        if (fRight) fRight.classList.remove('on');
+        return;
+      }
+      if (fLeft) fLeft.classList.toggle('on', nav.scrollLeft > 4);
+      if (fRight) fRight.classList.toggle('on', nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 4);
+    };
+    update();
+    nav.addEventListener('scroll', update, { passive: true });
+    // Centre l'onglet actif (au premier rendu, l'onglet UCI peut être hors écran)
+    const active = nav.querySelector('.tab-btn.active');
+    if (active) nav.scrollLeft = active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2;
+  }
+
   function render(matches, sortMode = 'date-desc', seriesMatches = [], uciMatches = [], uciSeriesMatches = []) {
     if (!matches.length && !seriesMatches.length && !uciMatches.length && !uciSeriesMatches.length) {
       resultsEl.innerHTML = '<div class="card empty">Aucun pilote ne correspond à cette recherche.</div>';
@@ -3242,7 +3284,11 @@
         const badge = t.count != null ? ` <span class="tab-badge">${t.count}</span>` : '';
         return `<button type="button" class="tab-btn${i === 0 ? ' active' : ''}" data-tab-btn="${t.key}" role="tab" aria-selected="${i === 0}">${t.label}${badge}</button>`;
       }).join('');
-      tabsNavHtml = `<div class="tabs-nav" role="tablist" style="--pilot-color:${pilotColor}">${navHtml}</div>`;
+      tabsNavHtml = `<div class="tabs-wrap">
+        <div class="tabs-nav" role="tablist" style="--pilot-color:${pilotColor}">${navHtml}</div>
+        <span class="tabs-fade left" aria-hidden="true"></span>
+        <span class="tabs-fade right" aria-hidden="true"></span>
+      </div>`;
     }
     html.push(`<div class="pilot-sticky-header">${pilotCardHtml}${tabsNavHtml}</div>`);
     for (let i = 0; i < tabsAvailable.length; i++) {
@@ -3254,6 +3300,7 @@
     applySectionVisibility();
     document.body.classList.add('has-results');
     initAnimations();
+    initTabsScroll();
 
   }
 
@@ -3298,6 +3345,9 @@ const cmpPickBtn = e.target.closest('[data-compare-pilot-key]');
       resultsEl.querySelectorAll('.tab-panel').forEach(p => {
         p.classList.toggle('active', p.dataset.tab === key);
       });
+      // Centre l'onglet choisi dans la barre défilante
+      const nav = tabBtn.closest('.tabs-nav');
+      if (nav) nav.scrollLeft = tabBtn.offsetLeft - (nav.clientWidth - tabBtn.offsetWidth) / 2;
       return;
     }
     for (const s of Object.values(sectionState)) {
