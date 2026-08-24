@@ -1,0 +1,58 @@
+const CACHE_NAME = 'sqorz-v2';
+// Chemins RELATIFS : l'app vit sur un sous-chemin (ex. /sqorz-stats/) — pas à la racine
+const ASSETS = ['./', './index.html'];
+// Index de données volumineux régénérés chaque semaine : on ne les met JAMAIS en cache
+// (ils passent directement par le navigateur, comme avant)
+const NO_CACHE = ['pilots-index.json', 'uci-index.json'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+  // Ne gérer que les fichiers locaux de l'app (même origine)
+  if (url.origin !== self.location.origin) return;
+  if (e.request.method !== 'GET') return;
+  // Les index de données ne passent pas par le cache
+  if (NO_CACHE.some(n => url.pathname.endsWith(n))) return;
+
+  // Navigations : réseau d'abord, sinon shell en cache (l'app s'ouvre hors-ligne)
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request)
+        .then(response => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+          return response;
+        })
+        .catch(() =>
+          caches.match(e.request).then(r => r || caches.match(new URL('./', self.location).href))
+        )
+    );
+    return;
+  }
+
+  // Autres GET (assets statiques) : réseau d'abord, cache en secours
+  e.respondWith(
+    fetch(e.request)
+      .then(response => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+        return response;
+      })
+      .catch(() => caches.match(e.request))
+  );
+});

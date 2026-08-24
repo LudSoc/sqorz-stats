@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Génère pilots-index.json en fetchant toutes les données BMX France depuis Sqorz.
-// Exécuté par GitHub Actions chaque semaine ; le fichier est commité dans le repo.
+// Génère pilots-index.json (région FR) et uci-index.json (région UCI, Mondiaux BMX) depuis Sqorz.
+// Exécuté par GitHub Actions chaque semaine ; les fichiers sont commités dans le repo.
+// Usage : node build-index.js [regionCode...] — par défaut FR + UCI (ex: node build-index.js UCI)
 
 const SQORZ_BASE = 'https://our.sqorz.com';
 const DELAY_MS = 150;
@@ -56,9 +57,9 @@ function slimSeriesCompetitor(c) {
   };
 }
 
-async function main() {
-  console.log('=== Étape 1 : région FR ===');
-  const region = await fetchJson(`${SQORZ_BASE}/json/region/FR`);
+async function buildRegion(regionCode, outFile) {
+  console.log(`=== Étape 1 : région ${regionCode} ===`);
+  const region = await fetchJson(`${SQORZ_BASE}/json/region/${regionCode}`);
   const accounts = (region.accounts || []);
   console.log(`${accounts.length} organisations trouvées`);
 
@@ -195,7 +196,7 @@ async function main() {
 
   const json = JSON.stringify(index);
   const { writeFileSync } = await import('fs');
-  writeFileSync('pilots-index.json', json);
+  writeFileSync(outFile, json);
 
   const sizeMb = (json.length / 1024 / 1024).toFixed(1);
   let totalCompetitors = 0;
@@ -204,10 +205,19 @@ async function main() {
   for (const sr of indexSeries) for (const cls of sr.classes) totalSeriesCompetitors += cls.competitors.length;
 
   console.log('');
-  console.log(`=== Terminé ===`);
+  console.log(`=== Terminé (${outFile}) ===`);
   console.log(`${indexEvents.length} événements, ${totalCompetitors} entrées pilotes`);
   console.log(`${indexSeries.length} séries, ${totalSeriesCompetitors} entrées championnats`);
   console.log(`Taille : ${sizeMb} Mo (non compressé)`);
+}
+
+async function main() {
+  const requested = process.argv.slice(2).filter(a => !a.startsWith('-'));
+  const regions = requested.length ? requested : ['FR', 'UCI'];
+  for (const regionCode of regions) {
+    const outFile = regionCode.toUpperCase() === 'FR' ? 'pilots-index.json' : regionCode.toLowerCase() + '-index.json';
+    await buildRegion(regionCode, outFile);
+  }
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

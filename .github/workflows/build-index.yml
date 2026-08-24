@@ -25,10 +25,10 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pilots-index.json
+          git add pilots-index.json uci-index.json
           if git diff --cached --quiet; then
             echo "Aucun changement — rien à commiter."
           else
-            git commit -m "chore: mise à jour de l'index pilotes"
+            git commit -m "chore: mise à jour des index pilotes"
             git push
           fi

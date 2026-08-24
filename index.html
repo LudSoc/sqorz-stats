@@ -16,6 +16,9 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Stats Pilote BMX — Sqorz Hub">
 <meta name="twitter:description" content="Recherchez un pilote BMX Race et consultez son historique complet : résultats, podiums, progressions et comparaisons.">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#6a8caf">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
 <script>
   // Applique le thème AVANT le rendu pour éviter le flash
   (() => {
@@ -1262,13 +1265,14 @@
 <script>
 (() => {
   let pilotsIndex = null;
+  let uciIndex = null; // index UCI (Mondiaux BMX Racing) — chargé en parallèle, optionnel
 
-  function searchLocal(query) {
+  function searchInIndex(index, query) {
     const tokens = norm(query).split(' ').filter(Boolean);
-    if (!tokens.length || !pilotsIndex) return { events: [], series: [] };
+    if (!tokens.length || !index) return { events: [], series: [] };
 
     const events = [];
-    for (const evEntry of (pilotsIndex.events || [])) {
+    for (const evEntry of (index.events || [])) {
       for (const cls of evEntry.classes) {
         for (const c of cls.competitors) {
           if (!matchPilot(c.firstName, c.lastName, tokens)) continue;
@@ -1284,7 +1288,7 @@
     }
 
     const series = [];
-    for (const srEntry of (pilotsIndex.series || [])) {
+    for (const srEntry of (index.series || [])) {
       for (const cls of srEntry.classes) {
         for (const c of cls.competitors) {
           if (!matchPilot(c.firstName, c.lastName, tokens)) continue;
@@ -1302,6 +1306,12 @@
     }
 
     return { events, series };
+  }
+  function searchLocal(query) {
+    return searchInIndex(pilotsIndex, query);
+  }
+  function searchUci(query) {
+    return searchInIndex(uciIndex, query);
   }
 
   // --- Cache des derniers résultats de recherche ---
@@ -1335,13 +1345,15 @@
   function resultsCacheKey(query) {
     return query;
   }
-  function saveResultsCache(query, matches, seriesMatches) {
+  function saveResultsCache(query, matches, seriesMatches, uciMatches, uciSeriesMatches) {
     try {
       const payload = JSON.stringify({
         cacheKey: resultsCacheKey(query),
         timestamp: Date.now(),
         matches: matches.map(slimMatch),
         seriesMatches: seriesMatches.map(slimSeriesMatch),
+        uciMatches: (uciMatches || []).map(slimMatch),
+        uciSeriesMatches: (uciSeriesMatches || []).map(slimSeriesMatch),
       });
       localStorage.setItem(RESULTS_CACHE_KEY, payload);
     } catch (e) {
@@ -1360,50 +1372,6 @@
       if (Date.now() - data.timestamp > RESULTS_CACHE_TTL) return null;
       return data;
     } catch { return null; }
-  }
-
-  // --- Cache localStorage des réponses Sqorz ---
-  const CACHE_KEY = 'sqorzCache';
-  const CACHE_TTL_STATIC = 24 * 60 * 60 * 1000;   // 24h pour /json/region
-  const CACHE_TTL_DYNAMIC = 60 * 60 * 1000;       // 1h pour /json/org et /json/series
-  const CACHE_TTL_FROZEN = 30 * 24 * 60 * 60 * 1000; // 30j pour événements passés (immuables)
-  const CACHE_MAX_ENTRIES = 250;
-  const _cache = (() => {
-    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch { return {}; }
-  })();
-  function persistCache() {
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify(_cache)); }
-    catch {
-      // Quota dépassé : on vire la moitié la plus ancienne et on retente
-      const entries = Object.entries(_cache).sort((a, b) => a[1].t - b[1].t);
-      const drop = Math.ceil(entries.length / 2);
-      for (let i = 0; i < drop; i++) delete _cache[entries[i][0]];
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify(_cache)); } catch {}
-    }
-  }
-  function ttlFor(path, eventDate) {
-    if (path.startsWith('/json/region/')) return CACHE_TTL_STATIC;
-    if (eventDate && eventDate < new Date().toISOString().slice(0, 10)) return CACHE_TTL_FROZEN;
-    return CACHE_TTL_DYNAMIC;
-  }
-  async function fetchJsonCached(path, signal, eventDate) {
-    const now = Date.now();
-    const entry = _cache[path];
-    if (entry && (now - entry.t) < ttlFor(path, eventDate)) return entry.v;
-    const v = await fetchJson(path, signal);
-    _cache[path] = { v, t: now };
-    const keys = Object.keys(_cache);
-    if (keys.length > CACHE_MAX_ENTRIES) {
-      const entries = Object.entries(_cache).sort((a, b) => a[1].t - b[1].t);
-      const drop = keys.length - CACHE_MAX_ENTRIES;
-      for (let i = 0; i < drop; i++) delete _cache[entries[i][0]];
-    }
-    persistCache();
-    return v;
-  }
-  function clearSqorzCache() {
-    for (const k of Object.keys(_cache)) delete _cache[k];
-    try { localStorage.removeItem(CACHE_KEY); } catch {}
   }
 
   // --- Messages d'erreur humanisés ---
@@ -1537,25 +1505,34 @@
   }
 
   const AC_MAX = 12;
-  function searchPilotsForAc(query) {
-    if (!pilotsIndex || !norm(query)) return { items: [], total: 0 };
-    const tokens = norm(query).split(' ').filter(Boolean);
-    const map = new Map();
+  // Pré-index des noms distincts (index FR) : construit UNE fois au chargement,
+  // pour ne pas rescanner tout l'index à chaque frappe dans l'autocomplétion.
+  let nameIndex = null; // normKey -> { firstName, lastName, groupName, count }
+  function buildNameIndex() {
+    nameIndex = new Map();
     for (const evEntry of (pilotsIndex.events || [])) {
       for (const cls of (evEntry.classes || [])) {
         for (const c of (cls.competitors || [])) {
           const key = norm((c.firstName || '') + ' ' + (c.lastName || '')).trim();
           if (!key) continue;
-          if (!tokens.every(t => key.includes(t))) continue;
-          if (!map.has(key)) {
-            map.set(key, { firstName: c.firstName || '', lastName: c.lastName || '', groupName: c.groupName || '', normKey: key, count: 0 });
+          if (!nameIndex.has(key)) {
+            nameIndex.set(key, { firstName: c.firstName || '', lastName: c.lastName || '', groupName: c.groupName || '', count: 0 });
           }
-          map.get(key).count++;
+          nameIndex.get(key).count++;
         }
       }
     }
-    const all = [...map.values()].sort((a, b) => b.count - a.count);
-    return { items: all.slice(0, AC_MAX), total: all.length };
+  }
+  function searchPilotsForAc(query) {
+    if (!nameIndex || !norm(query)) return { items: [], total: 0 };
+    const tokens = norm(query).split(' ').filter(Boolean);
+    const hits = [];
+    for (const [key, p] of nameIndex) {
+      if (!tokens.every(t => key.includes(t))) continue;
+      hits.push(p);
+    }
+    hits.sort((a, b) => b.count - a.count);
+    return { items: hits.slice(0, AC_MAX), total: hits.length };
   }
 
   function setupAutocomplete(input, dropdown, onSelect) {
@@ -1592,8 +1569,11 @@
       items[focusedIdx]?.scrollIntoView({ block: 'nearest' });
     }
 
+    // Debounce : la recherche (filtre du pré-index) ne part qu'après une pause de frappe
+    let acTimer = null;
     input.addEventListener('input', () => {
-      updateDropdown(searchPilotsForAc(input.value) );
+      clearTimeout(acTimer);
+      acTimer = setTimeout(() => updateDropdown(searchPilotsForAc(input.value)), 150);
     });
 
     input.addEventListener('keydown', e => {
@@ -1692,43 +1672,53 @@
     return idx;
   }
 
+  async function loadIndexFile(url, label, estimatedSize) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const compressed = !!res.headers.get('Content-Encoding');
+    const rawTotal = parseInt(res.headers.get('Content-Length') || '0', 10);
+    const total = compressed ? (estimatedSize || rawTotal || 0) : (rawTotal || 0);
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      const mb = (received / 1048576).toFixed(0);
+      if (total) {
+        setProgress(received, total);
+        setStatus(`Chargement ${label}… ${mb} / ${(total / 1048576).toFixed(0)} Mo`);
+      } else {
+        setStatus(`Chargement ${label}… ${mb} Mo`);
+      }
+    }
+
+    setProgress(0, 0);
+    const allBytes = new Uint8Array(received);
+    let offset = 0;
+    for (const chunk of chunks) { allBytes.set(chunk, offset); offset += chunk.length; }
+    return expandIndex(JSON.parse(new TextDecoder().decode(allBytes)));
+  }
+
   async function loadPilotsIndex() {
     retryBtn.hidden = true;
     nameInp.disabled = true;
     statusEl.classList.add('loading');
     setStatus('Chargement des données…');
     try {
-      const res = await fetch('./pilots-index.json');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      pilotsIndex = await loadIndexFile('./pilots-index.json', 'index France', 83_000_000);
+      // Index UCI (Mondiaux BMX Racing) — optionnel : s'il est absent, on continue sans
+      uciIndex = await loadIndexFile('./uci-index.json', 'index UCI', 8_000_000)
+        .catch(e => {
+          console.warn('[sqorz] uci-index.json indisponible :', e.message);
+          return { events: [], series: [] };
+        });
 
-      const compressed = !!res.headers.get('Content-Encoding');
-      const rawTotal = parseInt(res.headers.get('Content-Length') || '0', 10);
-      const ESTIMATED = 83_000_000; // ~79 Mo décompressé
-      const total = compressed ? ESTIMATED : (rawTotal || ESTIMATED);
-      const reader = res.body.getReader();
-      const chunks = [];
-      let received = 0;
-
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        received += value.length;
-        const mb = (received / 1048576).toFixed(0);
-        if (total) {
-          setProgress(received, total);
-          setStatus(`Chargement… ${mb} / ${(total / 1048576).toFixed(0)} Mo`);
-        } else {
-          setStatus(`Chargement… ${mb} Mo`);
-        }
-      }
-
-      setProgress(0, 0);
-      const allBytes = new Uint8Array(received);
-      let offset = 0;
-      for (const chunk of chunks) { allBytes.set(chunk, offset); offset += chunk.length; }
-      pilotsIndex = expandIndex(JSON.parse(new TextDecoder().decode(allBytes)));
-
+      buildNameIndex();
       nameInp.disabled = false;
       updateSearchEnabled();
       statusEl.classList.remove('loading');
@@ -1750,7 +1740,7 @@
     saveRecentSearch(query);
 
     const searchKey = norm(query);
-    if (searchKey === lastSearchKey && (lastMatches.length || lastSeriesMatches.length)) {
+    if (searchKey === lastSearchKey && (lastMatches.length || lastSeriesMatches.length || lastUciMatches.length || lastUciSeriesMatches.length)) {
       renderFiltered();
       return;
     }
@@ -1759,6 +1749,8 @@
     compareActive = false;
     selectedPilotKey = null;
     selectedComparePilotKey = null;
+    lastUciMatches = [];
+    lastUciSeriesMatches = [];
     document.getElementById('compareInputCard').hidden = true;
     document.getElementById('compareInp').value = '';
     document.getElementById('compareStatus').textContent = '';
@@ -1769,21 +1761,28 @@
     setProgress(0, 0);
 
     const { events: matches, series: seriesMatches } = searchLocal(query);
+    const { events: uciMatches, series: uciSeriesMatches } = searchUci(query);
 
     lastMatches = matches;
     lastSeriesMatches = seriesMatches;
+    lastUciMatches = uciMatches;
+    lastUciSeriesMatches = uciSeriesMatches;
     lastSearchKey = searchKey;
 
     const srMsg = seriesMatches.length ? ` · ${seriesMatches.length} classement(s) de championnat` : '';
-    setStatus(`${matches.length} résultat(s) trouvé(s)${srMsg}.`);
-    resultsFiltersEl.hidden = (matches.length + seriesMatches.length) === 0;
-    document.getElementById('compareToggleBtn').disabled = (matches.length + seriesMatches.length) === 0;
+    const uciMsg = uciMatches.length ? ` · ${uciMatches.length} résultat(s) UCI` : '';
+    setStatus(`${matches.length} résultat(s) trouvé(s)${srMsg}${uciMsg}.`);
+    const totalHits = matches.length + seriesMatches.length + uciMatches.length + uciSeriesMatches.length;
+    resultsFiltersEl.hidden = totalHits === 0;
+    document.getElementById('compareToggleBtn').disabled = totalHits === 0;
     renderFiltered();
-    if (matches.length || seriesMatches.length) saveResultsCache(norm(nameInp.value.trim()), matches, seriesMatches);
+    if (totalHits) saveResultsCache(norm(nameInp.value.trim()), matches, seriesMatches, uciMatches, uciSeriesMatches);
   }
 
   let lastMatches = [];
   let lastSeriesMatches = [];
+  let lastUciMatches = [];
+  let lastUciSeriesMatches = [];
   let lastSearchKey = null; // clé du dernier appel API (query|orgs)
   let lastCompareMatches = [];
   let compareActive = false;
@@ -1805,7 +1804,12 @@
       return d.startsWith(y + '-');
     });
     const filteredSeries = !y ? lastSeriesMatches : lastSeriesMatches.filter(sm => seriesYears(sm).has(y));
-    render(filtered, sortSel.value, filteredSeries);
+    const filteredUci = !y ? lastUciMatches : lastUciMatches.filter(m => {
+      const d = m.event.eventDate || m.event.eventEndDate || '';
+      return d.startsWith(y + '-');
+    });
+    const filteredUciSeries = !y ? lastUciSeriesMatches : lastUciSeriesMatches.filter(sm => seriesYears(sm).has(y));
+    render(filtered, sortSel.value, filteredSeries, filteredUci, filteredUciSeries);
   }
 
   function ordFr(n){ return n === 1 ? '1er' : `${n}e`; }
@@ -2428,7 +2432,7 @@
     return maxYear || '—';
   }
 
-  function renderChampionships(seriesMatches) {
+  function renderChampionships(seriesMatches, opts = {}) {
     if (!seriesMatches.length) return '';
 
     const sortByRank = (a, b) => {
@@ -2577,7 +2581,9 @@
       }));
     }
 
-    return `<h2 class="section-title">Championnats <span class="meta">${seriesMatches.length} classement(s) de série</span><button type="button" class="btn btn-ghost section-toggle" id="seriesToggle" aria-controls="seriesWrap">Masquer</button></h2><div id="seriesWrap" role="region" aria-label="Championnats">${allCards.join('')}</div>`;
+    const wrapId = opts.wrapId || 'seriesWrap';
+    const toggleBtn = opts.noToggle ? '' : `<button type="button" class="btn btn-ghost section-toggle" id="seriesToggle" aria-controls="${wrapId}">Masquer</button>`;
+    return `<h2 class="section-title">Championnats <span class="meta">${seriesMatches.length} classement(s) de série</span>${toggleBtn}</h2><div id="${wrapId}" role="region" aria-label="Championnats">${allCards.join('')}</div>`;
   }
 
   const PILOT_COLORS = [
@@ -2591,12 +2597,15 @@
     return PILOT_COLORS[Math.abs(hash) % PILOT_COLORS.length];
   }
 
-  function renderPilotCard(matches, seriesMatches, stats) {
+  function renderPilotCard(matches, seriesMatches, stats, uciMatches = []) {
     const sortedEv = [...matches].sort((a, b) =>
+      (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
+    const sortedUciEv = [...uciMatches].sort((a, b) =>
       (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
 
     const baseCmp = (sortedEv.find(m => m.competitor.firstName || m.competitor.lastName)
-      || seriesMatches.find(m => m.competitor.firstName || m.competitor.lastName))?.competitor;
+      || seriesMatches.find(m => m.competitor.firstName || m.competitor.lastName)
+      || sortedUciEv.find(m => m.competitor.firstName || m.competitor.lastName))?.competitor;
     if (!baseCmp) return '';
 
     const firstName = baseCmp.firstName || '';
@@ -2604,11 +2613,14 @@
     const fullName  = `${firstName} ${lastName}`.trim();
     if (!fullName) return '';
 
-    const plate = sortedEv.find(m => m.competitor.plate)?.competitor.plate || null;
+    const plate = sortedEv.find(m => m.competitor.plate)?.competitor.plate
+               || sortedUciEv.find(m => m.competitor.plate)?.competitor.plate || null;
     const club  = sortedEv.find(m => m.competitor.groupName)?.competitor.groupName
                || seriesMatches.find(m => m.competitor.groupName)?.competitor.groupName
+               || sortedUciEv.find(m => m.competitor.groupName)?.competitor.groupName
                || null;
-    const age   = sortedEv.find(m => m.competitor.age != null)?.competitor.age ?? null;
+    const age   = sortedEv.find(m => m.competitor.age != null)?.competitor.age
+               ?? sortedUciEv.find(m => m.competitor.age != null)?.competitor.age ?? null;
 
     const initials = [firstName[0], lastName[0]].filter(Boolean).join('').toUpperCase() || '?';
     const color    = avatarColor(fullName.toLowerCase());
@@ -2648,6 +2660,29 @@
         </div>
         ${qsHtml}
       </div>`;
+  }
+
+  // ===== ONGLET UCI (résultats internationaux — Mondiaux BMX Racing) =====
+  function renderUciPanel(uciMatches, uciStats, uciSeriesMatches, pilotColor) {
+    // Grouper par événement (même logique que la timeline principale)
+    const eventGroups = new Map();
+    for (const m of uciMatches) {
+      const k = m.event.eventId;
+      if (!eventGroups.has(k)) eventGroups.set(k, { event: m.event, account: m.account, items: [] });
+      eventGroups.get(k).items.push(m);
+    }
+    const sortedEvents = [...eventGroups.values()].sort((a, b) =>
+      (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
+
+    const html = [];
+    html.push(`<h2 class="section-title">Stats internationales <span class="meta">${uciStats.entries} engagement(s)</span></h2>`);
+    html.push(renderStatsDashboard(uciStats));
+    if (sortedEvents.length) {
+      html.push(`<h2 class="section-title">🏁 Courses <span class="meta">${sortedEvents.length} événement(s) · du plus récent au plus ancien</span></h2>`);
+      html.push(renderTimeline(sortedEvents, pilotColor));
+    }
+    if (uciSeriesMatches.length) html.push(renderChampionships(uciSeriesMatches, { noToggle: true, wrapId: 'uciSeriesWrap' }));
+    return html.join('');
   }
 
   function searchCompare() {
@@ -3043,8 +3078,8 @@
     initTimelineObserver();
   }
 
-  function render(matches, sortMode = 'date-desc', seriesMatches = []) {
-    if (!matches.length && !seriesMatches.length) {
+  function render(matches, sortMode = 'date-desc', seriesMatches = [], uciMatches = [], uciSeriesMatches = []) {
+    if (!matches.length && !seriesMatches.length && !uciMatches.length && !uciSeriesMatches.length) {
       resultsEl.innerHTML = '<div class="card empty">Aucun pilote ne correspond à cette recherche.</div>';
       document.body.classList.remove('has-results');
       return;
@@ -3052,9 +3087,10 @@
 
     const hasEventMatches = matches.length > 0;
 
-    // Recense tous les pilotes distincts dans les résultats
+    // Recense tous les pilotes distincts dans les résultats (FR, ou UCI si pas de FR)
     const pilotMap = new Map(); // normKey → { cmp, plate, club, count, lastDate }
-    for (const m of matches) {
+    const pilotSource = matches.length ? matches : uciMatches;
+    for (const m of pilotSource) {
       const c = m.competitor;
       const k = norm(`${c.firstName||''} ${c.lastName||''}`).trim();
       if (!k) continue;
@@ -3083,8 +3119,15 @@
     const primarySeriesMatches = activeKey
       ? seriesMatches.filter(sm => norm(`${sm.competitor.firstName||''} ${sm.competitor.lastName||''}`).trim() === activeKey)
       : seriesMatches;
+    const primaryUciMatches = activeKey
+      ? uciMatches.filter(m => norm(`${m.competitor.firstName||''} ${m.competitor.lastName||''}`).trim() === activeKey)
+      : uciMatches;
+    const primaryUciSeriesMatches = activeKey
+      ? uciSeriesMatches.filter(sm => norm(`${sm.competitor.firstName||''} ${sm.competitor.lastName||''}`).trim() === activeKey)
+      : uciSeriesMatches;
 
     const stats = hasEventMatches ? computeStats(primaryMatches) : null;
+    const uciStats = primaryUciMatches.length ? computeStats(primaryUciMatches) : null;
 
     const eventGroups = new Map();
     for (const m of primaryMatches) {
@@ -3136,7 +3179,7 @@
     // Couleur du pilote actif pour la timeline
     const pilotColor = avatarColor((activeKey || '').toLowerCase());
 
-    const panels = { stats: [], series: [], history: [] };
+    const panels = { stats: [], series: [], history: [], uci: [] };
     if (hasEventMatches) {
       const statsMeta = `synthèse sur ${stats.entries} engagement(s)`;
       panels.stats.push(`<h2 class="section-title">📈 Vue globale <span class="meta">${statsMeta}</span><button type="button" class="btn btn-ghost section-toggle" id="statsToggle" aria-controls="statsWrap">Masquer</button></h2>`);
@@ -3151,11 +3194,16 @@
       const timelineHtml = renderTimeline(sortedEvents, pilotColor);
       panels.history.push(`<h2 class="section-title">🏁 Courses <span class="meta">${sortedEvents.length} événement(s), ${sortLabel}</span><button type="button" class="btn btn-ghost section-toggle" id="historyToggle" aria-controls="historyWrap">Masquer</button></h2><div id="historyWrap" role="region" aria-label="Événements">${timelineHtml}</div>`);
     }
+    if (primaryUciMatches.length && uciStats) {
+      panels.uci.push(`<h2 class="section-title">🌍 UCI BMX Racing <span class="meta">${uciStats.entries} engagement(s) international(aux)</span><button type="button" class="btn btn-ghost section-toggle" id="uciToggle" aria-controls="uciWrap">Masquer</button></h2>`);
+      panels.uci.push(`<div id="uciWrap" role="region" aria-label="Résultats UCI">${renderUciPanel(primaryUciMatches, uciStats, primaryUciSeriesMatches, pilotColor)}</div>`);
+    }
 
     const tabsAvailable = [];
     if (panels.stats.length)   tabsAvailable.push({ key: 'stats',   label: '📈 Stats',       count: null });
     if (panels.series.length)  tabsAvailable.push({ key: 'series',  label: '🏆 Championnats', count: primarySeriesMatches.length });
     if (panels.history.length) tabsAvailable.push({ key: 'history', label: '🏁 Courses',      count: sortedEvents.length });
+    if (panels.uci.length)     tabsAvailable.push({ key: 'uci',     label: '🌍 UCI',         count: primaryUciMatches.length });
 
     const compareResultsEl = document.getElementById('compareResults');
     if (compareResultsEl) {
@@ -3187,7 +3235,7 @@
         <div class="pilot-picker-list">${items}</div>
       </div>`);
     }
-    const pilotCardHtml = renderPilotCard(primaryMatches, primarySeriesMatches, stats);
+    const pilotCardHtml = renderPilotCard(primaryMatches, primarySeriesMatches, stats || uciStats, primaryUciMatches);
     let tabsNavHtml = '';
     if (tabsAvailable.length > 1) {
       const navHtml = tabsAvailable.map((t, i) => {
@@ -3214,6 +3262,7 @@
     charts:  { hidden: localStorage.getItem('chartsHidden') === '1',  wrap: 'chartsWrap',  btn: 'chartsToggle',  key: 'chartsHidden' },
     series:  { hidden: localStorage.getItem('seriesHidden') === '1',  wrap: 'seriesWrap',  btn: 'seriesToggle',  key: 'seriesHidden' },
     history: { hidden: localStorage.getItem('historyHidden') === '1', wrap: 'historyWrap', btn: 'historyToggle', key: 'historyHidden' },
+    uci:     { hidden: localStorage.getItem('uciHidden') === '1',     wrap: 'uciWrap',     btn: 'uciToggle',     key: 'uciHidden' },
   };
   function applySectionVisibility() {
     for (const s of Object.values(sectionState)) {
@@ -3398,6 +3447,8 @@ const cmpPickBtn = e.target.closest('[data-compare-pilot-key]');
       if (cached) {
         lastMatches = cached.matches;
         lastSeriesMatches = cached.seriesMatches;
+        lastUciMatches = cached.uciMatches || [];
+        lastUciSeriesMatches = cached.uciSeriesMatches || [];
         lastSearchKey = norm(state.name);
         resultsFiltersEl.hidden = false;
         document.getElementById('compareToggleBtn').disabled = false;
@@ -3434,6 +3485,14 @@ const cmpPickBtn = e.target.closest('[data-compare-pilot-key]');
     }, { passive: true });
     btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
   })();
+</script>
+<script>
+  // PWA : enregistre le service worker (app shell en cache, réseau d'abord)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js').catch(e => console.warn('[sqorz] service worker :', e.message));
+    });
+  }
 </script>
 </body>
 </html>

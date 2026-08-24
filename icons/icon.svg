@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fond dégradé bleu acier -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3f566f"/>
+      <stop offset="100%" style="stop-color:#8aa6c2"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="100" fill="url(#bg)"/>
+  <!-- Lettre S stylisée -->
+  <text x="256" y="340" font-family="Arial Black, sans-serif" font-size="300" font-weight="900"
+        text-anchor="middle" fill="white" opacity="0.95">S</text>
+</svg>
