@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sqorz-v2';
+const CACHE_NAME = 'sqorz-v3';
 // Chemins RELATIFS : l'app vit sur un sous-chemin (ex. /sqorz-stats/) — pas à la racine
 const ASSETS = ['./', './index.html'];
 // Index de données volumineux régénérés chaque semaine : on ne les met JAMAIS en cache
@@ -29,30 +29,27 @@ self.addEventListener('fetch', e => {
   // Les index de données ne passent pas par le cache
   if (NO_CACHE.some(n => url.pathname.endsWith(n))) return;
 
+  // `cache: 'no-cache'` force la revalidation avec le serveur à CHAQUE requête :
+  // GitHub Pages renvoie `Cache-Control: max-age=600`, qui sinon laisse le navigateur
+  // resservir l'ancienne version jusqu'à 10 min sans la re-télécharger.
+  const freshFetch = fetch(e.request, { cache: 'no-cache' })
+    .then(response => {
+      const clone = response.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+      return response;
+    })
+    .catch(() => caches.match(e.request));
+
   // Navigations : réseau d'abord, sinon shell en cache (l'app s'ouvre hors-ligne)
   if (e.request.mode === 'navigate') {
     e.respondWith(
-      fetch(e.request)
-        .then(response => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
-          return response;
-        })
-        .catch(() =>
-          caches.match(e.request).then(r => r || caches.match(new URL('./', self.location).href))
-        )
+      freshFetch.then(r =>
+        r || caches.match(new URL('./', self.location).href)
+      )
     );
     return;
   }
 
   // Autres GET (assets statiques) : réseau d'abord, cache en secours
-  e.respondWith(
-    fetch(e.request)
-      .then(response => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
-        return response;
-      })
-      .catch(() => caches.match(e.request))
-  );
+  e.respondWith(freshFetch);
 });
