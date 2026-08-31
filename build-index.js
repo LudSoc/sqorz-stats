@@ -198,6 +198,31 @@ async function buildRegion(regionCode, outFile) {
   const { writeFileSync } = await import('fs');
   writeFileSync(outFile, json);
 
+  // Variante NDJSON (un événement par ligne) pour les clients mobiles :
+  // streaming ligne à ligne, sans tout charger en mémoire.
+  const eventsNdjson = indexEvents.map(e => JSON.stringify(e)).join('\n') + '\n';
+  const ndjsonFile = outFile.replace(/\.json$/, '.events.ndjson');
+  writeFileSync(ndjsonFile, eventsNdjson);
+
+  // Fichier compagnon léger pour les clients (ex. app Android) :
+  // permet de vérifier la fraîcheur (generated) et l'intégrité (sha256)
+  // sans télécharger l'index complet.
+  const { createHash } = await import('crypto');
+  const sha256 = createHash('sha256').update(json, 'utf8').digest('hex');
+  const eventsSha = createHash('sha256').update(eventsNdjson, 'utf8').digest('hex');
+  const metaFile = outFile.replace(/\.json$/, '.meta.json');
+  writeFileSync(metaFile, JSON.stringify({
+    generated: index.generated,
+    index: {
+      sha256,
+      sizeBytes: Buffer.byteLength(json, 'utf8'),
+    },
+    events: {
+      sha256: eventsSha,
+      sizeBytes: Buffer.byteLength(eventsNdjson, 'utf8'),
+    },
+  }, null, 2) + '\n');
+
   const sizeMb = (json.length / 1024 / 1024).toFixed(1);
   let totalCompetitors = 0;
   for (const ev of indexEvents) for (const cls of ev.classes) totalCompetitors += cls.competitors.length;
