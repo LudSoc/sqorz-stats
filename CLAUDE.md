@@ -193,7 +193,7 @@ Conditions d'apparition :
 - **Toutes les classes ne sont pas forcément chronométrées** (ex. Championnats de France 2026 : U19/U23/Élite uniquement — 562 phases chronométrées / 1 061). Un coureur sans lecture transpondeur (DNF/DNS, transpondeur manquant) n'a pas de `time` sur la manche.
 - Mesures de référence : Mondiaux UCI 2026 → 2 401 phases chronométrées / 3 829. Courses de club ou de ligue sans chrono → aucun champ de temps (ex. `transponderScoring: false`).
 
-Depuis 2026-09-02, `slimCompetitor` (`build-index.js`) **conserve** ces champs sous clés courtes (`tm`/`ht`/`ct`), et l'app les affiche (sous-ligne « ⏱ Chronos » dans la timeline, via `expandIndex()` + `chronoLinesForMatch`) — cf. `docs/superpowers/specs/2026-09-02-chronos-transpondeur-design.md`. ⚠️ **L'index publié actuel** (régénéré avant cette date) ne les contient pas encore : il sera mis à jour par la prochaine régénération hebdo (cron), après quoi les chronos apparaîtront sans autre changement (impact : +~0,65 Mo gzip au total, mesuré).
+Depuis 2026-09-02, `slimCompetitor` (`build-index.js`) **conserve** ces champs sous clés courtes (`tm`/`ht`/`ct`), et l'app les affiche (sous-ligne « ⏱ Chronos » dans la timeline, via `expandIndex()` + `chronoLinesForMatch`) — cf. `docs/superpowers/specs/2026-09-02-chronos-transpondeur-design.md`. Libellés d'affichage : `time` → « ⏱️ Chrono », `corner2Time` → « ⏱️ Virage 1 », `hillTime` → « ⏱️ Butte ». Exclusion : les phases DNF/DNS/DSQ (`result ≥ 100 000`) ne comptent **jamais** dans le calcul, même si elles portent un temps (souvent 0 ou temps d'abandon) ; un temps ≤ 0 n'est jamais compté non plus (`isNotTimedPhase`). NB : les détails manipulés par l'app sont en clés **expandées** (`result`, `time`…), pas en clés courtes (`r`, `tm`…) — `isNotTimedPhase` teste donc `result`, pas `r`. ⚠️ **L'index publié actuel** (régénéré avant cette date) ne les contient pas encore : il sera mis à jour par la prochaine régénération hebdo (cron), après quoi les chronos apparaîtront sans autre changement (impact : +~0,65 Mo gzip au total, mesuré).
 
 **Temps réel (hors périmètre public)** : l'API **LAN** du poste de chronométrage (« Local Web Services », cf. docs.sqorz.com) expose `getRaceDetails` (option `identifyBestTimes`) et le canal Socket.IO `/event/raceSummary` — réseau local de l'organisateur uniquement ; l'API internet `/json/event/{id}` est mise à jour ~toutes les 30 s.
 
@@ -273,16 +273,17 @@ Fichier séparé (≈2,8 Mo) généré par le même `build-index.js` à partir d
 - 1 édition = 4 événements (un par jour : WED/THU/FRI/SAT).
 - `groupName` = code pays (ex. `FRA`) et non le club local.
 
-## Navigation par niveaux (Régional / National / UCI)
+## Navigation par niveaux (Global / Régional / National / UCI)
 
 Depuis la spec `docs/superpowers/specs/2026-09-02-separation-niveaux-design.md`, la vue pilote est organisée en **2 rangées d'onglets** :
 
-1. **Rangée 1 — parties** : `🗼 Régional | 🇫🇷 National | 🌍 UCI` (constante `LEVELS` dans `index.html`, clés `regional|national|uci`).
+1. **Rangée 1 — parties** : `📊 Global | 📍 Régional | 🇫🇷 National | 🌍 UCI` (constante `LEVELS` dans `index.html`, clés `global|regional|national|uci`).
+   - **Global** = agrégation des trois niveaux (événements + séries concaténés, toutes stats confondues) — **défaut au premier rendu** (aucun `partPref` mémorisé).
    - **National** = les 5 comptes FFC (`NATIONAL_ACCOUNTS` : `ffc` + 4 zones `ffcbmxne/no/so/sudest`) — 185 événements / 35 séries ; **Régional** = toutes les autres orgs de l'index FR (520 événements / 73 séries, vérifié : aucun croisement entre les deux groupes) ; **UCI** = l'index `uci-index.json`.
-   - Une partie n'est affichée que si le pilote actif a des données à ce niveau (badge = nombre d'engagements). La partie choisie est mémorisée en `localStorage` (`partPref`, défaut `regional`).
+   - Une partie n'est affichée que si le pilote actif a des données à ce niveau (badge = nombre d'engagements). La partie choisie est mémorisée en `localStorage` (`partPref`) ; sans préférence, repli sur la première partie disponible (donc Global). Le mini-sélecteur de la comparaison 2 pilotes propose les mêmes parties (Global compris).
 2. **Rangée 2 — sous-vues** (de la partie active, défaut Stats) : `📈 Stats | 🏆 Championnats | 🏁 Courses`, chacune recalculée sur les seuls résultats du niveau.
 
-La comparaison 2 pilotes a son propre mini-sélecteur de niveau (init sur la partie active puis indépendant, `comparePart` + `lastCompareUciMatches`). Les boutons « Masquer/Afficher » des blocs ont été supprimés (D12). Le matching réutilise `norm()` et la clé pilote (`norm(firstName lastName)`) commune aux deux index.
+La comparaison 2 pilotes a son propre mini-sélecteur de niveau (mêmes parties, Global compris ; **défaut = Global** s'il est dispo, sinon la partie active — `comparePart` + `lastCompareUciMatches`, puis indépendant). Les boutons « Masquer/Afficher » des blocs ont été supprimés (D12). Le matching réutilise `norm()` et la clé pilote (`norm(firstName lastName)`) commune aux deux index.
 
 ---
 

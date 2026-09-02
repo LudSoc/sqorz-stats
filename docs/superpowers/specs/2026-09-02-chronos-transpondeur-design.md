@@ -48,7 +48,9 @@ Extrait réel (Championnats de France 2026, U19 Fille — Finale) :
   "hillTime": "2.628", "corner2Time": "20.468", "time": "35.063", "mergedRank": 1 }
 ```
 
-Les temps apparaissent sur **toutes les phases courues** (Manches, 1/4, 1/2, Finale…). Les noms de lignes (`hill`, `corner2`) dépendent de la config du circuit — les étiquettes affichées seront génériques (« complet », « virage 2 », « hill ») sauf si on étudie `phaseBlockSummaries[].races`.
+Les temps apparaissent sur **toutes les phases courues** (Manches, 1/4, 1/2, Finale…). Les noms de lignes (`hill`, `corner2`) dépendent de la config du circuit. **Libellés d'affichage décidés (2026-09-02)** : `time` → « ⏱️ Chrono », `corner2Time` → « ⏱️ Virage 1 », `hillTime` → « ⏱️ Butte ».
+
+**Phases non valables pour le chrono** (décision 2026-09-02) : toute phase dont `result >= 100000` (DNF/DNS/DSQ) est **exclue** du calcul, même si elle porte un temps (souvent `0` ou le temps d'un abandon) — vérifié sur données réelles : 381 phases DNF/DNS/DSQ portent un temps qui polluerait les stats. Par sécurité, un temps ≤ 0 n'est jamais compté.
 
 ### 3.2 Champs de diagnostic au niveau événement
 
@@ -89,8 +91,8 @@ Concrètement, pour chaque métrique de la classe à cette épreuve :
 - **meilleur temps de la classe** : le meilleur temps absolu enregistré dans la classe sur l'épreuve (toutes manches), avec le nom du pilote si disponible.
 
 Règles :
-- Population = pilotes **avec au moins un temps** sur la classe/épreuve (les DNF/DNS sans lecture sont exclus du classement, jamais comptés en 0).
-- Agrégation par pilote : **minimum** de ses temps sur la métrique (un pilote peut courir plusieurs manches).
+- Population = pilotes **avec au moins un temps valable** sur la classe/épreuve. Sont exclus : les phases DNF/DNS/DSQ (`result >= 100000`, même si elles portent un temps — souvent 0 ou temps d'abandon) et tout temps ≤ 0. Vérifié sur données réelles : aucune phase valable n'a de temps 0, donc rien de légitime n'est perdu.
+- Agrégation par pilote : **minimum** de ses temps valables sur la métrique (un pilote peut courir plusieurs manches).
 - Égalités : même temps → même rang, puis saut (classement type « compétition ») — à valider en recette sur des données réelles.
 - **Aucune comparaison entre épreuves ou pistes différentes** (D2) : pas de stat « meilleur temps » globale dans la carte pilote ni les dashboards.
 - Classes sans chrono à l'épreuve → aucune sous-ligne (silencieux, D4).
@@ -137,7 +139,7 @@ Règles :
 ### 6.1 À confirmer (non bloquants)
 
 - Unité officielle de `time`/splits (seconde supposée, D9) — via l'équipe Sqorz ou un événement de référence.
-- Libellés des lignes de chrono (`hill`, `corner2`) — étiquettes génériques par défaut.
+- ~~Libellés des lignes de chrono (`hill`, `corner2`)~~ **✅ Décidé 2026-09-02** : « ⏱️ Chrono » / « ⏱️ Virage 1 » / « ⏱️ Butte ».
 - Rendu exact de la sous-ligne (une ligne par métrique vs compactée) — à ajuster en recette visuelle.
 
 ### 6.2 Mesure d'impact taille — ✅ RÉALISÉE (2026-09-02)

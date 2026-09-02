@@ -1346,7 +1346,8 @@
   // Vérifié sur les données 2023-2026 : aucune série croisée entre les deux groupes.
   const NATIONAL_ACCOUNTS = new Set(['ffc', 'ffcbmxne', 'ffcbmxno', 'ffcbmxso', 'ffcbmxsudest']);
   const LEVELS = [
-    { key: 'regional', label: '🗼 Régional' },  // emoji « France dessinée » (D13 — facile à changer ici)
+    { key: 'global',   label: '📊 Global' },    // agrégation Régional + National + UCI (défaut au 1ᵉʳ rendu)
+    { key: 'regional', label: '📍 Régional' },  // emoji épingle de localisation (D13 — facile à changer ici)
     { key: 'national', label: '🇫🇷 National' },
     { key: 'uci',      label: '🌍 UCI' },
   ];
@@ -1402,7 +1403,10 @@
   }
 
   // --- Cache des derniers résultats de recherche ---
-  const RESULTS_CACHE_KEY = 'sqorzResultsCache';
+  // Versionné : à chaque changement de format des données en cache (ex. ajout des
+  // chronos tm/ht/ct) on incrémente, pour ignorer les caches périmés (D8 spec chronos).
+  const RESULTS_CACHE_VERSION = 2;
+  const RESULTS_CACHE_KEY = 'sqorzResultsCacheV' + RESULTS_CACHE_VERSION;
   const RESULTS_CACHE_TTL = 6 * 60 * 60 * 1000; // 6h
 
   function slimMatch(m) {
@@ -3056,10 +3060,14 @@
   // lignes de chrono du circuit n'est pas connue (spec §6.1).
   const CHRONO_METRICS = [
     { key: 'time',        label: '⏱️ Chrono' },
-    { key: 'corner2Time', label: '⏱️ Virage 2' },
-    { key: 'hillTime',    label: '⏱️ Hill' },
+    { key: 'corner2Time', label: '⏱️ Virage 1' },
+    { key: 'hillTime',    label: '⏱️ Butte' },
   ];
-  const num = s => { const n = parseFloat(s); return isFinite(n) ? n : null; };
+  const num = s => { const n = parseFloat(s); return isFinite(n) && n > 0 ? n : null; }; // temps > 0 requis
+  // Une phase DNF/DNS/DSQ (result ≥ 100000) n'est PAS une manche chronométrée valable :
+  // son temps (souvent 0 ou le temps d'un abandon) ne doit jamais entrer dans le calcul.
+  // NB : clés EXPANDIES (result, pas r) — l'index et le cache de recherche sont expandés.
+  const isNotTimedPhase = d => d == null || d.result == null || Number(d.result) >= 100000;
   const fmtChrono = v => `${Number(v).toFixed(3)} s`;
   const ordSup = n => n === 1 ? '1ᵉʳ' : `${n}ᵉ`;
 
@@ -3094,6 +3102,7 @@
       const details = cp.competitorRankDetails || [];
       let best = null;
       for (const d of details) {
+        if (isNotTimedPhase(d)) continue; // DNF/DNS/DSQ : temps non valable
         const v = num(d[metricKey]);
         if (v != null && (best == null || v < best)) best = v;
       }
@@ -3127,6 +3136,7 @@
         // Classe introuvable (ex. cache sans index) : on n'a que les phases du pilote → temps seul, pas de rang
         let b = null;
         for (const d of (c.competitorRankDetails || [])) {
+          if (isNotTimedPhase(d)) continue; // DNF/DNS/DSQ : temps non valable
           const v = num(d[met.key]);
           if (v != null && (b == null || v < b)) b = v;
         }
@@ -3384,13 +3394,17 @@
     const pilotColor = avatarColor((activeKey || '').toLowerCase());
 
     // ===== Découpage par niveau (spec : D1–D3, D11) =====
+    // Global = concaténation des trois niveaux (toutes stats confondues).
     const levelData = {
+      global:   { events: [], series: [] },
       regional: { events: [], series: [] },
       national: { events: [], series: [] },
       uci:      { events: primaryUciMatches, series: primaryUciSeriesMatches },
     };
     for (const m of primaryMatches) levelData[levelOf(m.account.accountCode)].events.push(m);
     for (const sm of primarySeriesMatches) levelData[levelOf(sm.account.accountCode)].series.push(sm);
+    levelData.global.events = [...levelData.regional.events, ...levelData.national.events, ...levelData.uci.events];
+    levelData.global.series = [...levelData.regional.series, ...levelData.national.series, ...levelData.uci.series];
 
     // Parties disponibles = niveaux avec au moins un engagement ou un classement (D4)
     const partsAvailable = LEVELS.filter(l => levelData[l.key].events.length || levelData[l.key].series.length);
@@ -3455,7 +3469,7 @@
       }
       const sortedGroups = sortGroups(groups);
       const lvStats = events.length ? computeStats(events) : null;
-      const adj = key === 'regional' ? 'régionaux' : key === 'national' ? 'nationaux' : 'internationaux';
+      const adj = key === 'global' ? 'tous niveaux' : key === 'regional' ? 'régionaux' : key === 'national' ? 'nationaux' : 'internationaux';
 
       const panels = { stats: '', series: '', courses: '' };
       if (events.length) {
@@ -3480,10 +3494,14 @@
     if (compareResultsEl) {
       let compareHtml = '';
       if (compareActive && (lastCompareMatches.length || lastCompareUciMatches.length)) {
-        if (comparePart == null || !partsAvailable.some(l => l.key === comparePart)) comparePart = activePart;
-        const p2ByLevel = { regional: [], national: [], uci: [] };
+        // Défaut du mini-sélecteur de comparaison : Global s'il est dispo, sinon la partie active (D16)
+        if (comparePart == null || !partsAvailable.some(l => l.key === comparePart)) {
+          comparePart = partsAvailable.some(l => l.key === 'global') ? 'global' : activePart;
+        }
+        const p2ByLevel = { global: [], regional: [], national: [], uci: [] };
         for (const m of lastCompareMatches) p2ByLevel[levelOf(m.account.accountCode)].push(m);
         p2ByLevel.uci = lastCompareUciMatches;
+        p2ByLevel.global = [...p2ByLevel.regional, ...p2ByLevel.national, ...p2ByLevel.uci];
         compareHtml = renderCompareSection({ levelData, p2ByLevel, parts: partsAvailable, part: comparePart });
       }
       compareResultsEl.innerHTML = compareHtml;

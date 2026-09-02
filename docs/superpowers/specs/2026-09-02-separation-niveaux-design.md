@@ -238,6 +238,16 @@ Contraintes transverses (rappel des conventions du projet) :
 
 Reste à valider en recette : rendu des emojis (surtout 🗼, qui est « Tokyo Tower » sur certaines plateformes — alternative ⚜️ si besoin) et hauteur sticky sur petits écrans.
 
+### Mise à jour 2026-09-02 — onglet « 📊 Global »
+
+Ajout d'un **4ᵉ niveau `global` en tête de la rangée 1** : `📊 Global | 📍 Régional | 🇫🇷 National | 🌍 UCI` (`LEVELS`). Il **agrège les trois niveaux** : `levelData.global` = concaténation des événements et des séries régionaux + nationaux + UCI, ce qui donne à Global les mêmes sous-vues (Stats / Championnats / Courses) recalculées sur toutes les données. Décisions :
+
+- **Défaut au premier rendu** (aucun `partPref`) = **Global** (premier de `LEVELS`, donc premier dispo) — les utilisateurs ayant déjà une préférence mémorisée la conservent.
+- Emoji choisi : **📊**.
+- Badge Global = nombre total d'engagements (somme des trois niveaux).
+- Mini-sélecteur de comparaison = mêmes parties, Global compris (`p2ByLevel.global` = concaténation) ; **défaut du mini-sélecteur = Global s'il est dispo**, sinon la partie active (décision du 2026-09-02, modifie D16 « init sur la partie active »).
+- Implémentation : ~12 lignes dans `render()` (`LEVELS`, `levelData.global`, `adj`, `p2ByLevel.global`) — le reste du pipeline est piloté par `LEVELS`/`levelData[part]`. Testé E2E (4 onglets, Global actif par défaut, badge 41 = 2+37+2, bascules OK, chronos rendus dans le panneau Global).
+
 ## Annexe — Les 34 organisations de l'index FR et leur niveau
 
 - **National (5)** : FEDERATION FRANCAISE DE CYCLISME (`ffc`) · FFC BMX NORD EST (`ffcbmxne`) · FFC BMX NORD OUEST (`ffcbmxno`) · FFC BMX SUD EST (`ffcbmxsudest`) · FFC BMX SUD OUEST (`ffcbmxso`).
