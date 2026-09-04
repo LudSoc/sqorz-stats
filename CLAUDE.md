@@ -197,6 +197,12 @@ Depuis 2026-09-02, `slimCompetitor` (`build-index.js`) **conserve** ces champs s
 
 **Temps réel (hors périmètre public)** : l'API **LAN** du poste de chronométrage (« Local Web Services », cf. docs.sqorz.com) expose `getRaceDetails` (option `identifyBestTimes`) et le canal Socket.IO `/event/raceSummary` — réseau local de l'organisateur uniquement ; l'API internet `/json/event/{id}` est mise à jour ~toutes les 30 s.
 
+## Indice de performance (🏅, 0–1000)
+
+Feature **100 % côté client** (spec `docs/superpowers/specs/2026-09-02-indice-perf-design.md`) : un score 0–1000 par pilote, par année et carrière, qui combine rang pondéré par les participants (`zScore` → `500 + 500·z/√3`), constance par phase (±10 %, proxy « classé ⇒ finales » pour les Mondiaux), chrono transpondeur (z-score sur log temps, centré, strict — poids `PERF_CHRONO_W` = 0,3), classements de séries (même z, année = dernier événement), sous coefs de niveau légers (Régional 0,9 / National 1,0 / UCI 1,15, clamp [5,1000]). DNF/DNS/DSQ final = pénalité 250 × coef.
+
+Affichage : chip **🏅 carrière** sur la carte pilote (tous niveaux), composant « 🏅 Indice de performance » dans l'onglet **Stats** de chaque partie (carrière + par année, avec encadré « ℹ️ Comment est-il calculé ? »), badges **🏅 … · N eng.** à côté des séparateurs d'année de la timeline. Calibré sur données réelles (2026-09-02) : médiane population ≈ 500, front runners > 800, HEITZ 829 / ANJOUBAULT 709 (carrière = moyenne des moyennes annuelles).
+
 ---
 
 ## Organisation UCI (Mondiaux)

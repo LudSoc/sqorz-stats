@@ -74,15 +74,21 @@ Points délicats :
 - Phases : `isFinalPhase` (exclut semi/quart/repech/petite finale), `isMotoPhase` (/^moto/i), `isSemiPhase`, `isKnockoutPhase`.
 - `gateResults[gate]` : classements en manche par ligne de départ (pour « meilleure/pire ligne »), seulement si gate 1-8 et result 1-20.
 
+### Indice de performance (spec indice-perf-design.md)
+Échelle **0–1000**, calculé côté client, aucune donnée ajoutée. Helpers : `perfScoreRang` (500 + 500·z/√3 via `zScore` — rang pondéré par champ), `perfConstance`/`perfCoefConstance` (½·%top4 + ½·finales ; finale atteinte = phase finale valide **ou** rang classé — proxy Mondiaux), `perfChronoScore` (z-score sur log temps, centré, strict — biais linéaire éliminé par calibration), `perfEngagement` (blend chrono `PERF_CHRONO_W`=0,3 ; DNF/DNS/DSQ = `PERF_DNF_SCORE`=250), `perfSeriesScore` (z sur S classés, année = dernier événement conné), `perfLevel`/`computePerfIndices` (coefs `PERF_LEVEL_COEFS` 0,9/1,0/1,15, clamp [5,1000] après coef ; **carrière = moyenne des moyennes annuelles**, §4.7).
+
+Rendu : `renderPerfComponent` (composant « 🏅 Indice de performance » dans l'onglet Stats de chaque niveau : carrière + par année, avec encadré « ℹ️ Comment est-il calculé ? »), chip `🏅` sur la carte pilote (5ᵉ paramètre de `renderPilotCard` = carrière Global), badges `🏅 N · M eng.` par année dans `renderTimeline` (3ᵉ paramètre `perfByYear`). Calibré sur données réelles 2026-09-02 (ancrage : médiane population ≈ 500, front runners > 800, Mondiaux ≈ 960–1000).
+
 ### Rendu
 - `renderStatsDashboard(s)` — 4 panneaux : Palmarès, Performance, Finales, Conditions (avec best/worst gate).
+- `renderStats(s)` → `renderStatsDashboard(s)` (le composant Indice est intercalé entre le dashboard et les graphiques dans la partie Stats de chaque niveau).
 - **Parties par niveau** (spec « séparation niveaux », D1–D16) : `LEVELS`/`levelOf()`/`NATIONAL_ACCOUNTS` ; panneaux par partie (`levelPanels`), sous-onglets (`subTabsHtml`, `data-part-btn` / `data-subtab-btn` / `data-compare-part`), `partPref` (localStorage), comparatif par niveau (`comparePart`, `lastCompareUciMatches`). Sticky hybride sur mobile (rangée 1 seule). Boutons « Masquer/Afficher » et `sectionState`/`applySectionVisibility` supprimés.
 - `renderYearlyChart(matches)` — rang moyen par saison (2 axes : rang + % finales). Nécessite ≥ 2 saisons.
 - `renderEvolutionChart(matches)` — z-score par date, zones colorées. Nécessite ≥ 2 engagements.
 - `renderRankHistogram(matches)` — bins 1er/2e/3e/4-8/9-16/17+.
 - `renderOrgDonut(matches)` — donut SVG par organisation, max 7 segments visibles + « Autres ».
 - `renderChampionships(seriesMatches)` — cartes championnat avec `<details>` par manche (rang, points, tallied ✓/○, lignes `absent` en grisé = pas de résultat).
-- `renderTimeline(sortedEvents, pilotColor)` — timeline verticale par année (desc), points de couleur par meilleur rang (r1/r2/r3), phases cliquables. **Chronos transpondeur** : sous chaque `.class-line` avec manches chronométrées, un `.chrono-block` de lignes `.chrono-line` (une par métrique `time`/`corner2Time`/`hillTime` présente) — meilleur temps du pilote, rang compétition parmi les pilotes chronométrés de la classe (retrouvée dans l'index via `findClassCompetitors`, mémoïsée), meilleur temps absolu de la classe + détenteur ; si la classe est introuvable (cache), temps seul sans rang. Rien si aucun chrono (D4).
+- `renderTimeline(sortedEvents, pilotColor, perfByYear = null)` — timeline verticale par année (desc), points de couleur par meilleur rang (r1/r2/r3), phases cliquables. Badge d'indice de performance par année quand `perfByYear` est fourni. **Chronos transpondeur** : sous chaque `.class-line` avec manches chronométrées, un `.chrono-block` de lignes `.chrono-line` (une par métrique `time`/`corner2Time`/`hillTime` présente) — meilleur temps du pilote, rang compétition parmi les pilotes chronométrés de la classe (retrouvée dans l'index via `findClassCompetitors`, mémoïsée), meilleur temps absolu de la classe + détenteur ; si la classe est introuvable (cache), temps seul sans rang. Rien si aucun chrono (D4).
 - `renderPilotCard(matches, seriesMatches, stats)` — hero card : avatar (plaque ou initiales), club (lien vers sqorz-club), âge, badges DNF/DNS/DSQ, compteurs.
 - `renderCompareSection(...)` — comparaison 2 pilotes : lignes avec barres proportionnelles, meilleure valeur en gras, lien vers H2H.
 - `phaseTag(d, ctx)` — chip de phase, avec lien race Sqorz si `raceName`+`phaseCode` dispo.

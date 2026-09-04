@@ -258,6 +258,15 @@
   .btn-ghost{background:transparent; color:var(--accent); padding:4px 6px; font-size:12px}
   .btn-ghost:hover:not(:disabled){background:color-mix(in srgb,var(--accent) 10%, transparent)}
   .hint{font-size:12px; color:var(--muted); margin-top:6px}
+  .perf-how{margin-top:12px; border:1px solid var(--line); border-radius:10px; background:var(--card-soft); overflow:hidden}
+  .perf-how summary{cursor:pointer; padding:8px 12px; font-size:12px; color:var(--muted); list-style:none; user-select:none}
+  .perf-how summary::-webkit-details-marker{display:none}
+  .perf-how summary:hover{color:var(--ink)}
+  .perf-how[open] summary{border-bottom:1px solid var(--line); color:var(--ink)}
+  .perf-how-body{padding:4px 14px 12px; font-size:12px; color:var(--ink-2); line-height:1.55}
+  .perf-how-body p{margin:8px 0}
+  .perf-how-body ul{margin:4px 0 8px; padding-left:18px}
+  .perf-how-body li{margin:4px 0}
   .status{font-size:13px; color:var(--muted); margin-top:14px; min-height:18px}
   .status.error{color:var(--bad)}
   .status.loading{font-size:15px; color:var(--accent); font-weight:600; display:flex; align-items:center; gap:8px}
@@ -716,6 +725,14 @@
     border:1px solid color-mix(in srgb, var(--pilot-color, var(--accent)) 30%, var(--line));
     display:inline-flex; align-items:center; gap:5px;
   }
+  .pilot-index{
+    font-size:12.5px; font-weight:800; color:var(--accent2, var(--accent));
+    padding:4px 12px; border-radius:99px;
+    background:color-mix(in srgb, var(--accent2, var(--accent)) 10%, var(--card-soft));
+    border:1px solid color-mix(in srgb, var(--accent2, var(--accent)) 35%, var(--line));
+    display:inline-flex; align-items:center; gap:5px;
+    font-variant-numeric:tabular-nums;
+  }
   .pilot-qs{
     display:flex; gap:0; flex-shrink:0; position:relative; z-index:1;
     border-left:1px solid var(--line); padding-left:20px;
@@ -1093,6 +1110,22 @@
   .timeline-year-sep::after{
     content:""; flex:1; height:1px; background:var(--line-strong);
   }
+  .tl-index-badge{
+    font-size:11px; font-weight:700; letter-spacing:.3px;
+    padding:3px 10px; border-radius:99px;
+    color:var(--accent2, var(--accent));
+    background:color-mix(in srgb, var(--accent2, var(--accent)) 10%, transparent);
+    border:1px solid color-mix(in srgb, var(--accent2, var(--accent)) 30%, var(--line));
+    white-space:nowrap; font-variant-numeric:tabular-nums;
+  }
+  .perf-year-row{
+    display:flex; justify-content:space-between; align-items:baseline; gap:8px;
+    font-size:12.5px; padding:3px 0;
+    font-variant-numeric:tabular-nums;
+  }
+  .perf-year{ font-weight:600; color:var(--ink-2) }
+  .perf-year-val{ font-weight:800 }
+  .perf-year-n{ font-weight:500; color:var(--muted); font-size:11px }
   .timeline-line-wrap{
     position:relative; padding-left:40px;
   }
@@ -2701,7 +2734,7 @@
     return PILOT_COLORS[Math.abs(hash) % PILOT_COLORS.length];
   }
 
-  function renderPilotCard(matches, seriesMatches, stats, uciMatches = []) {
+  function renderPilotCard(matches, seriesMatches, stats, uciMatches = [], perfCareer = null) {
     const sortedEv = [...matches].sort((a, b) =>
       (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
     const sortedUciEv = [...uciMatches].sort((a, b) =>
@@ -2757,6 +2790,7 @@
         <div class="pilot-info">
           <div class="pilot-name" id="pilotNameHeading">${escape(fullName)}</div>
           <div class="pilot-badges">
+            ${perfCareer != null ? `<span class="pilot-index" title="Indice de performance carrière (tous niveaux, 0–1000)">🏅 ${perfCareer}</span>` : ''}
             ${age != null ? `<span class="pilot-age" title="Âge">🎂 ${age} ans</span>` : ''}
             ${club ? `<a class="pilot-club" href="${CLUB_BASE}?club=${encodeURIComponent(norm(club))}" target="_blank" rel="noopener noreferrer" title="Stats du club">📍 ${escape(club)}</a>` : ''}
           </div>
@@ -3160,8 +3194,171 @@
     return `<div class="chrono-block">${rows.join('')}</div>`;
   }
 
+  // ===== INDICE DE PERFORMANCE (spec indice-perf-design, §4 — calibré §7 le 2026-09-02) =====
+  // Échelle 0–1000. Signaux : rang pondéré par les participants (z-score, brique existante),
+  // constance par phase, chrono transpondeur (z-log strict), séries, coef léger par niveau.
+  const PERF_LEVEL_COEFS = { regional: 0.9, national: 1.0, uci: 1.15 }; // §4.5 (léger)
+  const PERF_CHRONO_W = 0.3;   // poids du composant chrono dans le blend (§4.3, fourchette 0.3–0.4)
+  const PERF_DNF_SCORE = 250;  // pénalité engagement DNF/DNS/DSQ final (§4.4)
+  const perfClamp = v => Math.max(5, Math.min(1000, v));
+  const perfYearOf = d => (d || '').slice(0, 4) || '????';
+  // Score de rang : 500 + 500·z/√3 — 1ᵉʳ d'un gros champ ≈ 1000, médiane ≈ 500, dernier ≈ 5 (§4.1)
+  function perfScoreRang(rank, total) {
+    const z = zScore(rank, total);
+    return z == null ? null : perfClamp(500 + 500 * z / Math.sqrt(3));
+  }
+  // Meilleur temps valable du pilote (phases DNF/DNS/DSQ et temps ≤ 0 exclus — même règle que les chronos timeline)
+  function perfBestTime(details) {
+    let b = null;
+    for (const d of details || []) {
+      if (isNotTimedPhase(d)) continue;
+      const v = num(d.time);
+      if (v != null && (b == null || v < b)) b = v;
+    }
+    return b;
+  }
+  // Composant chrono : z-score sur log(temps) des pilotes chronométrés de la classe → centré sur 500,
+  // strict (peut baisser le score), classe < 3 chronométrés → null (§4.3, calibré : delta moyen +2,4 pts)
+  function perfChronoScore(allBests, pilotBest) {
+    if (pilotBest == null || !allBests || allBests.length < 3) return null;
+    const logs = allBests.map(Math.log);
+    const mu = logs.reduce((a, b) => a + b, 0) / logs.length;
+    const sd = Math.sqrt(logs.reduce((a, b) => a + (b - mu) * (b - mu), 0) / logs.length) || 1;
+    if (!sd) return null;
+    return perfClamp(500 + 500 * (mu - Math.log(pilotBest)) / sd / Math.sqrt(3));
+  }
+  // Constance : ½·(% manches top 4) + ½·(finales atteintes) ; « finale atteinte » = phase finale
+  // valide OU rang final classé (proxy Mondiaux sans phases knock-out publiées) (§4.2)
+  function perfConstance(details, rank) {
+    let validMotos = 0, top4 = 0;
+    for (const d of details || []) {
+      if (!isMotoPhase(d)) continue;
+      if (typeof d.result === 'number' && d.result < 100000) { validMotos++; if (d.result <= 4) top4++; }
+    }
+    const pctTop4 = validMotos ? top4 / validMotos : 0.5;
+    let finaleOk = false;
+    for (const d of details || []) {
+      if (isFinalPhase(d) && typeof d.result === 'number' && d.result < 100000) { finaleOk = true; break; }
+    }
+    if (!finaleOk && typeof rank === 'number' && rank < 100000) finaleOk = true;
+    return 0.5 * pctTop4 + 0.5 * (finaleOk ? 1 : 0.4);
+  }
+  const perfCoefConstance = c => 0.9 + 0.2 * c; // ∈ [0.94, 1.1] (moyenne ≈ 1,02 mesurée)
+
+  // Score d'un engagement événement → { raw (0–1000, avant clamp final), nDnf, year }
+  function perfEngagement(m) {
+    const c = m.competitor || {};
+    const year = perfYearOf(m.event.eventDate || m.event.eventEndDate);
+    const rk = c.rank;
+    if (typeof rk !== 'number' || rk >= 100000) { // §4.4 : pénalité légère
+      return { raw: PERF_DNF_SCORE, nDnf: 1, year };
+    }
+    const sr = perfScoreRang(rk, m.totalParticipants) ?? 250;
+    const cc = perfCoefConstance(perfConstance(c.competitorRankDetails, rk));
+    // Composant chrono (strict) : besoin des meilleurs temps de LA classe à CETTE épreuve
+    let chrono = null;
+    const comps = findClassCompetitors(m); // mémoïsé par classe
+    if (comps) {
+      const allBests = [];
+      for (const cp of comps) { const bt = perfBestTime(cp.competitorRankDetails); if (bt != null) allBests.push(bt); }
+      const pb = perfBestTime(c.competitorRankDetails);
+      if (allBests.length >= 3) chrono = perfChronoScore(allBests, pb);
+    }
+    const raw = chrono == null
+      ? sr * cc
+      : (sr * cc + PERF_CHRONO_W * chrono) / (1 + PERF_CHRONO_W); // blend renormalisé (§4.3)
+    return { raw, nDnf: 0, year };
+  }
+
+  // Score d'un classement de série → engagement de l'année du dernier événement conné (§4.6)
+  function perfSeriesScore(sm) {
+    const c = sm.competitor || {};
+    const sr = c.seriesRank;
+    let maxDate = '';
+    for (const e of sm.rankEvents || []) {
+      const d = e.eventDate || e.eventEndDate || '';
+      if (d > maxDate) maxDate = d;
+    }
+    const year = perfYearOf(maxDate);
+    const score = (typeof sr === 'number' && sr < 100000)
+      ? (perfScoreRang(sr, sm.totalCompetitors || 1) ?? 250)
+      : 250;
+    return { raw: score, year };
+  }
+
+  // Agrégation par niveau → { career, years: [{year, mean, n, seriesN, dnfN}], yearMap }
+  function perfLevel(key, events, series) {
+    const coef = PERF_LEVEL_COEFS[key] || 1;
+    const byYear = new Map();
+    const acc = (year, o) => {
+      let a = byYear.get(year);
+      if (!a) { a = { scores: 0, n: 0, dnfN: 0, seriesN: 0 }; byYear.set(year, a); }
+      a.scores += o.score; a.n++;
+      a.dnfN += o.nDnf || 0;
+      if (o.series) a.seriesN++;
+    };
+    for (const m of events) { const e = perfEngagement(m); acc(e.year, { score: perfClamp(e.raw * coef), nDnf: e.nDnf }); }
+    for (const sm of series) { const s = perfSeriesScore(sm); acc(s.year, { score: perfClamp(s.raw * coef), series: 1 }); }
+    const years = [...byYear.keys()].filter(y => y !== '????').sort((a, b) => b.localeCompare(a));
+    const yearRows = years.map(y => {
+      const a = byYear.get(y);
+      return {
+        year: y,
+        mean: a.n ? Math.round(a.scores / a.n) : null,
+        n: a.n, seriesN: a.seriesN, dnfN: a.dnfN,
+      };
+    });
+    const career = yearRows.length
+      ? Math.round(yearRows.reduce((s, r) => s + (r.mean ?? 0), 0) / yearRows.length)
+      : null;
+    return { career, years: yearRows, yearMap: new Map(yearRows.map(r => [r.year, r])) };
+  }
+
+  // Indices par niveau (Global = agrégation des trois, via levelData) — appel unique par render()
+  function computePerfIndices(levelData) {
+    const out = {};
+    for (const l of LEVELS) out[l.key] = perfLevel(l.key, levelData[l.key].events, levelData[l.key].series);
+    return out;
+  }
+
+  // Composant « 🏅 Indice » du dashboard Stats (spec §5.2) : carrière + par année + composants année courante
+  function renderPerfComponent(p) {
+    if (!p || !p.years.length) return '';
+    const yearRows = p.years.map(r => `
+      <div class="perf-year-row">
+        <span class="perf-year">${r.year}</span>
+        <span class="perf-year-val">${r.mean}<span class="perf-year-n">&nbsp;(${r.n} eng.${r.seriesN ? ` · ${r.seriesN} sér.` : ''}${r.dnfN ? ` · ${r.dnfN} DNF` : ''})</span></span>
+      </div>`).join('');
+    return `<h2 class="section-title">🏅 Indice de performance <span class="meta">0–1000</span></h2>
+  <details class="perf-how">
+    <summary>ℹ️ Comment est-il calculé ?</summary>
+    <div class="perf-how-body">
+      <p>L'indice estime le niveau d'un pilote sur une échelle de 0 à 1000, à partir de ses seuls résultats. Repères : ~500 = milieu du peloton, 800+ = parmi les meilleurs, 900+ = niveau mondial.</p>
+      <ul>
+        <li><strong>Rang selon le nombre de partants</strong> — gagner sur 4 n'est pas gagner sur 100 : chaque course est notée par la position statistique du pilote dans son champ (1ᵉʳ d'un gros champ ≈ 1000, médiane ≈ 500).</li>
+        <li><strong>Constance</strong> — manches de qualification dans le top 4 et finale atteinte : un pilote régulier est légèrement bonifié, un qualifié de justesse légèrement pénalisé (facteur ×0,94 à ×1,1).</li>
+        <li><strong>Chrono transpondeur</strong> — sur les épreuves chronométrées, le meilleur temps du pilote est comparé aux autres chronométrés de la même catégorie lors de l'épreuve (environ ¼ du score).</li>
+        <li><strong>Non-classements</strong> — un DNF, DNS ou DSQ final compte 250 : une pénalité, pas un zéro.</li>
+        <li><strong>Championnats</strong> — un classement de série compte comme une course, noté selon le nombre de pilotes classés.</li>
+        <li><strong>Niveau de compétition</strong> — le même rang n'a pas la même valeur partout : régional ×0,9, national ×1,0, international ×1,15.</li>
+      </ul>
+      <p>L'indice d'une année = la moyenne de ses engagements. L'indice carrière = la moyenne des indices annuels, pour qu'une saison chargée ne pèse pas plus qu'une autre.</p>
+    </div>
+  </details>
+  <div class="stats-dashboard">
+    <div class="stats-dashboard-panel">
+      <div class="stats-dashboard-panel-title">Carrière</div>
+      <div class="stats-dashboard-row"><span class="stats-dashboard-icon">🏅</span><span class="stats-dashboard-val">${p.career}</span><span class="stats-dashboard-label">indice carrière (${p.years.length} année${p.years.length > 1 ? 's' : ''})</span></div>
+    </div>
+    <div class="stats-dashboard-panel">
+      <div class="stats-dashboard-panel-title">Par année</div>
+      ${yearRows}
+    </div>
+  </div>`;
+  }
+
   // ===== TIMELINE VERTICALE =====
-  function renderTimeline(sortedEvents, pilotColor) {
+  function renderTimeline(sortedEvents, pilotColor, perfByYear = null) {
     if (!sortedEvents.length) return '';
     const colorVar = pilotColor || 'var(--accent)';
 
@@ -3179,7 +3376,11 @@
 
     for (const year of years) {
       const groups = byYear.get(year);
-      html.push(`<div class="timeline-year-sep">${year}</div>`);
+      const pi = perfByYear && perfByYear.get(year);
+      const piBadge = pi && pi.mean != null
+        ? ` <span class="tl-index-badge" title="Indice de performance ${year} (0–1000, sur ${pi.n} engagements)">🏅 ${pi.mean} · ${pi.n} eng.</span>`
+        : '';
+      html.push(`<div class="timeline-year-sep">${year}${piBadge}</div>`);
       html.push(`<div class="timeline-line-wrap">`);
 
       for (const { event, account, items } of groups) {
@@ -3406,6 +3607,9 @@
     levelData.global.events = [...levelData.regional.events, ...levelData.national.events, ...levelData.uci.events];
     levelData.global.series = [...levelData.regional.series, ...levelData.national.series, ...levelData.uci.series];
 
+    // ===== Indices de performance par niveau (spec indice-perf) =====
+    const perfIndices = computePerfIndices(levelData);
+
     // Parties disponibles = niveaux avec au moins un engagement ou un classement (D4)
     const partsAvailable = LEVELS.filter(l => levelData[l.key].events.length || levelData[l.key].series.length);
     const storedPart = localStorage.getItem('partPref');
@@ -3473,11 +3677,13 @@
 
       const panels = { stats: '', series: '', courses: '' };
       if (events.length) {
+        const perfHtml = renderPerfComponent(perfIndices[key]);
         panels.stats = `<h2 class="section-title">📈 Stats <span class="meta">synthèse sur ${lvStats.entries} engagement(s) ${adj}</span></h2>
   ${renderStats(lvStats)}
+  ${perfHtml}
   <h2 class="section-title">Graphiques <span class="meta">visualisations des résultats</span></h2>
   <div class="charts-grid">${renderCharts(events)}</div>`;
-        panels.courses = `<h2 class="section-title">🏁 Courses <span class="meta">${sortedGroups.length} événement(s), ${sortLabel}</span></h2>${renderTimeline(sortedGroups, pilotColor)}`;
+        panels.courses = `<h2 class="section-title">🏁 Courses <span class="meta">${sortedGroups.length} événement(s), ${sortLabel}</span></h2>${renderTimeline(sortedGroups, pilotColor, perfIndices[key] && perfIndices[key].yearMap)}`;
       }
       if (series.length) {
         panels.series = `<h2 class="section-title">🏆 Championnats <span class="meta">${series.length} classement(s) de série</span></h2><div>${renderChampionships(series)}</div>`;
@@ -3531,7 +3737,7 @@
         <div class="pilot-picker-list">${items}</div>
       </div>`);
     }
-    const pilotCardHtml = renderPilotCard(primaryMatches, primarySeriesMatches, stats || uciStats, primaryUciMatches);
+    const pilotCardHtml = renderPilotCard(primaryMatches, primarySeriesMatches, stats || uciStats, primaryUciMatches, perfIndices.global.career);
 
     // Rangée 1 : parties (D11, D13)
     let partsNavHtml = '';
