@@ -1357,6 +1357,7 @@
   <button type="button" id="clearCacheBtn" class="btn btn-ghost" style="font-size:12px;padding:4px 10px">Vider le cache</button>
   <span class="footer-sep">·</span>
   <span>Projet communautaire non officiel, non affilié à Sqorz</span>
+  <span id="dataDateWrap" hidden><span class="footer-sep">·</span><span>Données du <span id="dataDate"></span></span></span>
 </footer>
 <script>
   document.getElementById('footerYear').textContent = new Date().getFullYear();
@@ -1921,6 +1922,17 @@
     }
   }
 
+  // Date « données du … » affichée dans le pied de page (fraîcheur de l'index).
+  function showDataDate(iso) {
+    const wrap = document.getElementById('dataDateWrap');
+    const el = document.getElementById('dataDate');
+    if (!wrap || !el || !iso) return;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return;
+    el.textContent = d.toLocaleDateString('fr-FR');
+    wrap.hidden = false;
+  }
+
   async function loadPilotsIndex() {
     retryBtn.hidden = true;
     nameInp.disabled = true;
@@ -1951,6 +1963,7 @@
       updateSearchEnabled();
       statusEl.classList.remove('loading');
       setStatus('');
+      showDataDate(pilotsIndex.generated);
     } catch (e) {
       setProgress(0, 0);
       statusEl.classList.remove('loading');
