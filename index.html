@@ -1863,10 +1863,8 @@
 
   const expandBytes = bytes => expandIndex(JSON.parse(new TextDecoder().decode(bytes)));
 
-  // Récupère les OCTETS bruts d'un index avec cache : meta (sha256 attendu) → copie en cache
-  // → sources → cache périmé en dernier recours. Le parse + expansion se font ensuite dans
-  // un Web Worker (expandBytesSmart) pour ne pas geler le thread UI.
-  async function loadIndexBytesCached(cfg) {
+  // Charge un index avec cache : meta (sha256 attendu) → copie en cache → sources → cache périmé en dernier recours.
+  async function loadIndexCached(cfg) {
     let wantSha = null;
     try {
       const metaRes = await fetch(cfg.metaUrl);
@@ -1892,7 +1890,7 @@
       setStatus(`Données ${cfg.label} déjà à jour — lecture du cache…`);
       const bytes = await streamToBytes(hit, cfg.label, 0, true);
       setProgress(0, 0);
-      return bytes;
+      return expandBytes(bytes);
     }
 
     try {
@@ -1905,7 +1903,7 @@
           }));
         } catch (e) { console.warn('[sqorz] écriture du cache :', e && e.message); }
       }
-      return bytes;
+      return expandBytes(bytes);
     } catch (err) {
       // Dernier recours : copie périmée en cache (hors-ligne)
       if (cache) {
@@ -1915,99 +1913,12 @@
             setStatus('Hors-ligne — utilisation de la dernière copie connue.');
             const bytes = await streamToBytes(stale, cfg.label, 0, true);
             setProgress(0, 0);
-            return bytes;
+            return expandBytes(bytes);
           }
         } catch (e) { /* dernier recours indisponible */ }
       }
       throw err;
     }
-  }
-
-  // ==== Point 3 : parse + expansion dans un Web Worker (thread UI fluide) ====
-  // Le worker reçoit les octets bruts, fait JSON.parse + expandIndex (et, pour l'index
-  // France, construit le pré-index des noms de l'autocomplétion), puis renvoie l'index
-  // expansé en UNE copie structurée. Si le worker est indisponible (contexte non
-  // sécurisé, file://, navigateur ancien), repli automatique sur le thread principal.
-  function indexWorkerCode() {
-    // Les fonctions réelles de la page sont sérialisées (toString) et embarquées dans
-    // le worker : une seule source de vérité pour expandIndex / norm.
-    // NB : leur source ne contient ni backtick ni ${} — sinon adapter cette construction.
-    return `
-      const norm = ${norm.toString()};
-      const doExpand = ${expandIndex.toString()};
-
-      self.onmessage = (e) => {
-        const { bytes, buildNames } = e.data;
-        try {
-          const json = JSON.parse(new TextDecoder().decode(bytes));
-          const index = doExpand(json);
-          let names = null;
-          if (buildNames) {
-            const map = new Map();
-            for (const evEntry of (index.events || [])) {
-              for (const cls of (evEntry.classes || [])) {
-                for (const c of (cls.competitors || [])) {
-                  const key = norm((c.firstName || '') + ' ' + (c.lastName || '')).trim();
-                  if (!key) continue;
-                  const rec = map.get(key);
-                  if (rec) rec.count++;
-                  else map.set(key, { firstName: c.firstName || '', lastName: c.lastName || '', groupName: c.groupName || '', count: 1 });
-                }
-              }
-            }
-            names = [...map.entries()];
-          }
-          self.postMessage({ ok: true, index, names });
-        } catch (err) {
-          self.postMessage({ ok: false, error: String((err && err.message) || err) });
-        }
-      };
-    `;
-  }
-
-  let indexWorkerUrl = null;
-  function getIndexWorkerUrl() {
-    if (indexWorkerUrl) return indexWorkerUrl;
-    indexWorkerUrl = URL.createObjectURL(new Blob([indexWorkerCode()], { type: 'application/javascript' }));
-    return indexWorkerUrl;
-  }
-
-  // Expansion dans un worker jetable : renvoie { index, names? } ou jette une erreur.
-  function expandInWorker(bytes, buildNames) {
-    return new Promise((resolve, reject) => {
-      let worker;
-      try {
-        worker = new Worker(getIndexWorkerUrl());
-      } catch (err) {
-        reject(err);
-        return;
-      }
-      worker.onmessage = (e) => {
-        worker.terminate();
-        if (e.data && e.data.ok) resolve({ index: e.data.index, names: e.data.names || null });
-        else reject(new Error((e.data && e.data.error) || 'Erreur du worker'));
-      };
-      worker.onerror = (err) => {
-        worker.terminate();
-        reject(new Error('Erreur du worker : ' + ((err && err.message) || '')));
-      };
-      worker.postMessage({ bytes, buildNames });
-    });
-  }
-
-  // Expansion hors du thread UI, avec repli automatique sur le thread principal.
-  async function expandBytesSmart(bytes, buildNames) {
-    const canWorker = typeof Worker !== 'undefined' && typeof Blob !== 'undefined'
-      && typeof URL !== 'undefined' && !!URL.createObjectURL;
-    if (canWorker) {
-      try {
-        return await expandInWorker(bytes, buildNames);
-      } catch (err) {
-        console.warn('[sqorz] worker indisponible, repli sur le thread principal :', err && err.message);
-      }
-    }
-    // Repli : expansion sur le thread principal (ancien comportement)
-    return { index: expandBytes(bytes), names: null };
   }
 
   async function loadPilotsIndex() {
@@ -2016,37 +1927,26 @@
     statusEl.classList.add('loading');
     setStatus('Chargement des données…');
     try {
-      const pilotsBytes = await loadIndexBytesCached({
+      pilotsIndex = await loadIndexCached({
         key: 'pilots',
         metaUrl: './pilots-index.meta.json',
         urls: [`${R2_BASE}/pilots-index.json`, `${RELEASE_BASE}/pilots-index.json`, './pilots-index.json'],
         label: 'index France',
         estimatedSize: 83_000_000,
       });
-      // Parse + expansion hors du thread UI (worker) — le thread reste fluide.
-      setStatus('Préparation des données…');
-      const pilotsRes = await expandBytesSmart(pilotsBytes, true);
-      pilotsIndex = pilotsRes.index;
-      if (pilotsRes.names) nameIndex = new Map(pilotsRes.names); // pré-index construit dans le worker
-      else buildNameIndex(); // repli sans worker : construction sur le thread principal
-
       // Index UCI (Mondiaux BMX Racing) — optionnel : s'il est absent, on continue sans
-      let uciRes = { events: [], series: [] };
-      try {
-        const uciBytes = await loadIndexBytesCached({
-          key: 'uci',
-          metaUrl: './uci-index.meta.json',
-          urls: [`${R2_BASE}/uci-index.json`, `${RELEASE_BASE}/uci-index.json`, './uci-index.json'],
-          label: 'index UCI',
-          estimatedSize: 8_000_000,
-        });
-        setStatus('Préparation des données UCI…');
-        uciRes = (await expandBytesSmart(uciBytes, false)).index;
-      } catch (e) {
+      uciIndex = await loadIndexCached({
+        key: 'uci',
+        metaUrl: './uci-index.meta.json',
+        urls: [`${R2_BASE}/uci-index.json`, `${RELEASE_BASE}/uci-index.json`, './uci-index.json'],
+        label: 'index UCI',
+        estimatedSize: 8_000_000,
+      }).catch(e => {
         console.warn('[sqorz] uci-index.json indisponible :', e.message);
-      }
-      uciIndex = uciRes;
+        return { events: [], series: [] };
+      });
 
+      buildNameIndex();
       nameInp.disabled = false;
       updateSearchEnabled();
       statusEl.classList.remove('loading');
