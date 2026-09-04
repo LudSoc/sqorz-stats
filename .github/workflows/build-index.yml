@@ -43,8 +43,10 @@ jobs:
       # dashboard Cloudflare (R2 → bucket → Settings → CORS Policy). Le jeton S3
       # « Object Read & Write » n'a pas les droits pour la modifier via l'API.
 
+      # Upload inconditionnel : `aws s3 cp` est idempotent et le bucket peut
+      # être vide ou partiel même quand le sha n'a pas changé (premier run,
+      # objet supprimé...) — on republie toujours les 4 fichiers.
       - name: Publier les index sur R2
-        if: steps.changed.outputs.changed == 'true'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
