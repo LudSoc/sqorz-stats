@@ -1,0 +1,32 @@
+name: R2 diag
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+    steps:
+      - name: Diagnostic
+        run: |
+          set -x
+          aws --version
+          echo "AK len: ${#AWS_ACCESS_KEY_ID} (attendu 32)"
+          echo "SK len: ${#AWS_SECRET_ACCESS_KEY} (attendu 64)"
+          ENDPOINT="https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com"
+          BUCKET="${{ secrets.R2_BUCKET_NAME }}"
+          echo "diag-small" > small.txt
+          aws s3 cp small.txt "s3://$BUCKET/diag-small.txt" --endpoint-url "$ENDPOINT" --content-type "text/plain"
+          echo "--- petit fichier : OK"
+          head -c 12M /dev/zero > big.bin
+          aws s3 cp big.bin "s3://$BUCKET/diag-big.bin" --endpoint-url "$ENDPOINT" --content-type "application/octet-stream"
+          echo "--- gros fichier (multipart) : OK"
+          aws s3 ls "s3://$BUCKET/" --endpoint-url "$ENDPOINT"
+          echo "DIAG OK"
