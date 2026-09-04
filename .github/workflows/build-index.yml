@@ -5,11 +5,12 @@ on:
     - cron: '0 3 * * 1'  # chaque lundi à 3h UTC
   workflow_dispatch:       # déclenchement manuel possible
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -18,17 +19,58 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Générer pilots-index.json
+      - name: Générer les index
         run: node build-index.js
 
-      - name: Commit si changements
+      - name: Vérifier si les index ont changé (sha256 vs meta commité)
+        id: changed
+        run: |
+          node - <<'EOF'
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+          let changed = false;
+          for (const base of ['pilots-index', 'uci-index']) {
+            const m = JSON.parse(fs.readFileSync(base + '.meta.json', 'utf8'));
+            try {
+              const old = JSON.parse(execSync('git show HEAD:' + base + '.meta.json', { stdio: ['pipe', 'pipe', 'ignore'] }).toString());
+              if (old.index.sha256 !== m.index.sha256) changed = true;
+            } catch { changed = true; }
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'changed=' + changed + '\n');
+          EOF
+
+      - name: Publier les index en assets de release
+        if: steps.changed.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="data-$(date -u +%Y-%m-%d)"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG déjà existante — aucun nouvel asset."
+          else
+            gh release create "$TAG" \
+              pilots-index.json pilots-index.events.ndjson \
+              uci-index.json uci-index.events.ndjson \
+              --title "Index pilotes $(date -u +%Y-%m-%d)" \
+              --notes "Régénération hebdomadaire des index (assets publics référencés par les apps)."
+            echo "Release $TAG créée avec les 4 assets."
+          fi
+
+      - name: Ne plus suivre les gros fichiers (publiés en assets)
+        if: steps.changed.outputs.changed == 'true'
+        run: |
+          for f in pilots-index.json pilots-index.events.ndjson uci-index.json uci-index.events.ndjson; do
+            if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then git rm --cached "$f"; fi
+          done
+
+      - name: Commit si changements (metas uniquement)
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pilots-index.json pilots-index.meta.json pilots-index.events.ndjson uci-index.json uci-index.meta.json uci-index.events.ndjson
+          git add pilots-index.meta.json uci-index.meta.json
           if git diff --cached --quiet; then
             echo "Aucun changement — rien à commiter."
           else
-            git commit -m "chore: mise à jour des index pilotes"
+            git commit -m "chore: mise à jour des index pilotes (metas ; gros fichiers publiés en release)"
             git push
           fi

@@ -1800,9 +1800,19 @@
     return idx;
   }
 
-  async function loadIndexFile(url, label, estimatedSize) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  // Sources de données : assets de release (GitHub Releases) d'abord, fichier local en secours.
+  const RELEASE_BASE = 'https://github.com/LudSoc/sqorz-stats/releases/latest/download';
+
+  async function loadIndexFile(urls, label, estimatedSize) {
+    let res = null, lastErr = null;
+    for (const url of urls) {
+      try {
+        const r = await fetch(url);
+        if (r.ok) { res = r; break; }
+        lastErr = new Error(`HTTP ${r.status}`);
+      } catch (e) { lastErr = e; console.warn(`[sqorz] source indisponible : ${url}`, e && e.message); }
+    }
+    if (!res) throw lastErr || new Error('Index indisponible.');
 
     const compressed = !!res.headers.get('Content-Encoding');
     const rawTotal = parseInt(res.headers.get('Content-Length') || '0', 10);
@@ -1838,9 +1848,9 @@
     statusEl.classList.add('loading');
     setStatus('Chargement des données…');
     try {
-      pilotsIndex = await loadIndexFile('./pilots-index.json', 'index France', 83_000_000);
+      pilotsIndex = await loadIndexFile([`${RELEASE_BASE}/pilots-index.json`, './pilots-index.json'], 'index France', 83_000_000);
       // Index UCI (Mondiaux BMX Racing) — optionnel : s'il est absent, on continue sans
-      uciIndex = await loadIndexFile('./uci-index.json', 'index UCI', 8_000_000)
+      uciIndex = await loadIndexFile([`${RELEASE_BASE}/uci-index.json`, './uci-index.json'], 'index UCI', 8_000_000)
         .catch(e => {
           console.warn('[sqorz] uci-index.json indisponible :', e.message);
           return { events: [], series: [] };
