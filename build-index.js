@@ -21,6 +21,8 @@ const norm = s => (s || '').toLowerCase()
 
 // Clés courtes : fn=firstName, ln=lastName, gn=groupName, d=competitorRankDetails
 // Dans chaque detail : n=phaseName, r=result, rp=racePosition, pc=phaseCode, pbc=phaseBlockCode, rn=raceName
+// + champs chrono transpondeur (épreuves chronométrées) : tm=time, ht=hillTime, ct=corner2Time
+//   (spec chronos-transpondeur : conservés pour la sous-ligne « ⏱ Chronos » de la timeline)
 function slimCompetitor(c) {
   const out = {
     fn: c.firstName, ln: c.lastName,
@@ -34,6 +36,9 @@ function slimCompetitor(c) {
       if (d.phaseCode)             p.pc  = d.phaseCode;
       if (d.phaseBlockCode)        p.pbc = d.phaseBlockCode;
       if (d.raceName != null)      p.rn  = d.raceName;
+      if (typeof d.time === 'string')         p.tm = d.time;
+      if (typeof d.hillTime === 'string')     p.ht = d.hillTime;
+      if (typeof d.corner2Time === 'string')  p.ct = d.corner2Time;
       return p;
     });
   if (details.length) out.d = details;

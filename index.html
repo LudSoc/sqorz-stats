@@ -93,8 +93,7 @@
   }
   .btn:focus-visible,
   .recent-chip:focus-visible,
-  .recent-clear:focus-visible,
-  .section-toggle:focus-visible{
+  .recent-clear:focus-visible{
     outline:2px solid var(--accent-hi);
     outline-offset:3px;
   }
@@ -394,7 +393,6 @@
     font-size:14px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.6px;
   }
   .section-title .meta{font-weight:400; text-transform:none; letter-spacing:0; font-size:12px}
-  .section-title .section-toggle{margin-left:auto; font-size:12px; padding:4px 10px; text-transform:none; letter-spacing:0}
   .chart-title{margin-bottom:2px}
 
   /* Event card */
@@ -437,6 +435,21 @@
   .class-name{font-weight:600; font-size:14px; color:var(--ink)}
   .meta{font-size:12px; color:var(--muted)}
   .phases{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+  /* Sous-ligne chronos transpondeur (spec chronos-transpondeur, D5) */
+  .chrono-block{
+    display:flex; flex-direction:column; gap:3px;
+    margin:0 0 4px 0; padding:6px 10px;
+    border-left:2px solid var(--accent); border-radius:0 6px 6px 0;
+    background:color-mix(in srgb, var(--accent) 6%, transparent);
+  }
+  .chrono-line{
+    display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;
+    font-size:12px; color:var(--muted);
+  }
+  .chrono-label{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; opacity:.85; min-width:74px}
+  .chrono-time{font-variant-numeric:tabular-nums; color:var(--ink); font-weight:600}
+  .chrono-rank{white-space:nowrap}
+  .chrono-best{opacity:.9}
   .phase{
     background:var(--card-soft); border:1px solid var(--line); padding:3px 9px;
     border-radius:99px; font-size:12px; display:inline-flex; gap:6px; align-items:baseline;
@@ -807,6 +820,25 @@
   .tab-panel{ display:none }
   .tab-panel.active{ display:block }
   .tab-panel > h2.section-title:first-child{ margin-top:4px }
+  /* Sous-vues d'une partie (rangée 2) */
+  .subtab-panel{ display:none }
+  .subtab-panel.active{ display:block }
+  .sub-row .tabs-nav{ border-bottom-width:1px }
+  .sub-row .tab-btn{ padding:11px 18px; font-size:13.5px }
+  .tabs-wrap.hidden{ display:none }
+  /* Mini-sélecteur de niveau de la comparaison (D10) */
+  .compare-part-select{ display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 6px }
+  .compare-part-btn{
+    padding:6px 14px; border-radius:99px; border:1px solid var(--line);
+    background:transparent; color:var(--muted); font-family:inherit;
+    font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap;
+    transition:color .15s, border-color .2s, background .15s;
+  }
+  .compare-part-btn:hover{ color:var(--ink) }
+  .compare-part-btn.active{
+    color:var(--ink); font-weight:600; border-color:var(--accent);
+    background:color-mix(in srgb, var(--accent) 12%, transparent);
+  }
 
   .empty{padding:36px; text-align:center; color:var(--muted)}
   .summary{font-size:13px; color:var(--muted); margin:0 0 12px}
@@ -1163,6 +1195,15 @@
     .timeline-line-wrap::before{ left:10px }
     .timeline-dot{ left:-23px }
   }
+  /* Sticky hybride (D15) : desktop = tout sticky ; mobile = seule la rangée 1 (parties) reste sticky */
+  @media (max-width:640px){
+    .pilot-sticky-header{ position:static; box-shadow:none }
+    .pilot-sticky-header .pilot-card{ border-radius:var(--radius) }
+    .pilot-sticky-header .parts-row{
+      position:sticky; top:0; z-index:9; background:var(--bg);
+      box-shadow:0 2px 10px rgba(60,90,120,.12);
+    }
+  }
   @media (max-width:380px){
     .stats-dashboard{ grid-template-columns:1fr }
   }
@@ -1299,6 +1340,21 @@
   let pilotsIndex = null;
   let uciIndex = null; // index UCI (Mondiaux BMX Racing) — chargé en parallèle, optionnel
 
+  // ===== Niveaux de compétition (spec « séparation niveaux », D1–D3, D13) =====
+  // Les 5 comptes FFC (fédération + 4 zones) organisent tout le niveau national ;
+  // tout autre compte de l'index FR est « régional » (ligues, départements, clubs).
+  // Vérifié sur les données 2023-2026 : aucune série croisée entre les deux groupes.
+  const NATIONAL_ACCOUNTS = new Set(['ffc', 'ffcbmxne', 'ffcbmxno', 'ffcbmxso', 'ffcbmxsudest']);
+  const LEVELS = [
+    { key: 'global',   label: '📊 Global' },    // agrégation Régional + National + UCI (défaut au 1ᵉʳ rendu)
+    { key: 'regional', label: '📍 Régional' },  // emoji épingle de localisation (D13 — facile à changer ici)
+    { key: 'national', label: '🇫🇷 National' },
+    { key: 'uci',      label: '🌍 UCI' },
+  ];
+  function levelOf(accountCode) {
+    return NATIONAL_ACCOUNTS.has(accountCode) ? 'national' : 'regional';
+  }
+
   function searchInIndex(index, query) {
     const tokens = norm(query).split(' ').filter(Boolean);
     if (!tokens.length || !index) return { events: [], series: [] };
@@ -1347,7 +1403,10 @@
   }
 
   // --- Cache des derniers résultats de recherche ---
-  const RESULTS_CACHE_KEY = 'sqorzResultsCache';
+  // Versionné : à chaque changement de format des données en cache (ex. ajout des
+  // chronos tm/ht/ct) on incrémente, pour ignorer les caches périmés (D8 spec chronos).
+  const RESULTS_CACHE_VERSION = 2;
+  const RESULTS_CACHE_KEY = 'sqorzResultsCacheV' + RESULTS_CACHE_VERSION;
   const RESULTS_CACHE_TTL = 6 * 60 * 60 * 1000; // 6h
 
   function slimMatch(m) {
@@ -1684,6 +1743,10 @@
             ...(d.pc         ? { phaseCode:      d.pc  } : {}),
             ...(d.pbc        ? { phaseBlockCode: d.pbc } : {}),
             ...(d.rn  != null ? { raceName:       d.rn  } : {}),
+            // Champs chrono transpondeur (spec chronos-transpondeur) : tm=time, ht=hillTime, ct=corner2Time
+            ...(d.tm != null ? { time:         d.tm } : {}),
+            ...(d.ht != null ? { hillTime:     d.ht } : {}),
+            ...(d.ct != null ? { corner2Time:  d.ct } : {}),
           }));
         }
       }
@@ -1778,7 +1841,9 @@
     }
 
     lastCompareMatches = [];
+    lastCompareUciMatches = [];
     compareActive = false;
+    comparePart = null;
     selectedPilotKey = null;
     selectedComparePilotKey = null;
     lastUciMatches = [];
@@ -1816,8 +1881,11 @@
   let lastUciMatches = [];
   let lastUciSeriesMatches = [];
   let lastSearchKey = null; // clé du dernier appel API (query|orgs)
+  let subTabsHtml = {}; // sous-onglets (Stats/Championnats/Courses) par partie — reconstruit à chaque render()
   let lastCompareMatches = [];
+  let lastCompareUciMatches = []; // matches UCI du 2ᵉ pilote (comparaison par niveau, D10)
   let compareActive = false;
+  let comparePart = null; // niveau de comparaison H2H ; null = partie active de la fiche (D16)
   let selectedPilotKey = null; // null = auto (plus récent), sinon clé norm() du pilote choisi
   let selectedComparePilotKey = null; // idem pour le pilote de comparaison
   function seriesYears(sm) {
@@ -2470,7 +2538,7 @@
     return maxYear || '—';
   }
 
-  function renderChampionships(seriesMatches, opts = {}) {
+  function renderChampionships(seriesMatches) {
     if (!seriesMatches.length) return '';
 
     const sortByRank = (a, b) => {
@@ -2619,9 +2687,7 @@
       }));
     }
 
-    const wrapId = opts.wrapId || 'seriesWrap';
-    const toggleBtn = opts.noToggle ? '' : `<button type="button" class="btn btn-ghost section-toggle" id="seriesToggle" aria-controls="${wrapId}">Masquer</button>`;
-    return `<h2 class="section-title">Championnats <span class="meta">${seriesMatches.length} classement(s) de série</span>${toggleBtn}</h2><div id="${wrapId}" role="region" aria-label="Championnats">${allCards.join('')}</div>`;
+    return allCards.join('');
   }
 
   const PILOT_COLORS = [
@@ -2700,28 +2766,7 @@
       </div>`;
   }
 
-  // ===== ONGLET UCI (résultats internationaux — Mondiaux BMX Racing) =====
-  function renderUciPanel(uciMatches, uciStats, uciSeriesMatches, pilotColor) {
-    // Grouper par événement (même logique que la timeline principale)
-    const eventGroups = new Map();
-    for (const m of uciMatches) {
-      const k = m.event.eventId;
-      if (!eventGroups.has(k)) eventGroups.set(k, { event: m.event, account: m.account, items: [] });
-      eventGroups.get(k).items.push(m);
-    }
-    const sortedEvents = [...eventGroups.values()].sort((a, b) =>
-      (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
-
-    const html = [];
-    html.push(`<h2 class="section-title">Stats internationales <span class="meta">${uciStats.entries} engagement(s)</span></h2>`);
-    html.push(renderStatsDashboard(uciStats));
-    if (sortedEvents.length) {
-      html.push(`<h2 class="section-title">🏁 Courses <span class="meta">${sortedEvents.length} événement(s) · du plus récent au plus ancien</span></h2>`);
-      html.push(renderTimeline(sortedEvents, pilotColor));
-    }
-    if (uciSeriesMatches.length) html.push(renderChampionships(uciSeriesMatches, { noToggle: true, wrapId: 'uciSeriesWrap' }));
-    return html.join('');
-  }
+  // ===== ONGLET UCI supprimé au profit du rendu générique par partie (voir spec §7) =====
 
   function searchCompare() {
     const query = document.getElementById('compareInp').value.trim();
@@ -2730,13 +2775,16 @@
     if (!lastSearchKey) { st.textContent = 'Lance d\'abord une recherche principale.'; return; }
 
     const { events: found } = searchLocal(query);
+    const { events: foundUci } = searchUci(query);
 
-    if (!found.length) {
+    if (!found.length && !foundUci.length) {
       st.textContent = `Aucun résultat pour « ${query} » dans les mêmes organisations.`;
       return;
     }
     st.textContent = '';
     lastCompareMatches = found;
+    lastCompareUciMatches = foundUci;
+    comparePart = null; // re-sync sur la partie active (D16)
     selectedComparePilotKey = null;
     compareActive = true;
     renderFiltered();
@@ -2747,12 +2795,36 @@
     }
   }
 
-  function renderCompareSection(p1Matches, p1Stats) {
-    if (!compareActive || !lastCompareMatches.length || !p1Stats) return '';
+  // ===== COMPARAISON 2 PILOTES par niveau (D10, D16) =====
+  function renderCompareSection(ctx) {
+    if (!compareActive) return '';
+    const part = ctx.part;
+    const parts = ctx.parts;
+    const p1LevelMatches = ctx.levelData[part].events;
+    const p2LevelMatches = ctx.p2ByLevel[part];
+    if (!p1LevelMatches.length) return '';
+
+    const partLabel = LEVELS.find(l => l.key === part)?.label || part;
+    const cmpQuery = document.getElementById('compareInp')?.value.trim() || '';
+
+    // Mini-sélecteur de niveau (D10)
+    const selectorHtml = parts.length > 1 ? `
+      <div class="compare-part-select" role="tablist" aria-label="Niveau de comparaison">
+        ${parts.map(l => `<button type="button" class="compare-part-btn${l.key === part ? ' active' : ''}" data-compare-part="${l.key}" role="tab" aria-selected="${l.key === part}">${l.label}</button>`).join('')}
+      </div>` : '';
+    const hd = `<div class="compare-section-hd"><span>Comparaison · ${partLabel}</span></div>`;
+
+    if (!p2LevelMatches.length) {
+      return `<div class="compare-section" id="compareSection">
+        ${hd}
+        ${selectorHtml}
+        <div class="empty" style="padding:18px 0 4px">Aucun résultat pour ${escape(cmpQuery || 'le 2ᵉ pilote')} au niveau ${partLabel}.</div>
+      </div>`;
+    }
 
     // Construire la pilotMap pour le pilote 2 (gestion des homonymes)
     const cmpPilotMap = new Map();
-    for (const m of lastCompareMatches) {
+    for (const m of p2LevelMatches) {
       const c = m.competitor;
       const k = norm(`${c.firstName||''} ${c.lastName||''}`).trim();
       if (!k) continue;
@@ -2800,8 +2872,8 @@
 
     // Filtrer les matchs du pilote 2 sélectionné
     const cmpSelectedMatches = cmpActiveKey
-      ? lastCompareMatches.filter(m => norm(`${m.competitor.firstName||''} ${m.competitor.lastName||''}`).trim() === cmpActiveKey)
-      : lastCompareMatches;
+      ? p2LevelMatches.filter(m => norm(`${m.competitor.firstName||''} ${m.competitor.lastName||''}`).trim() === cmpActiveKey)
+      : p2LevelMatches;
 
     // Pilote 2 : filtrer par année si nécessaire, même logique que le pilote principal
     const y = yearSel.value;
@@ -2812,14 +2884,15 @@
         const c = [...cmpSelectedMatches].sort((a,b) =>
           (b.event.eventDate||'').localeCompare(a.event.eventDate||''))
           .find(m => m.competitor.firstName || m.competitor.lastName)?.competitor;
-        return c ? `${c.firstName||''} ${c.lastName||''}`.trim() : 'le 2ᵉ pilote';
+        return c ? `${c.firstName||''} ${c.lastName||''}`.trim() : (cmpQuery || 'le 2ᵉ pilote');
       })();
       return `<div class="compare-section" id="compareSection">
         <div class="compare-section-hd">
-          <span>Comparaison</span>
+          <span>Comparaison · ${partLabel}</span>
         </div>
+        ${selectorHtml}
         ${cmpPickerHtml}
-        <div class="empty" style="padding:18px 0 4px">Aucun résultat pour ${escape(p2name)} en ${escape(y)}.</div>
+        <div class="empty" style="padding:18px 0 4px">Aucun résultat pour ${escape(p2name)} en ${escape(y)}${parts.length > 1 ? ` au niveau ${partLabel}` : ''}.</div>
       </div>`;
     }
     const p2Sorted = [...compareFiltered].sort((a, b) =>
@@ -2827,8 +2900,12 @@
     const p2Primary = compareFiltered;
     const p2Stats = computeStats(p2Primary);
 
+    // Stats du pilote 1 au niveau choisi
+    const p1Primary = p1LevelMatches;
+    const p1Stats = computeStats(p1Primary);
+
     // Identité
-    const p1Sorted = [...p1Matches].sort((a, b) => (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
+    const p1Sorted = [...p1Primary].sort((a, b) => (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
     const p1c = p1Sorted[0]?.competitor;
     const p2c = p2Sorted[0]?.competitor;
     const p1Name = p1c ? `${p1c.firstName||''} ${p1c.lastName||''}`.trim() : '—';
@@ -2896,9 +2973,8 @@
     }).join('');
 
     return `<div class="compare-section" id="compareSection">
-      <div class="compare-section-hd">
-        <span>Comparaison</span>
-      </div>
+      ${hd}
+      ${selectorHtml}
       ${cmpPickerHtml}
       <div class="compare-pilots">
         <div class="compare-pilot">
@@ -2912,7 +2988,7 @@
       </div>
       <div class="compare-rows">${rowsHtml}</div>
       <div class="compare-h2h-link">
-        <a href="${escape(`${H2H_BASE}?a=${encodeURIComponent(norm(p1Name))}&b=${encodeURIComponent(cmpActiveKey || norm(p2Name))}`)}" target="_blank" rel="noopener noreferrer">Voir les confrontations directes →</a>
+        <a href="${escape(`${H2H_BASE}?a=${encodeURIComponent(norm(p1Name))}&b=${encodeURIComponent(norm(p2Name))}`)}" target="_blank" rel="noopener noreferrer">Voir les confrontations directes →</a>
       </div>
     </div>`;
   }
@@ -2976,6 +3052,112 @@
         </div>
       </div>
     `;
+  }
+
+  // ===== CHRONOS TRANSPONDEUR (spec chronos-transpondeur, D1–D6) =====
+  // Métriques de temps affichées/classées par classe-épreuve. Les valeurs sont des
+  // chaînes "secondes.3d" (ex. "35.063"). Labels génériques tant que la config des
+  // lignes de chrono du circuit n'est pas connue (spec §6.1).
+  const CHRONO_METRICS = [
+    { key: 'time',        label: '⏱️ Chrono' },
+    { key: 'corner2Time', label: '⏱️ Virage 1' },
+    { key: 'hillTime',    label: '⏱️ Butte' },
+  ];
+  const num = s => { const n = parseFloat(s); return isFinite(n) && n > 0 ? n : null; }; // temps > 0 requis
+  // Une phase DNF/DNS/DSQ (result ≥ 100000) n'est PAS une manche chronométrée valable :
+  // son temps (souvent 0 ou le temps d'un abandon) ne doit jamais entrer dans le calcul.
+  // NB : clés EXPANDIES (result, pas r) — l'index et le cache de recherche sont expandés.
+  const isNotTimedPhase = d => d == null || d.result == null || Number(d.result) >= 100000;
+  const fmtChrono = v => `${Number(v).toFixed(3)} s`;
+  const ordSup = n => n === 1 ? '1ᵉʳ' : `${n}ᵉ`;
+
+  // Retrouve la classe complète (tous les compétiteurs) dans l'index en mémoire, pour
+  // pouvoir classer le pilote parmi les pilotes chronométrés de la classe à cette épreuve.
+  // Retourne null si l'événement/classe est introuvable (ex. app fondée sur le cache).
+  const _chronoClassCache = new Map();
+  function findClassCompetitors(m) {
+    const key = `${m.account.accountCode}/${m.event.eventId}/${m.cls?.perpetualClassCode || m.cls?.className || ''}`;
+    if (_chronoClassCache.has(key)) return _chronoClassCache.get(key);
+    const index = m.account.accountCode === 'ucibmxworlds' ? uciIndex : pilotsIndex;
+    let out = null;
+    for (const ev of (index && index.events) || []) {
+      if (ev.account.accountCode !== m.account.accountCode) continue;
+      if (ev.event.eventId !== m.event.eventId) continue;
+      for (const cl of ev.classes) {
+        if (m.cls?.perpetualClassCode && cl.perpetualClassCode === m.cls.perpetualClassCode) { out = cl.competitors; break; }
+        if (!m.cls?.perpetualClassCode && cl.className === m.cls?.className) { out = cl.competitors; break; }
+      }
+      break; // événement trouvé
+    }
+    _chronoClassCache.set(key, out);
+    if (_chronoClassCache.size > 500) _chronoClassCache.clear(); // garde-fou mémoire
+    return out;
+  }
+
+  // Meilleur temps de chaque pilote sur la métrique (min sur ses phases chronométrées),
+  // puis stats de classe : meilleur absolu, nb de pilotes chronométrés, rang compétition.
+  function chronoStatsForClass(allCompetitors, active, metricKey) {
+    const bestOf = new Map(); // nom → meilleur temps du pilote
+    for (const cp of allCompetitors) {
+      const details = cp.competitorRankDetails || [];
+      let best = null;
+      for (const d of details) {
+        if (isNotTimedPhase(d)) continue; // DNF/DNS/DSQ : temps non valable
+        const v = num(d[metricKey]);
+        if (v != null && (best == null || v < best)) best = v;
+      }
+      if (best != null) bestOf.set(cp.firstName + ' ' + cp.lastName, best);
+    }
+    if (!bestOf.size) return null;
+    const times = [...bestOf.values()].sort((a, b) => a - b);
+    const classBest = times[0];
+    const activeName = `${active.firstName} ${active.lastName}`;
+    const activeBest = bestOf.has(activeName) ? bestOf.get(activeName) : null;
+    if (activeBest == null) return null; // pilote sans lecture sur cette métrique → rien (D4)
+    // Rang « compétition » : égalités → même rang puis saut (nb de pilotes strictement plus rapides + 1)
+    let rank = 1;
+    for (const t of times) { if (t < activeBest) rank++; else break; }
+    const bestRider = [...bestOf.entries()].find(([, v]) => v === classBest)[0];
+    return { activeBest, rank, timedCount: times.length, classBest, bestRider };
+  }
+
+  // Sous-ligne « ⏱ Chronos » : une ligne par métrique présente (D3, D5), format D7.
+  function chronoLinesForMatch(m) {
+    const c = m.competitor;
+    const all = findClassCompetitors(m);
+    const rows = [];
+    for (const met of CHRONO_METRICS) {
+      let best = null, rank = null, timedCount = null, classBest = null, bestRider = null;
+      if (all) {
+        const s = chronoStatsForClass(all, c, met.key);
+        if (!s) continue;
+        ({ activeBest: best, rank, timedCount, classBest, bestRider } = s);
+      } else {
+        // Classe introuvable (ex. cache sans index) : on n'a que les phases du pilote → temps seul, pas de rang
+        let b = null;
+        for (const d of (c.competitorRankDetails || [])) {
+          if (isNotTimedPhase(d)) continue; // DNF/DNS/DSQ : temps non valable
+          const v = num(d[met.key]);
+          if (v != null && (b == null || v < b)) b = v;
+        }
+        if (b == null) continue;
+        best = b;
+      }
+      const bestTxt = classBest != null
+        ? (rank === 1 && bestRider === `${c.firstName} ${c.lastName}`
+            ? 'meilleur temps de la classe'
+            : `meilleur ${fmtChrono(classBest)}${bestRider && bestRider !== `${c.firstName} ${c.lastName}` ? ` — ${escape(bestRider)}` : ''}`)
+        : '';
+      rows.push(`
+        <div class="chrono-line" title="Meilleur temps du pilote sur ses manches chronométrées (${met.key})">
+          <span class="chrono-label">${met.label}</span>
+          <b class="chrono-time">${fmtChrono(best)}</b>
+          ${rank != null ? `<span class="chrono-rank">${ordSup(rank)} / ${timedCount} chronométrés</span>` : ''}
+          ${bestTxt ? `<span class="chrono-best">${bestTxt}</span>` : ''}
+        </div>`);
+    }
+    if (!rows.length) return '';
+    return `<div class="chrono-block">${rows.join('')}</div>`;
   }
 
   // ===== TIMELINE VERTICALE =====
@@ -3063,7 +3245,7 @@
                 <div class="rank-pill ${pillClass}" title="Classement final de la catégorie">${specialResultLabel(rk) ?? rk ?? '—'}</div>
               </div>
             </div>
-          `);
+            ${chronoLinesForMatch(m)}`);
         }
 
         html.push(`</div></div>`); // event-body + event
@@ -3116,32 +3298,45 @@
     initTimelineObserver();
   }
 
-  // Gère les indicateurs de défilement horizontal de la barre d'onglets
+  // Gère les indicateurs de défilement horizontal des rangées d'onglets (parties + sous-vues)
   function initTabsScroll() {
-    const nav = resultsEl.querySelector('.tabs-nav');
-    if (!nav) return;
-    const fLeft = resultsEl.querySelector('.tabs-fade.left');
-    const fRight = resultsEl.querySelector('.tabs-fade.right');
-    const mLeft = resultsEl.querySelector('.tabs-more.left');
-    const mRight = resultsEl.querySelector('.tabs-more.right');
-    const update = () => {
-      const scrollable = nav.scrollWidth > nav.clientWidth + 4;
-      if (!scrollable) {
-        for (const el of [fLeft, fRight, mLeft, mRight]) if (el) el.classList.remove('on');
-        return;
-      }
-      const atStart = nav.scrollLeft <= 4;
-      const atEnd = nav.scrollLeft + nav.clientWidth >= nav.scrollWidth - 4;
-      if (fLeft) fLeft.classList.toggle('on', !atStart);
-      if (fRight) fRight.classList.toggle('on', !atEnd);
-      if (mLeft) mLeft.classList.toggle('on', !atStart);
-      if (mRight) mRight.classList.toggle('on', !atEnd);
-    };
-    update();
-    nav.addEventListener('scroll', update, { passive: true });
-    // Centre l'onglet actif (au premier rendu, l'onglet UCI peut être hors écran)
-    const active = nav.querySelector('.tab-btn.active');
-    if (active) nav.scrollLeft = active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2;
+    resultsEl.querySelectorAll('.tabs-wrap').forEach(wrap => {
+      const nav = wrap.querySelector('.tabs-nav');
+      if (!nav) return;
+      const fLeft = wrap.querySelector('.tabs-fade.left');
+      const fRight = wrap.querySelector('.tabs-fade.right');
+      const mLeft = wrap.querySelector('.tabs-more.left');
+      const mRight = wrap.querySelector('.tabs-more.right');
+      const update = () => {
+        const scrollable = nav.scrollWidth > nav.clientWidth + 4;
+        if (!scrollable) {
+          for (const el of [fLeft, fRight, mLeft, mRight]) if (el) el.classList.remove('on');
+          return;
+        }
+        const atStart = nav.scrollLeft <= 4;
+        const atEnd = nav.scrollLeft + nav.clientWidth >= nav.scrollWidth - 4;
+        if (fLeft) fLeft.classList.toggle('on', !atStart);
+        if (fRight) fRight.classList.toggle('on', !atEnd);
+        if (mLeft) mLeft.classList.toggle('on', !atStart);
+        if (mRight) mRight.classList.toggle('on', !atEnd);
+      };
+      update();
+      nav.addEventListener('scroll', update, { passive: true });
+      // Centre l'onglet actif (au premier rendu, l'onglet UCI peut être hors écran)
+      const active = nav.querySelector('.tab-btn.active');
+      if (active) nav.scrollLeft = active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2;
+    });
+  }
+
+  // Construit une rangée d'onglets (parties / sous-vues) avec ses indicateurs de défilement
+  function rowTabsHtml(navHtml, rowClass, pilotColor) {
+    return `<div class="tabs-wrap ${rowClass}">
+        <div class="tabs-nav" role="tablist"${pilotColor ? ` style="--pilot-color:${pilotColor}"` : ''}>${navHtml}</div>
+        <span class="tabs-fade left" aria-hidden="true"></span>
+        <span class="tabs-fade right" aria-hidden="true"></span>
+        <span class="tabs-more left" aria-hidden="true"></span>
+        <span class="tabs-more right" aria-hidden="true"></span>
+      </div>`;
   }
 
   function render(matches, sortMode = 'date-desc', seriesMatches = [], uciMatches = [], uciSeriesMatches = []) {
@@ -3195,12 +3390,26 @@
     const stats = hasEventMatches ? computeStats(primaryMatches) : null;
     const uciStats = primaryUciMatches.length ? computeStats(primaryUciMatches) : null;
 
-    const eventGroups = new Map();
-    for (const m of primaryMatches) {
-      const k = m.event.eventId;
-      if (!eventGroups.has(k)) eventGroups.set(k, { event: m.event, account: m.account, items: [] });
-      eventGroups.get(k).items.push(m);
-    }
+    // Couleur du pilote actif pour la timeline
+    const pilotColor = avatarColor((activeKey || '').toLowerCase());
+
+    // ===== Découpage par niveau (spec : D1–D3, D11) =====
+    // Global = concaténation des trois niveaux (toutes stats confondues).
+    const levelData = {
+      global:   { events: [], series: [] },
+      regional: { events: [], series: [] },
+      national: { events: [], series: [] },
+      uci:      { events: primaryUciMatches, series: primaryUciSeriesMatches },
+    };
+    for (const m of primaryMatches) levelData[levelOf(m.account.accountCode)].events.push(m);
+    for (const sm of primarySeriesMatches) levelData[levelOf(sm.account.accountCode)].series.push(sm);
+    levelData.global.events = [...levelData.regional.events, ...levelData.national.events, ...levelData.uci.events];
+    levelData.global.series = [...levelData.regional.series, ...levelData.national.series, ...levelData.uci.series];
+
+    // Parties disponibles = niveaux avec au moins un engagement ou un classement (D4)
+    const partsAvailable = LEVELS.filter(l => levelData[l.key].events.length || levelData[l.key].series.length);
+    const storedPart = localStorage.getItem('partPref');
+    const activePart = partsAvailable.some(l => l.key === storedPart) ? storedPart : (partsAvailable[0]?.key ?? null);
 
     const bestRankOf = g => {
       let best = null;
@@ -3210,71 +3419,92 @@
       }
       return best;
     };
-
-    const sortedEvents = [...eventGroups.values()];
     let sortLabel;
     switch (sortMode) {
-      case 'date-asc':
-        sortedEvents.sort((a,b) => (a.event.eventDate || '').localeCompare(b.event.eventDate || ''));
-        sortLabel = 'du plus ancien au plus récent';
-        break;
-      case 'rank-asc':
-      case 'rank-desc': {
-        const dir = sortMode === 'rank-asc' ? 1 : -1;
-        sortedEvents.sort((a,b) => {
-          const ra = bestRankOf(a);
-          const rb = bestRankOf(b);
-          if (ra == null && rb == null) return 0;
-          if (ra == null) return 1;
-          if (rb == null) return -1;
-          if (ra !== rb) return (ra - rb) * dir;
-          return (b.event.eventDate || '').localeCompare(a.event.eventDate || '');
-        });
-        sortLabel = sortMode === 'rank-asc'
-          ? 'meilleur classement final en premier'
-          : 'moins bon classement final en premier';
-        break;
-      }
+      case 'date-asc':  sortLabel = 'du plus ancien au plus récent'; break;
+      case 'rank-asc':  sortLabel = 'meilleur classement final en premier'; break;
+      case 'rank-desc': sortLabel = 'moins bon classement final en premier'; break;
       case 'date-desc':
-      default:
-        sortedEvents.sort((a,b) => (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
-        sortLabel = 'du plus récent au plus ancien';
-        break;
+      default:          sortLabel = 'du plus récent au plus ancien'; break;
     }
+    const sortGroups = (groups) => {
+      const sorted = [...groups.values()];
+      switch (sortMode) {
+        case 'date-asc':
+          sorted.sort((a, b) => (a.event.eventDate || '').localeCompare(b.event.eventDate || ''));
+          break;
+        case 'rank-asc':
+        case 'rank-desc': {
+          const dir = sortMode === 'rank-asc' ? 1 : -1;
+          sorted.sort((a, b) => {
+            const ra = bestRankOf(a);
+            const rb = bestRankOf(b);
+            if (ra == null && rb == null) return 0;
+            if (ra == null) return 1;
+            if (rb == null) return -1;
+            if (ra !== rb) return (ra - rb) * dir;
+            return (b.event.eventDate || '').localeCompare(a.event.eventDate || '');
+          });
+          break;
+        }
+        default:
+          sorted.sort((a, b) => (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
+          break;
+      }
+      return sorted;
+    };
 
-    // Couleur du pilote actif pour la timeline
-    const pilotColor = avatarColor((activeKey || '').toLowerCase());
+    // Panneaux par partie : Stats / Championnats / Courses (D1, D5, D12, D14)
+    const levelPanels = {};
+    subTabsHtml = {};
+    for (const l of LEVELS) {
+      const key = l.key;
+      const events = levelData[key].events;
+      const series = levelData[key].series;
+      const groups = new Map();
+      for (const m of events) {
+        const gk = m.event.eventId;
+        if (!groups.has(gk)) groups.set(gk, { event: m.event, account: m.account, items: [] });
+        groups.get(gk).items.push(m);
+      }
+      const sortedGroups = sortGroups(groups);
+      const lvStats = events.length ? computeStats(events) : null;
+      const adj = key === 'global' ? 'tous niveaux' : key === 'regional' ? 'régionaux' : key === 'national' ? 'nationaux' : 'internationaux';
 
-    const panels = { stats: [], series: [], history: [], uci: [] };
-    if (hasEventMatches) {
-      const statsMeta = `synthèse sur ${stats.entries} engagement(s)`;
-      panels.stats.push(`<h2 class="section-title">📈 Vue globale <span class="meta">${statsMeta}</span><button type="button" class="btn btn-ghost section-toggle" id="statsToggle" aria-controls="statsWrap">Masquer</button></h2>`);
-      panels.stats.push(`<div id="statsWrap" role="region" aria-label="Statistiques">${renderStats(stats)}</div>`);
-      panels.stats.push(`<h2 class="section-title">Graphiques <span class="meta">visualisations des résultats</span><button type="button" class="btn btn-ghost section-toggle" id="chartsToggle" aria-controls="chartsWrap">Masquer</button></h2>`);
-      panels.stats.push(`<div id="chartsWrap" role="region" aria-label="Graphiques"><div class="charts-grid">${renderCharts(primaryMatches)}</div></div>`);
+      const panels = { stats: '', series: '', courses: '' };
+      if (events.length) {
+        panels.stats = `<h2 class="section-title">📈 Stats <span class="meta">synthèse sur ${lvStats.entries} engagement(s) ${adj}</span></h2>
+  ${renderStats(lvStats)}
+  <h2 class="section-title">Graphiques <span class="meta">visualisations des résultats</span></h2>
+  <div class="charts-grid">${renderCharts(events)}</div>`;
+        panels.courses = `<h2 class="section-title">🏁 Courses <span class="meta">${sortedGroups.length} événement(s), ${sortLabel}</span></h2>${renderTimeline(sortedGroups, pilotColor)}`;
+      }
+      if (series.length) {
+        panels.series = `<h2 class="section-title">🏆 Championnats <span class="meta">${series.length} classement(s) de série</span></h2><div>${renderChampionships(series)}</div>`;
+      }
+      levelPanels[key] = panels;
+      subTabsHtml[key] = [
+        events.length ? { key: 'stats',   label: '📈 Stats',       count: null }               : null,
+        series.length ? { key: 'series',  label: '🏆 Championnats', count: series.length }      : null,
+        events.length ? { key: 'courses', label: '🏁 Courses',      count: sortedGroups.length } : null,
+      ].filter(Boolean);
     }
-    if (primarySeriesMatches.length) {
-      panels.series.push(renderChampionships(primarySeriesMatches));
-    }
-    if (hasEventMatches) {
-      const timelineHtml = renderTimeline(sortedEvents, pilotColor);
-      panels.history.push(`<h2 class="section-title">🏁 Courses <span class="meta">${sortedEvents.length} événement(s), ${sortLabel}</span><button type="button" class="btn btn-ghost section-toggle" id="historyToggle" aria-controls="historyWrap">Masquer</button></h2><div id="historyWrap" role="region" aria-label="Événements">${timelineHtml}</div>`);
-    }
-    if (primaryUciMatches.length && uciStats) {
-      panels.uci.push(`<h2 class="section-title">🌍 UCI BMX Racing <span class="meta">${uciStats.entries} engagement(s) international(aux)</span><button type="button" class="btn btn-ghost section-toggle" id="uciToggle" aria-controls="uciWrap">Masquer</button></h2>`);
-      panels.uci.push(`<div id="uciWrap" role="region" aria-label="Résultats UCI">${renderUciPanel(primaryUciMatches, uciStats, primaryUciSeriesMatches, pilotColor)}</div>`);
-    }
-
-    const tabsAvailable = [];
-    if (panels.stats.length)   tabsAvailable.push({ key: 'stats',   label: '📈 Stats',       count: null });
-    if (panels.series.length)  tabsAvailable.push({ key: 'series',  label: '🏆 Championnats', count: primarySeriesMatches.length });
-    if (panels.history.length) tabsAvailable.push({ key: 'history', label: '🏁 Courses',      count: sortedEvents.length });
-    if (panels.uci.length)     tabsAvailable.push({ key: 'uci',     label: '🌍 UCI',         count: primaryUciMatches.length });
 
     const compareResultsEl = document.getElementById('compareResults');
     if (compareResultsEl) {
-      const hasCompare = compareActive && lastCompareMatches.length;
-      compareResultsEl.innerHTML = hasCompare ? renderCompareSection(primaryMatches, stats) : '';
+      let compareHtml = '';
+      if (compareActive && (lastCompareMatches.length || lastCompareUciMatches.length)) {
+        // Défaut du mini-sélecteur de comparaison : Global s'il est dispo, sinon la partie active (D16)
+        if (comparePart == null || !partsAvailable.some(l => l.key === comparePart)) {
+          comparePart = partsAvailable.some(l => l.key === 'global') ? 'global' : activePart;
+        }
+        const p2ByLevel = { global: [], regional: [], national: [], uci: [] };
+        for (const m of lastCompareMatches) p2ByLevel[levelOf(m.account.accountCode)].push(m);
+        p2ByLevel.uci = lastCompareUciMatches;
+        p2ByLevel.global = [...p2ByLevel.regional, ...p2ByLevel.national, ...p2ByLevel.uci];
+        compareHtml = renderCompareSection({ levelData, p2ByLevel, parts: partsAvailable, part: comparePart });
+      }
+      compareResultsEl.innerHTML = compareHtml;
     }
 
     const html = [];
@@ -3302,51 +3532,48 @@
       </div>`);
     }
     const pilotCardHtml = renderPilotCard(primaryMatches, primarySeriesMatches, stats || uciStats, primaryUciMatches);
-    let tabsNavHtml = '';
-    if (tabsAvailable.length > 1) {
-      const navHtml = tabsAvailable.map((t, i) => {
-        const badge = t.count != null ? ` <span class="tab-badge">${t.count}</span>` : '';
-        return `<button type="button" class="tab-btn${i === 0 ? ' active' : ''}" data-tab-btn="${t.key}" role="tab" aria-selected="${i === 0}">${t.label}${badge}</button>`;
+
+    // Rangée 1 : parties (D11, D13)
+    let partsNavHtml = '';
+    if (partsAvailable.length) {
+      const navHtml = partsAvailable.map((l) => {
+        const count = levelData[l.key].events.length;
+        const on = l.key === activePart;
+        return `<button type="button" class="tab-btn${on ? ' active' : ''}" data-part-btn="${l.key}" role="tab" aria-selected="${String(on)}">${l.label}<span class="tab-badge">${count}</span></button>`;
       }).join('');
-      tabsNavHtml = `<div class="tabs-wrap">
-        <div class="tabs-nav" role="tablist" style="--pilot-color:${pilotColor}">${navHtml}</div>
-        <span class="tabs-fade left" aria-hidden="true"></span>
-        <span class="tabs-fade right" aria-hidden="true"></span>
-        <span class="tabs-more left" aria-hidden="true"></span>
-        <span class="tabs-more right" aria-hidden="true"></span>
-      </div>`;
+      partsNavHtml = rowTabsHtml(navHtml, 'parts-row', pilotColor);
     }
-    html.push(`<div class="pilot-sticky-header">${pilotCardHtml}${tabsNavHtml}</div>`);
-    for (let i = 0; i < tabsAvailable.length; i++) {
-      const t = tabsAvailable[i];
-      html.push(`<section class="tab-panel${i === 0 ? ' active' : ''}" data-tab="${t.key}" role="tabpanel">${panels[t.key].join('')}</section>`);
+
+    // Rangée 2 : sous-vues de la partie active — Stats par défaut (D12, D14)
+    // Toujours rendue (masquée si la partie n'a qu'une seule sous-vue) pour
+    // pouvoir être reconstruite à chaque changement de partie.
+    const subs = subTabsHtml[activePart] || [];
+    let subNavBtns = '';
+    if (subs.length > 1) {
+      subNavBtns = subs.map((s, i) => {
+        const badge = s.count != null ? `<span class="tab-badge">${s.count}</span>` : '';
+        return `<button type="button" class="tab-btn${i === 0 ? ' active' : ''}" data-subtab-btn="${s.key}" role="tab" aria-selected="${i === 0}">${s.label}${badge}</button>`;
+      }).join('');
+    }
+    const subNavHtml = rowTabsHtml(subNavBtns, `sub-row${subs.length > 1 ? '' : ' hidden'}`);
+
+    html.push(`<div class="pilot-sticky-header">${pilotCardHtml}${partsNavHtml}${subNavHtml}</div>`);
+
+    for (const l of partsAvailable) {
+      const sDefs = subTabsHtml[l.key];
+      const subPanels = sDefs.map((s, i) =>
+        `<div class="subtab-panel${i === 0 ? ' active' : ''}" data-subtab="${s.key}">${levelPanels[l.key][s.key]}</div>`
+      ).join('');
+      html.push(`<section class="tab-panel${l.key === activePart ? ' active' : ''}" data-tab="${l.key}" data-part="${l.key}" role="tabpanel">${subPanels}</section>`);
     }
 
     resultsEl.innerHTML = html.join('');
-    applySectionVisibility();
     document.body.classList.add('has-results');
     initAnimations();
     initTabsScroll();
 
   }
 
-  const sectionState = {
-    stats:   { hidden: localStorage.getItem('statsHidden') === '1',   wrap: 'statsWrap',   btn: 'statsToggle',   key: 'statsHidden' },
-    charts:  { hidden: localStorage.getItem('chartsHidden') === '1',  wrap: 'chartsWrap',  btn: 'chartsToggle',  key: 'chartsHidden' },
-    series:  { hidden: localStorage.getItem('seriesHidden') === '1',  wrap: 'seriesWrap',  btn: 'seriesToggle',  key: 'seriesHidden' },
-    history: { hidden: localStorage.getItem('historyHidden') === '1', wrap: 'historyWrap', btn: 'historyToggle', key: 'historyHidden' },
-    uci:     { hidden: localStorage.getItem('uciHidden') === '1',     wrap: 'uciWrap',     btn: 'uciToggle',     key: 'uciHidden' },
-  };
-  function applySectionVisibility() {
-    for (const s of Object.values(sectionState)) {
-      const wrap = document.getElementById(s.wrap);
-      const btn = document.getElementById(s.btn);
-      if (!wrap || !btn) continue;
-      wrap.hidden = s.hidden;
-      btn.textContent = s.hidden ? 'Afficher' : 'Masquer';
-      btn.setAttribute('aria-expanded', String(!s.hidden));
-    }
-  }
   resultsEl.addEventListener('click', e => {
     const pickBtn = e.target.closest('[data-pilot-key]');
     if (pickBtn) {
@@ -3354,35 +3581,69 @@
       renderFiltered();
       return;
     }
-const cmpPickBtn = e.target.closest('[data-compare-pilot-key]');
+    const cmpPickBtn = e.target.closest('[data-compare-pilot-key]');
     if (cmpPickBtn) {
       selectedComparePilotKey = cmpPickBtn.dataset.comparePilotKey;
       renderFiltered();
       return;
     }
-    const tabBtn = e.target.closest('[data-tab-btn]');
-    if (tabBtn && resultsEl.contains(tabBtn)) {
-      const key = tabBtn.dataset.tabBtn;
-      resultsEl.querySelectorAll('.tab-btn').forEach(b => {
-        const on = b === tabBtn;
+    // Changer de partie (rangée 1) : mémorise partPref (D7), sous-vue remise sur Stats (D14)
+    const partBtn = e.target.closest('[data-part-btn]');
+    if (partBtn && resultsEl.contains(partBtn)) {
+      const key = partBtn.dataset.partBtn;
+      localStorage.setItem('partPref', key);
+      resultsEl.querySelectorAll('.tab-panel[data-part]').forEach(p => {
+        p.classList.toggle('active', p.dataset.part === key);
+      });
+      resultsEl.querySelectorAll('[data-part-btn]').forEach(b => {
+        const on = b.dataset.partBtn === key;
         b.classList.toggle('active', on);
         b.setAttribute('aria-selected', String(on));
       });
-      resultsEl.querySelectorAll('.tab-panel').forEach(p => {
-        p.classList.toggle('active', p.dataset.tab === key);
-      });
+      // Rangée 2 → sous-vues de la nouvelle partie
+      const subRow = resultsEl.querySelector('.pilot-sticky-header .sub-row');
+      const subs = subTabsHtml[key] || [];
+      if (subRow) {
+        if (subs.length > 1) {
+          const nav = subRow.querySelector('.tabs-nav');
+          nav.innerHTML = subs.map((s, i) => {
+            const badge = s.count != null ? `<span class="tab-badge">${s.count}</span>` : '';
+            return `<button type="button" class="tab-btn${i === 0 ? ' active' : ''}" data-subtab-btn="${s.key}" role="tab" aria-selected="${i === 0}">${s.label}${badge}</button>`;
+          }).join('');
+          subRow.classList.remove('hidden');
+          const active = nav.querySelector('.tab-btn.active');
+          if (active) nav.scrollLeft = active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2;
+        } else {
+          subRow.classList.add('hidden');
+        }
+      }
+      const panel = resultsEl.querySelector(`.tab-panel[data-part="${key}"]`);
+      if (panel) {
+        panel.querySelectorAll('.subtab-panel').forEach(p => {
+          p.classList.toggle('active', p.dataset.subtab === (subs[0] ? subs[0].key : ''));
+        });
+      }
       // Centre l'onglet choisi dans la barre défilante
-      const nav = tabBtn.closest('.tabs-nav');
-      if (nav) nav.scrollLeft = tabBtn.offsetLeft - (nav.clientWidth - tabBtn.offsetWidth) / 2;
+      const nav = partBtn.closest('.tabs-nav');
+      if (nav) nav.scrollLeft = partBtn.offsetLeft - (nav.clientWidth - partBtn.offsetWidth) / 2;
       return;
     }
-    for (const s of Object.values(sectionState)) {
-      if (e.target.closest('#' + s.btn)) {
-        s.hidden = !s.hidden;
-        localStorage.setItem(s.key, s.hidden ? '1' : '0');
-        applySectionVisibility();
-        return;
-      }
+    // Changer de sous-vue (rangée 2)
+    const subBtn = e.target.closest('[data-subtab-btn]');
+    if (subBtn && resultsEl.contains(subBtn)) {
+      const key = subBtn.dataset.subtabBtn;
+      const subNav = resultsEl.querySelector('.pilot-sticky-header .sub-row .tabs-nav');
+      subNav?.querySelectorAll('.tab-btn').forEach(b => {
+        const on = b.dataset.subtabBtn === key;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', String(on));
+      });
+      resultsEl.querySelector('.tab-panel[data-part].active')?.querySelectorAll('.subtab-panel').forEach(p => {
+        p.classList.toggle('active', p.dataset.subtab === key);
+      });
+      const nav = subBtn.closest('.tabs-nav');
+      if (nav) nav.scrollLeft = subBtn.offsetLeft - (nav.clientWidth - subBtn.offsetWidth) / 2;
+      return;
     }
   });
 
@@ -3432,11 +3693,21 @@ const cmpPickBtn = e.target.closest('[data-compare-pilot-key]');
   document.getElementById('compareCloseBtn').addEventListener('click', () => {
     document.getElementById('compareInputCard').hidden = true;
     lastCompareMatches = [];
+    lastCompareUciMatches = [];
     compareActive = false;
+    comparePart = null;
     selectedComparePilotKey = null;
     document.getElementById('compareInp').value = '';
     document.getElementById('compareStatus').textContent = '';
     renderFiltered();
+  });
+  // Mini-sélecteur de niveau de la comparaison (D10, D16)
+  document.getElementById('compareResults').addEventListener('click', e => {
+    const btn = e.target.closest('[data-compare-part]');
+    if (btn) {
+      comparePart = btn.dataset.comparePart;
+      renderFiltered();
+    }
   });
 
   nameInp.addEventListener('input', updateSearchEnabled);
