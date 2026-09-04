@@ -1804,7 +1804,51 @@
   const R2_BASE = 'https://pub-7af06f138c97425f8062b881846803cb.r2.dev';
   const RELEASE_BASE = 'https://github.com/LudSoc/sqorz-stats/releases/latest/download';
 
-  async function loadIndexFile(urls, label, estimatedSize) {
+  // Cache client piloté par meta.json (sha256) : l'index (~80 Mo) n'est re-téléchargé
+  // que lorsque sa version a changé. La copie est conservée dans la Cache API.
+  const INDEX_CACHE_NAME = 'sqorz-index-v1';
+  const INDEX_CACHE_URLS = {
+    pilots: 'https://sqorz.local/cache/pilots-index.json',
+    uci:    'https://sqorz.local/cache/uci-index.json',
+  };
+
+  async function openIndexCache() {
+    if (typeof caches === 'undefined') return null;
+    try { return await caches.open(INDEX_CACHE_NAME); }
+    catch (e) { console.warn('[sqorz] cache indisponible :', e && e.message); return null; }
+  }
+
+  // Télécharge le corps d'une réponse en streaming, avec barre de progression (sauf quiet).
+  async function streamToBytes(res, label, estimatedSize, quiet) {
+    const compressed = !!res.headers.get('Content-Encoding');
+    const rawTotal = parseInt(res.headers.get('Content-Length') || '0', 10);
+    const total = quiet ? 0 : (compressed ? (estimatedSize || rawTotal || 0) : (rawTotal || 0));
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      if (!quiet) {
+        const mb = (received / 1048576).toFixed(0);
+        if (total) {
+          setProgress(received, total);
+          setStatus(`Chargement ${label}… ${mb} / ${(total / 1048576).toFixed(0)} Mo`);
+        } else {
+          setStatus(`Chargement ${label}… ${mb} Mo`);
+        }
+      }
+    }
+    if (!quiet) setProgress(0, 0);
+    const allBytes = new Uint8Array(received);
+    let offset = 0;
+    for (const chunk of chunks) { allBytes.set(chunk, offset); offset += chunk.length; }
+    return allBytes;
+  }
+
+  async function fetchFromSources(urls, label) {
     let res = null, lastErr = null;
     for (const url of urls) {
       try {
@@ -1814,33 +1858,67 @@
       } catch (e) { lastErr = e; console.warn(`[sqorz] source indisponible : ${url}`, e && e.message); }
     }
     if (!res) throw lastErr || new Error('Index indisponible.');
+    return res;
+  }
 
-    const compressed = !!res.headers.get('Content-Encoding');
-    const rawTotal = parseInt(res.headers.get('Content-Length') || '0', 10);
-    const total = compressed ? (estimatedSize || rawTotal || 0) : (rawTotal || 0);
-    const reader = res.body.getReader();
-    const chunks = [];
-    let received = 0;
+  const expandBytes = bytes => expandIndex(JSON.parse(new TextDecoder().decode(bytes)));
 
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      received += value.length;
-      const mb = (received / 1048576).toFixed(0);
-      if (total) {
-        setProgress(received, total);
-        setStatus(`Chargement ${label}… ${mb} / ${(total / 1048576).toFixed(0)} Mo`);
-      } else {
-        setStatus(`Chargement ${label}… ${mb} Mo`);
+  // Charge un index avec cache : meta (sha256 attendu) → copie en cache → sources → cache périmé en dernier recours.
+  async function loadIndexCached(cfg) {
+    let wantSha = null;
+    try {
+      const metaRes = await fetch(cfg.metaUrl);
+      if (metaRes.ok) {
+        const meta = await metaRes.json();
+        wantSha = (meta && meta.index && meta.index.sha256) || null;
       }
+    } catch (e) { console.warn(`[sqorz] meta indisponible (${cfg.metaUrl}) :`, e && e.message); }
+
+    const cache = await openIndexCache();
+    let hit = null;
+    if (cache) {
+      try {
+        const res = await cache.match(INDEX_CACHE_URLS[cfg.key]);
+        if (res) {
+          const sha = res.headers.get('x-index-sha');
+          if ((wantSha && sha === wantSha) || !wantSha) hit = res;
+        }
+      } catch (e) { console.warn('[sqorz] lecture du cache :', e && e.message); }
     }
 
-    setProgress(0, 0);
-    const allBytes = new Uint8Array(received);
-    let offset = 0;
-    for (const chunk of chunks) { allBytes.set(chunk, offset); offset += chunk.length; }
-    return expandIndex(JSON.parse(new TextDecoder().decode(allBytes)));
+    if (hit) {
+      setStatus(`Données ${cfg.label} déjà à jour — lecture du cache…`);
+      const bytes = await streamToBytes(hit, cfg.label, 0, true);
+      setProgress(0, 0);
+      return expandBytes(bytes);
+    }
+
+    try {
+      const res = await fetchFromSources(cfg.urls, cfg.label);
+      const bytes = await streamToBytes(res, cfg.label, cfg.estimatedSize, false);
+      if (cache && wantSha) {
+        try {
+          await cache.put(INDEX_CACHE_URLS[cfg.key], new Response(bytes, {
+            headers: { 'Content-Type': 'application/json', 'X-Index-Sha': wantSha },
+          }));
+        } catch (e) { console.warn('[sqorz] écriture du cache :', e && e.message); }
+      }
+      return expandBytes(bytes);
+    } catch (err) {
+      // Dernier recours : copie périmée en cache (hors-ligne)
+      if (cache) {
+        try {
+          const stale = await cache.match(INDEX_CACHE_URLS[cfg.key]);
+          if (stale) {
+            setStatus('Hors-ligne — utilisation de la dernière copie connue.');
+            const bytes = await streamToBytes(stale, cfg.label, 0, true);
+            setProgress(0, 0);
+            return expandBytes(bytes);
+          }
+        } catch (e) { /* dernier recours indisponible */ }
+      }
+      throw err;
+    }
   }
 
   async function loadPilotsIndex() {
@@ -1849,13 +1927,24 @@
     statusEl.classList.add('loading');
     setStatus('Chargement des données…');
     try {
-      pilotsIndex = await loadIndexFile([`${R2_BASE}/pilots-index.json`, `${RELEASE_BASE}/pilots-index.json`, './pilots-index.json'], 'index France', 83_000_000);
+      pilotsIndex = await loadIndexCached({
+        key: 'pilots',
+        metaUrl: './pilots-index.meta.json',
+        urls: [`${R2_BASE}/pilots-index.json`, `${RELEASE_BASE}/pilots-index.json`, './pilots-index.json'],
+        label: 'index France',
+        estimatedSize: 83_000_000,
+      });
       // Index UCI (Mondiaux BMX Racing) — optionnel : s'il est absent, on continue sans
-      uciIndex = await loadIndexFile([`${R2_BASE}/uci-index.json`, `${RELEASE_BASE}/uci-index.json`, './uci-index.json'], 'index UCI', 8_000_000)
-        .catch(e => {
-          console.warn('[sqorz] uci-index.json indisponible :', e.message);
-          return { events: [], series: [] };
-        });
+      uciIndex = await loadIndexCached({
+        key: 'uci',
+        metaUrl: './uci-index.meta.json',
+        urls: [`${R2_BASE}/uci-index.json`, `${RELEASE_BASE}/uci-index.json`, './uci-index.json'],
+        label: 'index UCI',
+        estimatedSize: 8_000_000,
+      }).catch(e => {
+        console.warn('[sqorz] uci-index.json indisponible :', e.message);
+        return { events: [], series: [] };
+      });
 
       buildNameIndex();
       nameInp.disabled = false;

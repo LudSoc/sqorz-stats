@@ -1,4 +1,7 @@
-const CACHE_NAME = 'sqorz-v3';
+const CACHE_NAME = 'sqorz-v4';
+// Cache applicatif des index piloté par meta.json (chantier 2) : on le conserve
+// lors des purges d'activation (il vit sur le même domaine ludsoc.github.io).
+const INDEX_CACHE_NAME = 'sqorz-index-v1';
 // Chemins RELATIFS : l'app vit sur un sous-chemin (ex. /sqorz-stats/) — pas à la racine
 const ASSETS = ['./', './index.html'];
 // Index de données volumineux régénérés chaque semaine : on ne les met JAMAIS en cache
@@ -15,7 +18,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => k !== CACHE_NAME && k !== INDEX_CACHE_NAME).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
