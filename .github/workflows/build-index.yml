@@ -39,24 +39,34 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT, 'changed=' + changed + '\n');
           EOF
 
-      - name: Publier les index en assets de release
+      # NB : la politique CORS du bucket est configurée une seule fois dans le
+      # dashboard Cloudflare (R2 → bucket → Settings → CORS Policy). Le jeton S3
+      # « Object Read & Write » n'a pas les droits pour la modifier via l'API.
+
+      - name: Publier les index sur R2
         if: steps.changed.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
         run: |
-          TAG="data-$(date -u +%Y-%m-%d)"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG déjà existante — aucun nouvel asset."
-          else
-            gh release create "$TAG" \
-              pilots-index.json pilots-index.events.ndjson \
-              uci-index.json uci-index.events.ndjson \
-              --title "Index pilotes $(date -u +%Y-%m-%d)" \
-              --notes "Régénération hebdomadaire des index (assets publics référencés par les apps)."
-            echo "Release $TAG créée avec les 4 assets."
-          fi
+          ENDPOINT="https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com"
+          BUCKET="${{ secrets.R2_BUCKET_NAME }}"
+          declare -A TYPES=(
+            [pilots-index.json]=application/json
+            [pilots-index.events.ndjson]=application/x-ndjson
+            [uci-index.json]=application/json
+            [uci-index.events.ndjson]=application/x-ndjson
+          )
+          for f in "${!TYPES[@]}"; do
+            aws s3 cp "$f" "s3://$BUCKET/$f" \
+              --endpoint-url "$ENDPOINT" \
+              --content-type "${TYPES[$f]}" \
+              --cache-control "public, max-age=300"
+            echo "Publié : $f"
+          done
 
-      - name: Ne plus suivre les gros fichiers (publiés en assets)
+      - name: Ne plus suivre les gros fichiers (publiés sur R2)
         if: steps.changed.outputs.changed == 'true'
         run: |
           for f in pilots-index.json pilots-index.events.ndjson uci-index.json uci-index.events.ndjson; do
@@ -71,6 +81,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "Aucun changement — rien à commiter."
           else
-            git commit -m "chore: mise à jour des index pilotes (metas ; gros fichiers publiés en release)"
+            git commit -m "chore: mise à jour des index pilotes (metas ; gros fichiers publiés sur R2)"
             git push
           fi

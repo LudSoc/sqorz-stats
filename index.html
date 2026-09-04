@@ -1800,7 +1800,8 @@
     return idx;
   }
 
-  // Sources de données : assets de release (GitHub Releases) d'abord, fichier local en secours.
+  // Sources de données : bucket public Cloudflare R2 d'abord, puis assets de release, puis fichier local en secours.
+  const R2_BASE = 'https://pub-7af06f138c97425f8062b881846803cb.r2.dev';
   const RELEASE_BASE = 'https://github.com/LudSoc/sqorz-stats/releases/latest/download';
 
   async function loadIndexFile(urls, label, estimatedSize) {
@@ -1848,9 +1849,9 @@
     statusEl.classList.add('loading');
     setStatus('Chargement des données…');
     try {
-      pilotsIndex = await loadIndexFile([`${RELEASE_BASE}/pilots-index.json`, './pilots-index.json'], 'index France', 83_000_000);
+      pilotsIndex = await loadIndexFile([`${R2_BASE}/pilots-index.json`, `${RELEASE_BASE}/pilots-index.json`, './pilots-index.json'], 'index France', 83_000_000);
       // Index UCI (Mondiaux BMX Racing) — optionnel : s'il est absent, on continue sans
-      uciIndex = await loadIndexFile([`${RELEASE_BASE}/uci-index.json`, './uci-index.json'], 'index UCI', 8_000_000)
+      uciIndex = await loadIndexFile([`${R2_BASE}/uci-index.json`, `${RELEASE_BASE}/uci-index.json`, './uci-index.json'], 'index UCI', 8_000_000)
         .catch(e => {
           console.warn('[sqorz] uci-index.json indisponible :', e.message);
           return { events: [], series: [] };
