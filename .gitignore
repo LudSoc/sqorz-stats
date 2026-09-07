@@ -1,2 +1,8 @@
 .claude/
 node_modules/
+
+# Gros index générés (publiés sur R2, jamais commités)
+pilots-index.json
+pilots-index.events.ndjson
+uci-index.json
+uci-index.events.ndjson

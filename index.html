@@ -267,6 +267,9 @@
   .perf-how-body p{margin:8px 0}
   .perf-how-body ul{margin:4px 0 8px; padding-left:18px}
   .perf-how-body li{margin:4px 0}
+  .perf-example{margin:10px 0; padding:8px 12px; background:var(--card); border:1px solid var(--line); border-radius:8px}
+  .perf-example p{margin:4px 0}
+  .perf-example ul{margin:4px 0 4px; padding-left:18px}
   .status{font-size:13px; color:var(--muted); margin-top:14px; min-height:18px}
   .status.error{color:var(--bad)}
   .status.loading{font-size:15px; color:var(--accent); font-weight:600; display:flex; align-items:center; gap:8px}
@@ -1802,8 +1805,11 @@
   }
 
   // Sources de données : bucket public Cloudflare R2 d'abord, puis assets de release, puis fichier local en secours.
+  // En dev local (localhost/127.0.0.1), on inverse : fichiers du dossier en premier (same-origin,
+  // aucun CORS, aucun réseau) — pratique pour tester sans bucket.
   const R2_BASE = 'https://pub-7af06f138c97425f8062b881846803cb.r2.dev';
   const RELEASE_BASE = 'https://github.com/LudSoc/sqorz-stats/releases/latest/download';
+  const IS_LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
 
   // Cache client piloté par meta.json (sha256) : l'index (~80 Mo) n'est re-téléchargé
   // que lorsque sa version a changé. La copie est conservée dans la Cache API.
@@ -1942,7 +1948,9 @@
       pilotsIndex = await loadIndexCached({
         key: 'pilots',
         metaUrl: './pilots-index.meta.json',
-        urls: [`${R2_BASE}/pilots-index.json`, `${RELEASE_BASE}/pilots-index.json`, './pilots-index.json'],
+        urls: IS_LOCAL
+          ? ['./pilots-index.json', `${R2_BASE}/pilots-index.json`, `${RELEASE_BASE}/pilots-index.json`]
+          : [`${R2_BASE}/pilots-index.json`, `${RELEASE_BASE}/pilots-index.json`, './pilots-index.json'],
         label: 'index France',
         estimatedSize: 83_000_000,
       });
@@ -1950,7 +1958,9 @@
       uciIndex = await loadIndexCached({
         key: 'uci',
         metaUrl: './uci-index.meta.json',
-        urls: [`${R2_BASE}/uci-index.json`, `${RELEASE_BASE}/uci-index.json`, './uci-index.json'],
+        urls: IS_LOCAL
+          ? ['./uci-index.json', `${R2_BASE}/uci-index.json`, `${RELEASE_BASE}/uci-index.json`]
+          : [`${R2_BASE}/uci-index.json`, `${RELEASE_BASE}/uci-index.json`, './uci-index.json'],
         label: 'index UCI',
         estimatedSize: 8_000_000,
       }).catch(e => {
@@ -3312,7 +3322,11 @@
   // constance par phase, chrono transpondeur (z-log strict), séries, coef léger par niveau.
   const PERF_LEVEL_COEFS = { regional: 0.9, national: 1.0, uci: 1.15 }; // §4.5 (léger)
   const PERF_CHRONO_W = 0.3;   // poids du composant chrono dans le blend (§4.3, fourchette 0.3–0.4)
-  const PERF_DNF_SCORE = 250;  // pénalité engagement DNF/DNS/DSQ final (§4.4)
+  // Pénalité DNF/DNS/DSQ final, graduée par la phase la plus profonde ATTEINTE (§4.4) :
+  // un DNF en manche n'est PAS éliminatoire — le pilote peut se qualifier quand même pour les
+  // phases finales. C'est donc la progression (jusqu'où il est allé) qui compte, pas le lieu
+  // de l'abandon. Les phases des non-classés sont conservées dans l'index (build-index.js).
+  const PERF_DNF_SCORES = { final: 700, semi: 550, quarter: 400, moto: 250 };
   const perfClamp = v => Math.max(5, Math.min(1000, v));
   const perfYearOf = d => (d || '').slice(0, 4) || '????';
   // Score de rang : 500 + 500·z/√3 — 1ᵉʳ d'un gros champ ≈ 1000, médiane ≈ 500, dernier ≈ 5 (§4.1)
@@ -3358,13 +3372,31 @@
   }
   const perfCoefConstance = c => 0.9 + 0.2 * c; // ∈ [0.94, 1.1] (moyenne ≈ 1,02 mesurée)
 
+  // Phase la plus profonde ATTEINTE par un non-classé, d'après les phases présentes dans ses
+  // détails (elles reflètent sa participation : éliminé en manches = manches seules, qualifié
+  // jusqu'en finale = phase Finale présente). Détermine la pénalité DNF (§4.4).
+  function perfDeepestPhase(details) {
+    const order = { final: 3, semi: 2, quarter: 1, moto: 0 };
+    let depth = 'moto';
+    for (const d of details || []) {
+      const n = d.phaseName || '';
+      const t = isFinalPhase(d) ? 'final'
+        : /semi|demi/i.test(n) ? 'semi'
+        : /quart|quarter|1\/4/i.test(n) ? 'quarter'
+        : 'moto';
+      if (order[t] > order[depth]) depth = t;
+    }
+    return depth;
+  }
+
   // Score d'un engagement événement → { raw (0–1000, avant clamp final), nDnf, year }
   function perfEngagement(m) {
     const c = m.competitor || {};
     const year = perfYearOf(m.event.eventDate || m.event.eventEndDate);
     const rk = c.rank;
-    if (typeof rk !== 'number' || rk >= 100000) { // §4.4 : pénalité légère
-      return { raw: PERF_DNF_SCORE, nDnf: 1, year };
+    if (typeof rk !== 'number' || rk >= 100000) { // §4.4 : pénalité graduée par phase la plus profonde atteinte
+      const depth = perfDeepestPhase(c.competitorRankDetails);
+      return { raw: PERF_DNF_SCORES[depth] ?? PERF_DNF_SCORES.moto, nDnf: 1, year };
     }
     const sr = perfScoreRang(rk, m.totalParticipants) ?? 250;
     const cc = perfCoefConstance(perfConstance(c.competitorRankDetails, rk));
@@ -3451,10 +3483,20 @@
         <li><strong>Rang selon le nombre de partants</strong> — gagner sur 4 n'est pas gagner sur 100 : chaque course est notée par la position statistique du pilote dans son champ (1ᵉʳ d'un gros champ ≈ 1000, médiane ≈ 500).</li>
         <li><strong>Constance</strong> — manches de qualification dans le top 4 et finale atteinte : un pilote régulier est légèrement bonifié, un qualifié de justesse légèrement pénalisé (facteur ×0,94 à ×1,1).</li>
         <li><strong>Chrono transpondeur</strong> — sur les épreuves chronométrées, le meilleur temps du pilote est comparé aux autres chronométrés de la même catégorie lors de l'épreuve (environ ¼ du score).</li>
-        <li><strong>Non-classements</strong> — un DNF, DNS ou DSQ final compte 250 : une pénalité, pas un zéro.</li>
+        <li><strong>Non-classements</strong> — un DNF, DNS ou DSQ final est pénalisé selon la phase la plus profonde atteinte (sa progression) : éliminé en manches ≈ 250, quart ≈ 400, demi-finale ≈ 550, finale ≈ 700. Un DNF en manche n'élimine pas : s'il s'est qualifié jusqu'en finale, il est noté comme finaliste. Une pénalité, pas un zéro.</li>
         <li><strong>Championnats</strong> — un classement de série compte comme une course, noté selon le nombre de pilotes classés.</li>
         <li><strong>Niveau de compétition</strong> — le même rang n'a pas la même valeur partout : régional ×0,9, national ×1,0, international ×1,15.</li>
       </ul>
+      <div class="perf-example">
+        <p><strong>Exemple anonyme</strong> — pilote national, 4 engagements en 2025 :</p>
+        <ul>
+          <li>5ᵉ sur 40 (chrono 35,20 s) → rang ≈ 888, constance ×1,1, chrono ≈ 846 → (888×1,1 + 0,3×846)/1,3 ≈ <strong>946</strong></li>
+          <li>12ᵉ sur 30 (sans chrono) → ≈ <strong>648</strong></li>
+          <li>éliminé en manches (DNF, sans phase finale atteinte) → <strong>250</strong> (qualifié jusqu'en finale, ça serait ≈ 700)</li>
+          <li>série 4ᵉ sur 25 → ≈ <strong>860</strong></li>
+        </ul>
+        <p>Année = (946 + 648 + 250 + 860) / 4 ≈ <strong>676</strong>. L'indice carrière = la moyenne des indices annuels.</p>
+      </div>
       <p>L'indice d'une année = la moyenne de ses engagements. L'indice carrière = la moyenne des indices annuels, pour qu'une saison chargée ne pèse pas plus qu'une autre.</p>
     </div>
   </details>

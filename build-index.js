@@ -23,13 +23,18 @@ const norm = s => (s || '').toLowerCase()
 // Dans chaque detail : n=phaseName, r=result, rp=racePosition, pc=phaseCode, pbc=phaseBlockCode, rn=raceName
 // + champs chrono transpondeur (épreuves chronométrées) : tm=time, ht=hillTime, ct=corner2Time
 //   (spec chronos-transpondeur : conservés pour la sous-ligne « ⏱ Chronos » de la timeline)
+// NB : pour un compétiteur NON classé (rank absent ou ≥ 100 000 = DNF/DNS/DSQ), on garde les
+// phases MÊME sans résultat : elles indiquent jusqu'où il est allé (ex. « Final » présente =
+// qualifié jusqu'en finale) — l'indice de performance en déduit la phase la plus profonde atteinte
+// pour graduer la pénalité (spec indice-perf §4.4).
 function slimCompetitor(c) {
   const out = {
     fn: c.firstName, ln: c.lastName,
     rank: c.rank, plate: c.plate, age: c.age, gn: c.groupName,
   };
+  const classed = typeof c.rank === 'number' && c.rank < 100000;
   const details = (c.competitorRankDetails || [])
-    .filter(d => d.phaseName && d.result != null)
+    .filter(d => d.phaseName && (classed ? d.result != null : true))
     .map(d => {
       const p = { n: d.phaseName, r: d.result };
       if (d.racePosition  != null) p.rp  = d.racePosition;
