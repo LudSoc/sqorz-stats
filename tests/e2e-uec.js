@@ -8,7 +8,8 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const blocks = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
-const mainScript = blocks[2];
+const commonSrc = fs.readFileSync(path.join(root, 'common.js'), 'utf8');
+const mainScript = commonSrc + '\n;\n' + blocks[2];
 
 let failures = 0;
 const check = (label, cond, extra = '') => {

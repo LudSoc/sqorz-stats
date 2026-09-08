@@ -1,0 +1,121 @@
+// Tests du socle partagé (common.js) : utils, score de rang, constance, dates, expansion, chargeur.
+// Usage : node --test tests/common.test.js
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
+
+const src = fs.readFileSync(path.join(__dirname, '..', 'common.js'), 'utf8');
+const SC = new Function('window', src + '\nreturn window.SqorzCommon;')({});
+
+// --- utils ---
+test('norm : casse/accents/espaces', () => {
+  assert.equal(SC.norm('  Jean-DUPONT  Éléonore '), 'jean dupont eleonore');
+  assert.equal(SC.norm(null), '');
+});
+
+test('escape : XSS neutralisé', () => {
+  assert.equal(SC.escape('<img src=x onerror=1>'), '&lt;img src=x onerror=1&gt;');
+  assert.equal(SC.escape(null), '');
+});
+
+test('zScore : médiane ≈ 0, bornes, cas dégradés', () => {
+  assert.equal(SC.zScore(2, 3) !== null, true);
+  assert.equal(SC.zScore(1, 1), null);
+  assert.equal(SC.zScore('x', 10), null);
+  const z = SC.zScore(1, 75);
+  assert.ok(Math.abs(z - 1.709) < 0.01, `z(1/75)=${z}`);
+});
+
+// --- score de rang (courbe convexe §7.4) ---
+test('perfScoreRang : repères (vainqueur, médiane, dernier)', () => {
+  assert.equal(SC.perfScoreRang(38, 75), 500); // médiane exacte
+  assert.ok(SC.perfScoreRang(1, 75) >= 980, '1er grand champ ≈ 980-1000');
+  assert.ok(SC.perfScoreRang(75, 75) <= 10, 'dernier ≈ 5');
+});
+
+test('perfScoreRang : cas Merlin Guigo (11e/65 + 4e/58)', () => {
+  const s11 = SC.perfScoreRang(11, 65);
+  const s4 = SC.perfScoreRang(4, 58);
+  assert.ok(s11 < 750 && s11 > 650, `11/65=${s11}`);
+  assert.ok(s4 < 920 && s4 > 820, `4/58=${s4}`);
+  assert.ok(s4 - s11 > 100, 'le podium se détache nettement');
+});
+
+// --- constance ---
+test('perfConstance : éliminé en demie sans bonus finale', () => {
+  const semiOut = [
+    { phaseName: 'Moto 1', result: 4 }, { phaseName: 'Moto 2', result: 1 },
+    { phaseName: 'Semi Finals', result: 6 },
+  ];
+  assert.equal(SC.perfConstance(semiOut, 11), 0.7);
+});
+
+test('perfConstance : proxy finale conservé sans phases KO (Mondiaux)', () => {
+  const noKo = [{ phaseName: 'Moto 1', result: 2 }, { phaseName: 'Moto 2', result: 3 }];
+  assert.equal(SC.perfConstance(noKo, 11), 1);
+  assert.equal(SC.perfCoefConstance(1), 1.05);
+  assert.equal(SC.perfCoefConstance(0.2), 0.97);
+});
+
+test('coefs de niveau', () => {
+  assert.deepEqual(SC.PERF_LEVEL_COEFS, { regional: 0.93, national: 1.0, uec: 1.05, uci: 1.05 });
+});
+
+// --- dates par source ---
+test('formatDataDates : une date / plusieurs / aucune', () => {
+  assert.equal(SC.formatDataDates([{ tag: 'FR', iso: '2026-09-07T08:18:20.000Z' }]), '07/09/2026');
+  assert.equal(
+    SC.formatDataDates([{ tag: 'FR', iso: '2026-09-07T08:18:20.000Z' }, { tag: 'UEC', iso: '2026-09-07T08:18:20.000Z' }]),
+    '07/09/2026');
+  assert.equal(
+    SC.formatDataDates([{ tag: 'FR', iso: '2026-09-07T08:18:20.000Z' }, { tag: 'UEC', iso: '2026-09-08T09:38:00.000Z' }, { tag: 'UCI', iso: null }]),
+    'FR 07/09/2026 · UEC 08/09/2026');
+  assert.equal(SC.formatDataDates([]), null);
+  assert.equal(SC.formatDataDates([{ tag: 'FR', iso: 'pas-une-date' }]), null);
+});
+
+// --- expansion ---
+test('expandIndex : superset + mode slim', () => {
+  const slim = { events: [{ event: {}, account: {}, classes: [{ competitors: [{ fn: 'A', ln: 'B', gn: 'FRA', jid: ' 123 ', d: [{ n: 'Finale', r: 4, tm: '35.1' }] }] }] }], series: [{ classes: [{ competitors: [{ fn: 'A', ln: 'B', sr: 2, sp: 40, ev: [{ er: 1 }] }] }] }] };
+  const full = SC.expandIndex(JSON.parse(JSON.stringify(slim)));
+  const c = full.events[0].classes[0].competitors[0];
+  assert.equal(c.firstName, 'A');
+  assert.equal(c.riderId, ' 123 ');
+  assert.equal(c.competitorRankDetails[0].time, '35.1');
+  assert.equal(full.series[0].classes[0].competitors[0].seriesRank, 2);
+  const light = SC.expandIndex(JSON.parse(JSON.stringify(slim)), { details: false, series: false });
+  assert.equal(light.events[0].classes[0].competitors[0].competitorRankDetails, undefined);
+  assert.equal(light.events[0].classes[0].competitors[0].firstName, 'A');
+});
+
+// --- chargeur (fetch stubbé, pas de Cache API sous node) ---
+test('loadIndexCached : meta + réseau + expansion', async () => {
+  const payload = JSON.stringify({ generated: '2026-09-08T00:00:00.000Z', events: [{ event: { eventId: 'e1' }, account: {}, classes: [{ competitors: [{ fn: 'A', ln: 'B' }] }] }], series: [] });
+  const seen = [];
+  global.fetch = async (url) => {
+    seen.push(String(url));
+    if (String(url).endsWith('.meta.json')) {
+      return new Response(JSON.stringify({ index: { sha256: 'abc', sizeBytes: 1 } }), { headers: { 'Content-Type': 'application/json' } });
+    }
+    return new Response(payload, { headers: { 'Content-Type': 'application/json' } });
+  };
+  const status = [];
+  const idx = await SC.loadIndexCached({
+    metaUrl: 'https://x/uec-index.meta.json', cacheKey: 'k', sources: ['https://x/uec-index.json'],
+    tag: '[test]', label: 'Index UEC', onStatus: (t) => status.push(t), onProgress: () => {},
+  });
+  delete global.fetch;
+  assert.equal(idx.events.length, 1);
+  assert.equal(idx.events[0].classes[0].competitors[0].firstName, 'A');
+  assert.ok(seen.some(u => u.endsWith('.meta.json')) && seen.some(u => u.endsWith('.json') && !u.endsWith('.meta.json')));
+});
+
+test('loadIndexCached : échec réseau → throw (l’appelant dégrade)', async () => {
+  global.fetch = async () => { throw new Error('Failed to fetch'); };
+  await assert.rejects(() => SC.loadIndexCached({
+    metaUrl: 'https://x/m.meta.json', cacheKey: 'k', sources: ['https://x/f.json'],
+    tag: '[test]', label: 'X', onStatus: () => {}, onProgress: () => {},
+  }), /Failed to fetch/);
+  delete global.fetch;
+});

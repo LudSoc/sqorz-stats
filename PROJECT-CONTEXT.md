@@ -18,14 +18,16 @@ C'est un outil de la suite « Sqorz Hub » (frères : `sqorz-head2head`, `sqorz-
 
 | Fichier | Rôle |
 |---------|------|
-| `index.html` | L'app complète (HTML+CSS+JS inline). À ne PAS confondre avec un fichier JS séparé. |
+| `index.html` | L'app complète (HTML+CSS+JS inline + `common.js`). |
+| `common.js` | Socle partagé 100 % sans DOM (`window.SqorzCommon` : norm/escape/humanError, zScore, phases, `expandIndex`, `loadIndexCached` à cache meta.json, helpers purs de l'indice perf, `formatDataDates`). Chargé avant `index.html` (`./common.js`) et par les apps sœurs (club/h2h/category) via `https://ludsoc.github.io/sqorz-stats/common.js` (+ fallback local `../sqorz_stats/common.js`). Testé par `tests/common.test.js`. Toute évolution d'une fonction partagée se fait ICI, pas dans les apps. |
 | `pilots-index.json` | Index pré-calculé de tous les pilotes FR (~79 Mo). **Généré, jamais édité à la main.** |
-| `uci-index.json` | Index UCI (Mondiaux BMX Racing, ~2,8 Mo). Chargé en parallèle, optionnel (si absent, l'app continue sans l'onglet UCI). **Généré, jamais édité à la main.** |
-| `uec-index.json` | Index UEC (Coupe/Championnats d'Europe via JSTiming, ~6 Mo estimé). Chargé en parallèle, optionnel (onglet 🇪🇺 UEC). **Généré par `build-uec.js`, jamais édité à la main.** |
+| `uci-index.json` | Index UCI (Mondiaux BMX Racing, ~2,8 Mo). Chargé en **arrière-plan** après l'index FR, optionnel (si absent, l'app continue sans l'onglet UCI). **Généré, jamais édité à la main.** |
+| `uec-index.json` | Index UEC (Coupe/Championnats d'Europe via JSTiming, ~10 Mo). Chargé en **arrière-plan** après l'index FR (onglet 🇪🇺 UEC + refresh de la recherche affichée à son arrivée), optionnel. **Généré par `build-uec.js`, jamais édité à la main.** |
 | `build-index.js` | Script Node qui génère les index par région (`node build-index.js [regionCode...]` ; par défaut FR + UCI). |
 | `build-uec.js` | Script Node qui génère `uec-index.json` depuis JSTiming (`node build-uec.js [--limit N] [--match SUBSTR] [--no-cache]`) — crawl des pages Inertia (`data-payload`), cache de contenu `.cache/uec/`. |
 | `tests/uec-parse.test.js` | Tests unitaires des helpers de parsing de `build-uec.js` (`node --test tests/`). |
-| `tests/e2e-uec.js` | E2E hors navigateur : exécute l'IIFE d'`index.html` avec les index réels, vérifie recherche/rendu/indice UEC (`node tests/e2e-uec.js`). |
+| `tests/e2e-uec.js` | E2E hors navigateur : exécute l'IIFE d'`index.html` (**`common.js` pré-chargé**) avec les index réels, vérifie recherche/rendu/indice UEC + ligne 🏅 en comparaison (`node tests/e2e-uec.js`). |
+| `tests/common.test.js` | Tests unitaires du socle partagé (`node --test tests/`) : utils, score de rang (cas Merlin Guigo), constance/proxy finale, dates par source, expansion, chargeur (fetch stubbé). |
 | `.github/workflows/build-index.yml` | Cron hebdo (lundi 3h UTC) : `node build-index.js` + `node build-uec.js`, publication R2 (6 fichiers) et commit des metas. |
 | `worker.js` | Cloudflare Worker : proxy de cache API Sqorz (KV). Utile pour chauffer le cache, pas utilisé par l'app. |
 | `warm-kv.sh` | Script shell qui pré-chauffe le KV Cloudflare via le worker proxy. |

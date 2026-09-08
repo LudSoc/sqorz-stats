@@ -1,0 +1,330 @@
+/* Sqorz Hub — socle partagé (common.js).
+ *
+ * Fonctions pures et chargeur d'index communs aux outils (sqorz-stats, sqorz-club,
+ * sqorz-head2head, sqorz-category). Hébergé par sqorz-stats, chargé en premier par
+ * chaque app via :
+ *   <script src="https://ludsoc.github.io/sqorz-stats/common.js"></script>
+ * (sqorz-stats lui-même utilise <script src="./common.js"></script>).
+ *
+ * 100 % SANS DOM : aucune référence à document/window/localStorage ici (sauf
+ * `window.SqorzCommon` en toute fin pour l'exposition). L'affichage passe par les
+ * callbacks onStatus/onProgress du chargeur. Testé par `node --test tests/common.test.js`.
+ */
+(function () {
+  'use strict';
+
+  // ===== Utils =====
+  const norm = s => (s || '')
+    .toString()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+
+  const escape = s => String(s ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+
+  // --- Messages d'erreur humanisés (wording neutre : les sources sont R2/GitHub) ---
+  function humanError(e) {
+    if (!e) return 'Erreur inconnue.';
+    if (e.name === 'AbortError') return 'Recherche annulée.';
+    const msg = e.message || String(e);
+    if (/HTTP 5\d\d/.test(msg)) return 'Le serveur de données est momentanément indisponible. Réessaie dans quelques instants.';
+    if (/HTTP 4\d\d/.test(msg)) return 'Le serveur de données refuse la requête. Réessaie plus tard.';
+    if (/network|fetch failed|Failed to fetch|NetworkError/i.test(msg)) return 'Pas de réseau. Vérifie ta connexion.';
+    if (/JSON parse/i.test(msg)) return 'Réponse du serveur illisible. Réessaie.';
+    if (/proxys|tous les proxys/i.test(msg)) return 'Les proxys publics ne répondent pas. Réessaie dans quelques minutes.';
+    return msg;
+  }
+
+  // Z-score du rang sous l'hypothèse uniforme : positif = mieux que la médiane du plateau, borné par ±√3.
+  function zScore(rank, total) {
+    if (!total || total < 2 || typeof rank !== 'number') return null;
+    const mu = (total + 1) / 2;
+    const sigma = Math.sqrt((total * total - 1) / 12);
+    if (!sigma) return null;
+    return (mu - rank) / sigma;
+  }
+
+  // ===== Phases =====
+  function isFinalPhase(d) {
+    const n = (d.phaseName || '').toLowerCase();
+    if (!/final/.test(n)) return false;
+    if (/semi|demi|quarter|quart|\d+\/|\d+.?[èe]me|\d+°|eighth|repech|petit|last.chance/.test(n)) return false;
+    return true;
+  }
+  function isMotoPhase(d) {
+    return /^moto/i.test(d.phaseName || '');
+  }
+  function isSemiPhase(d) {
+    return /semi/i.test(d.phaseName || '');
+  }
+  // Temps non valable : phase absente, sans résultat, ou DNF/DNS/DSQ (result ≥ 100 000).
+  const isNotTimedPhase = d => d == null || d.result == null || Number(d.result) >= 100000;
+  const num = s => { const n = parseFloat(s); return isFinite(n) && n > 0 ? n : null; }; // temps > 0 requis
+
+  // Phases à élimination directe présentes dans les détails (demies/quarts/8es/16es) :
+  // un pilote classé qui en a sans phase finale a été éliminé avant la finale
+  // (pas de bonus « finale atteinte » — spec indice-perf §7.4).
+  function perfHasKnockout(details) {
+    for (const d of details || []) {
+      const n = (d.phaseName || '').toLowerCase();
+      if (/semi|demi|quart|quarter|1\/8|1\/16|huitieme|seizieme/.test(n)) return true;
+    }
+    return false;
+  }
+
+  // ===== Expansion de l'index (clés courtes → champs complets) =====
+  // opts.details === false : n'expanse ni les phases ni les séries (mode économe
+  // en mémoire pour les apps qui n'en ont pas besoin, ex. head-to-head).
+  function expandIndex(idx, opts) {
+    const withDetails = !opts || opts.details !== false;
+    const withSeries = !opts || opts.series !== false;
+    for (const ev of (idx.events || [])) {
+      for (const cls of (ev.classes || [])) {
+        for (const c of (cls.competitors || [])) {
+          c.firstName = c.fn; c.lastName = c.ln; c.groupName = c.gn;
+          if (c.age === undefined) c.age = null;
+          if (!withDetails) continue;
+          // ID pilote JSTiming (index UEC uniquement) : identité intra-UEC stable (spec UEC §4.3)
+          if (c.jid != null) c.riderId = c.jid;
+          c.competitorRankDetails = (c.d || []).map(d => ({
+            phaseName: d.n, result: d.r,
+            ...(d.rp  != null ? { racePosition:  d.rp  } : {}),
+            ...(d.pc         ? { phaseCode:      d.pc  } : {}),
+            ...(d.pbc        ? { phaseBlockCode: d.pbc } : {}),
+            ...(d.rn  != null ? { raceName:       d.rn  } : {}),
+            // Champs chrono transpondeur (spec chronos-transpondeur) : tm=time, ht=hillTime, ct=corner2Time
+            ...(d.tm != null ? { time:         d.tm } : {}),
+            ...(d.ht != null ? { hillTime:     d.ht } : {}),
+            ...(d.ct != null ? { corner2Time:  d.ct } : {}),
+          }));
+        }
+      }
+    }
+    if (withSeries) {
+      for (const sr of (idx.series || [])) {
+        for (const cls of (sr.classes || [])) {
+          for (const c of (cls.competitors || [])) {
+            c.firstName = c.fn; c.lastName = c.ln; c.groupName = c.gn;
+            c.seriesRank = c.sr; c.seriesPoints = c.sp;
+            c.seriesRankCompetitorEvents = (c.ev || []).map(e => e == null ? null : ({
+              ...(e.er != null ? { eventRank:   e.er } : {}),
+              ...(e.ep != null ? { eventPoints: e.ep } : {}),
+              ...(e.t         ? { tallied: true }      : {}),
+            }));
+          }
+        }
+      }
+    }
+    return idx;
+  }
+
+  // ===== Chargeur d'index avec cache client piloté par meta.json (sha256) =====
+  // meta (sha256 attendu) → copie Cache API → sources réseau → copie périmée en dernier recours.
+  // Affichage via callbacks (pas de DOM ici) : onStatus(text, isError), onProgress(done, total).
+  // quiet = true : aucun status/progression (chargement d'arrière-plan) ; les erreurs
+  // restent visibles en console et remontent à l'appelant (qui dégrade gracieusement).
+  const INDEX_CACHE_NAME = 'sqorz-index-v1';
+
+  async function openIndexCache(tag) {
+    if (typeof caches === 'undefined') return null;
+    try { return await caches.open(INDEX_CACHE_NAME); }
+    catch (e) { console.warn(tag + ' cache indisponible :', e && e.message); return null; }
+  }
+
+  async function streamBytes(res, { label, estimatedSize, quiet, onStatus, onProgress }) {
+    const compressed = !!res.headers.get('Content-Encoding');
+    const rawTotal = parseInt(res.headers.get('Content-Length') || '0', 10);
+    const total = quiet ? 0 : (compressed ? (estimatedSize || rawTotal || 0) : (rawTotal || 0));
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      if (!quiet) {
+        const mb = (received / 1048576).toFixed(0);
+        if (total) {
+          onProgress(received, total);
+          onStatus(`Chargement ${label}… ${mb} / ${(total / 1048576).toFixed(0)} Mo`);
+        } else {
+          onStatus(`Chargement ${label}… ${mb} Mo`);
+        }
+      }
+    }
+    if (!quiet) onProgress(0, 0);
+    const allBytes = new Uint8Array(received);
+    let offset = 0;
+    for (const chunk of chunks) { allBytes.set(chunk, offset); offset += chunk.length; }
+    return allBytes;
+  }
+
+  async function loadIndexCached({
+    metaUrl, cacheKey, sources, tag = '[sqorz]', label = 'Index', estimatedSize = 0,
+    quiet = false, expandOpts = null, onStatus = null, onProgress = null,
+  }) {
+    const status = onStatus || (() => {});
+    const progress = onProgress || (() => {});
+    const log = m => console.warn(tag + ' ' + m);
+    let wantSha = null;
+    try {
+      const metaRes = await fetch(metaUrl);
+      if (metaRes.ok) {
+        const meta = await metaRes.json();
+        wantSha = (meta && meta.index && meta.index.sha256) || null;
+      }
+    } catch (e) { log('meta indisponible (' + metaUrl + ') : ' + (e && e.message)); }
+
+    const cache = await openIndexCache(tag);
+    let hit = null;
+    if (cache) {
+      try {
+        const res = await cache.match(cacheKey);
+        if (res) {
+          const sha = res.headers.get('x-index-sha');
+          if ((wantSha && sha === wantSha) || !wantSha) hit = res;
+        }
+      } catch (e) { log('lecture du cache : ' + (e && e.message)); }
+    }
+    const expand = bytes => expandIndex(JSON.parse(new TextDecoder().decode(bytes)), expandOpts || undefined);
+
+    if (hit) {
+      if (!quiet) status(`${label} déjà à jour — lecture du cache…`);
+      return expand(new Uint8Array(await hit.arrayBuffer()));
+    }
+
+    try {
+      let res = null, lastErr = null;
+      for (const url of sources) {
+        try {
+          const r = await fetch(url);
+          if (r.ok) { res = r; break; }
+          lastErr = new Error(`HTTP ${r.status}`);
+        } catch (e) { lastErr = e; log('source indisponible : ' + url + ' — ' + (e && e.message)); }
+      }
+      if (!res) throw lastErr || new Error('Index indisponible.');
+      const bytes = await streamBytes(res, { label, estimatedSize, quiet, onStatus: status, onProgress: progress });
+      if (cache && wantSha) {
+        try {
+          await cache.put(cacheKey, new Response(bytes, {
+            headers: { 'Content-Type': 'application/json', 'X-Index-Sha': wantSha },
+          }));
+        } catch (e) { log('écriture du cache : ' + (e && e.message)); }
+      }
+      return expand(bytes);
+    } catch (err) {
+      // Dernier recours : copie périmée en cache (hors-ligne)
+      if (cache) {
+        try {
+          const stale = await cache.match(cacheKey);
+          if (stale) {
+            if (!quiet) status('Hors-ligne — dernière copie connue.', true);
+            return expand(new Uint8Array(await stale.arrayBuffer()));
+          }
+        } catch (e) { /* dernier recours indisponible */ }
+      }
+      throw err;
+    }
+  }
+
+  // ===== Indice de performance (spec indice-perf-design, §4 + §7.4) =====
+  // Échelle 0–1000. Seuls les helpers purs vivent ici ; perfEngagement/perfLevel
+  // restent côté apps (ils dépendent de findClassCompetitors, spécifique à chaque index).
+  const PERF_LEVEL_COEFS = { regional: 0.93, national: 1.0, uec: 1.05, uci: 1.05 }; // §4.5 (léger, réduit §7.4)
+  const PERF_RANG_EXP = 2.5;   // exposant convexe du score de rang pour z > 0 (§7.4)
+  const PERF_CHRONO_W = 0.3;   // poids du composant chrono dans le blend (§4.3)
+  const PERF_DNF_SCORES = { final: 700, semi: 550, quarter: 400, moto: 250 }; // §4.4
+  const perfClamp = v => Math.max(5, Math.min(1000, v));
+  // Score de rang : 500 + 500·(z/√3)^2,5 pour z > 0 (convexe — le podium se détache
+  // du fond de top-20), linéaire sous la médiane. 1ᵉʳ grand champ ≈ 980-1000. (§4.1)
+  function perfScoreRang(rank, total) {
+    const z = zScore(rank, total);
+    if (z == null) return null;
+    if (z <= 0) return perfClamp(500 + 500 * z / Math.sqrt(3));
+    return perfClamp(500 + 500 * Math.pow(Math.min(1, z / Math.sqrt(3)), PERF_RANG_EXP));
+  }
+  // Meilleur temps valable du pilote (phases DNF/DNS/DSQ et temps ≤ 0 exclus)
+  function perfBestTime(details) {
+    let b = null;
+    for (const d of details || []) {
+      if (isNotTimedPhase(d)) continue;
+      const v = num(d.time);
+      if (v != null && (b == null || v < b)) b = v;
+    }
+    return b;
+  }
+  // Composant chrono : z-score sur log(temps) des pilotes chronométrés de la classe,
+  // centré sur 500, strict (peut baisser le score), < 3 chronométrés → null (§4.3)
+  function perfChronoScore(allBests, pilotBest) {
+    if (pilotBest == null || !allBests || allBests.length < 3) return null;
+    const logs = allBests.map(Math.log);
+    const mu = logs.reduce((a, b) => a + b, 0) / logs.length;
+    const sd = Math.sqrt(logs.reduce((a, b) => a + (b - mu) * (b - mu), 0) / logs.length) || 1;
+    if (!sd) return null;
+    return perfClamp(500 + 500 * (mu - Math.log(pilotBest)) / sd / Math.sqrt(3));
+  }
+  // Constance : ½·(% manches top 4) + ½·(finale atteinte) ; « finale atteinte » =
+  // phase finale valide OU rang final classé SANS phases KO publiées (§4.2 + §7.4)
+  function perfConstance(details, rank) {
+    let validMotos = 0, top4 = 0;
+    for (const d of details || []) {
+      if (!isMotoPhase(d)) continue;
+      if (typeof d.result === 'number' && d.result < 100000) { validMotos++; if (d.result <= 4) top4++; }
+    }
+    const pctTop4 = validMotos ? top4 / validMotos : 0.5;
+    let finaleOk = false;
+    for (const d of details || []) {
+      if (isFinalPhase(d) && typeof d.result === 'number' && d.result < 100000) { finaleOk = true; break; }
+    }
+    if (!finaleOk && typeof rank === 'number' && rank < 100000 && !perfHasKnockout(details)) finaleOk = true;
+    return 0.5 * pctTop4 + 0.5 * (finaleOk ? 1 : 0.4);
+  }
+  const perfCoefConstance = c => 0.95 + 0.1 * c; // ∈ [0.97, 1.05] (§7.4)
+  // Phase la plus profonde ATTEINTE par un non-classé → pénalité DNF graduée (§4.4)
+  function perfDeepestPhase(details) {
+    const order = { final: 3, semi: 2, quarter: 1, moto: 0 };
+    let depth = 'moto';
+    for (const d of details || []) {
+      const n = d.phaseName || '';
+      const t = isFinalPhase(d) ? 'final'
+        : /semi|demi/i.test(n) ? 'semi'
+        : /quart|quarter|1\/4/i.test(n) ? 'quarter'
+        : 'moto';
+      if (order[t] > order[depth]) depth = t;
+    }
+    return depth;
+  }
+
+  // ===== Fraîcheur des données =====
+  function fmtDateFr(iso) {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? null : d.toLocaleDateString('fr-FR');
+  }
+  // parts: [{ tag: 'FR', iso }, ...] — ignore les dates absentes/invalides.
+  // Une seule date distincte → « 07/09/2026 », sinon « FR 07/09/2026 · UEC 08/09/2026 ».
+  // Retourne null si aucune date valable (l'app garde alors son pied de page masqué).
+  function formatDataDates(parts) {
+    const items = (parts || [])
+      .map(p => ({ tag: p.tag, text: fmtDateFr(p.iso) }))
+      .filter(p => p.text);
+    if (!items.length) return null;
+    if (new Set(items.map(p => p.text)).size === 1) return items[0].text;
+    return items.map(p => `${p.tag} ${p.text}`).join(' · ');
+  }
+
+  window.SqorzCommon = {
+    norm, escape, humanError, zScore,
+    isFinalPhase, isMotoPhase, isSemiPhase, isNotTimedPhase, num, perfHasKnockout,
+    expandIndex, INDEX_CACHE_NAME, openIndexCache, loadIndexCached,
+    PERF_LEVEL_COEFS, PERF_RANG_EXP, PERF_CHRONO_W, PERF_DNF_SCORES,
+    perfClamp, perfScoreRang, perfBestTime, perfChronoScore,
+    perfConstance, perfCoefConstance, perfDeepestPhase,
+    fmtDateFr, formatDataDates,
+  };
+})();

@@ -25,7 +25,7 @@ Look up any BMX Race pilot and explore their full history: results by event, pro
 
 ### Tech
 
-Single-file HTML/CSS/JS, no framework, no build step. Pilot index pre-built from the public [Sqorz API](https://our.sqorz.com), refreshed weekly. Cloudflare Worker used as an API cache proxy.
+HTML/CSS/JS, no framework, no build step. Shared core (`SqorzCommon` in `common.js`: utils, index loader, perf index). Pilot index pre-built from the public [Sqorz API](https://our.sqorz.com), refreshed weekly. Cloudflare Worker used as an API cache proxy.
 
 > Community project, not affiliated with Sqorz.
 
@@ -50,6 +50,6 @@ Recherchez n'importe quel pilote BMX Race et explorez son historique complet : r
 
 ### Technique
 
-HTML/CSS/JS en fichier unique, sans framework, sans étape de build. Index des pilotes pré-construit depuis l'[API publique Sqorz](https://our.sqorz.com), rafraîchi chaque semaine. Worker Cloudflare utilisé comme proxy de cache API.
+HTML/CSS/JS, sans framework, sans étape de build. Socle partagé (`SqorzCommon` dans `common.js` : utils, chargeur d'index, indice de perf). Index des pilotes pré-construit depuis l'[API publique Sqorz](https://our.sqorz.com), rafraîchi chaque semaine. Worker Cloudflare utilisé comme proxy de cache API.
 
 > Projet communautaire non officiel, non affilié à Sqorz.
