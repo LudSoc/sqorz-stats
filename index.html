@@ -3100,6 +3100,13 @@
     const p1Primary = p1LevelMatches;
     const p1Stats = computeStats(p1Primary);
 
+    // Indice de performance au niveau comparé, sur le même périmètre que les stats
+    // (matchs déjà filtrés par année ; le pilote 2 n'a pas de séries — searchCompare
+    // ne cherche que les événements — d'où []). Sans filtre année = carrière du niveau,
+    // avec filtre année = indice de l'année (moyenne des engagements filtrés).
+    const p1Perf = perfLevel(part, p1Primary, ctx.levelData[part].series || []);
+    const p2Perf = perfLevel(part, compareFiltered, []);
+
     // Identité
     const p1Sorted = [...p1Primary].sort((a, b) => (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
     const p1c = p1Sorted[0]?.competitor;
@@ -3142,6 +3149,7 @@
       { label:'% qualification', v1:fp1,              v2:fp2,              hi:true,  s:'%' },
       { label:'% finales',      v1:fin1,             v2:fin2,             hi:true,  s:'%' },
       { label:'% manches top 4',v1:mtr1,             v2:mtr2,             hi:true,  s:'%' },
+      { label: y ? `🏅 Indice perf ${y}` : '🏅 Indice perf carrière', v1:p1Perf.career, v2:p2Perf.career, hi:true },
     ];
 
     function barW(v1, v2, hi) {

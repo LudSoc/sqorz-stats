@@ -85,7 +85,8 @@ const indexes = {
 // Le IIFE n'expose rien : on injecte un hook de test + les index réels, et on
 // retire le init() async (dont le .catch réseau réassignerait les index à vide).
 const HOOK = `
-;window.__test = { searchLocal, searchUci, searchUec, render, norm, computeStats, levelOf };
+;window.__test = { searchLocal, searchUci, searchUec, render, norm, computeStats, levelOf,
+  __setCompare: (m) => { compareActive = true; lastCompareMatches = m; } };
 `;
 const initIdx = mainScript.indexOf('(async function init()');
 if (initIdx < 0) { console.error('init() introuvable'); process.exit(1); }
@@ -147,6 +148,26 @@ check('badge 🏅 (indice) présent dans le rendu', out.includes('🏅'));
 // --- 4. Non-régression : pilote FR ---
 const resFr = T.searchLocal('HEITZ');
 check('recherche FR non régressée (HEITZ)', resFr.events.length > 0, `${resFr.events.length} matches`);
+
+// --- 5. Comparaison 2 pilotes + indice de performance ---
+const p2 = T.searchLocal('ANJOUBAULT');
+T.__setCompare(p2.events);
+global.document.getElementById('compareInp').value = 'ANJOUBAULT';
+try {
+  T.render(local.events, 'date-desc', local.series, uci.events, uci.series, uec.events);
+  check('render() avec comparaison active sans erreur', true);
+} catch (e) {
+  check('render() avec comparaison active sans erreur', false, e.message);
+}
+const cmpOut = global.document.getElementById('compareResults').innerHTML || '';
+check('comparaison rendue (section Comparaison)', cmpOut.includes('id="compareSection"'));
+check('ligne 🏅 Indice perf présente dans la comparaison', cmpOut.includes('Indice perf'));
+const perfChunk = cmpOut.split('<div class="compare-row">').slice(1).find(c => c.includes('Indice perf'));
+const perfVals = perfChunk
+  ? [...perfChunk.matchAll(/<div class="cv p[12][^"]*">([^<]*)<\/div>/g)].map(m => m[1])
+  : [];
+const perfValsOk = perfVals.length === 2 && /^\d+$/.test(perfVals[0]) && /^\d+$/.test(perfVals[1]);
+check('indice perf chiffré pour les deux pilotes', perfValsOk, perfVals.length === 2 ? `p1=${perfVals[0]} p2=${perfVals[1]}` : 'ligne introuvable');
 
 console.log(failures ? `\n${failures} échec(s)` : '\nTous les tests E2E passent.');
 process.exit(failures ? 1 : 0);

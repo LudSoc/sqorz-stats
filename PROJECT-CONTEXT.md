@@ -87,7 +87,7 @@ Rendu : `renderPerfComponent` (composant « 🏅 Indice de performance » dans l
 ### Rendu
 - `renderStatsDashboard(s)` — 4 panneaux : Palmarès, Performance, Finales, Conditions (avec best/worst gate).
 - `renderStats(s)` → `renderStatsDashboard(s)` (le composant Indice est intercalé entre le dashboard et les graphiques dans la partie Stats de chaque niveau).
-- **Parties par niveau** (spec « séparation niveaux », D1–D16) : `LEVELS`/`levelOf()`/`NATIONAL_ACCOUNTS` ; panneaux par partie (`levelPanels`), sous-onglets (`subTabsHtml`, `data-part-btn` / `data-subtab-btn` / `data-compare-part`), `partPref` (localStorage), comparatif par niveau (`comparePart`, `lastCompareUciMatches`). Sticky hybride sur mobile (rangée 1 seule). Boutons « Masquer/Afficher » et `sectionState`/`applySectionVisibility` supprimés.
+- **Parties par niveau** (spec « séparation niveaux », D1–D16) : `LEVELS`/`levelOf()`/`NATIONAL_ACCOUNTS` ; panneaux par partie (`levelPanels`), sous-onglets (`subTabsHtml`, `data-part-btn` / `data-subtab-btn` / `data-compare-part`), `partPref` (localStorage), comparatif par niveau (`comparePart`, `lastCompareUciMatches`, lignes dont 🏅 indice perf via `perfLevel` au niveau comparé — carrière, ou année si filtre année). Sticky hybride sur mobile (rangée 1 seule). Boutons « Masquer/Afficher » et `sectionState`/`applySectionVisibility` supprimés.
 - `renderYearlyChart(matches)` — rang moyen par saison (2 axes : rang + % finales). Nécessite ≥ 2 saisons.
 - `renderEvolutionChart(matches)` — z-score par date, zones colorées. Nécessite ≥ 2 engagements.
 - `renderRankHistogram(matches)` — bins 1er/2e/3e/4-8/9-16/17+.
