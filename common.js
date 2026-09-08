@@ -77,20 +77,24 @@
   }
 
   // ===== Expansion de l'index (clés courtes → champs complets) =====
-  // opts.details === false : n'expanse ni les phases ni les séries (mode économe
-  // en mémoire pour les apps qui n'en ont pas besoin, ex. head-to-head).
+  // opts.details : true (défaut) = tout ; false = noms seuls (mode économe en
+  // mémoire) ; 'chrono' = noms + PHASES CHRONOMÉTRÉES seules, en champs minimaux
+  // (phaseName/result/time/hillTime/corner2Time — pour les duels chronos H2H :
+  // seules les épreuves transpondeur pèsent, le reste ne coûte presque rien).
   function expandIndex(idx, opts) {
-    const withDetails = !opts || opts.details !== false;
+    const detailsOpt = !opts || opts.details === undefined ? true : opts.details;
     const withSeries = !opts || opts.series !== false;
     for (const ev of (idx.events || [])) {
       for (const cls of (ev.classes || [])) {
         for (const c of (cls.competitors || [])) {
           c.firstName = c.fn; c.lastName = c.ln; c.groupName = c.gn;
           if (c.age === undefined) c.age = null;
-          if (!withDetails) continue;
+          if (detailsOpt === false) continue;
+          let ds = (c.d || []);
+          if (detailsOpt === 'chrono') ds = ds.filter(d => d.tm != null || d.ht != null || d.ct != null);
           // ID pilote JSTiming (index UEC uniquement) : identité intra-UEC stable (spec UEC §4.3)
           if (c.jid != null) c.riderId = c.jid;
-          c.competitorRankDetails = (c.d || []).map(d => ({
+          c.competitorRankDetails = ds.map(d => ({
             phaseName: d.n, result: d.r,
             ...(d.rp  != null ? { racePosition:  d.rp  } : {}),
             ...(d.pc         ? { phaseCode:      d.pc  } : {}),
