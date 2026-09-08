@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Application web statique (SPA) de consultation de statistiques BMX racing, alimentée par l'API publique Sqorz. Elle permet de rechercher un coureur, visualiser ses performances par événement, comparer plusieurs coureurs, et naviguer dans les classements de championnats.
+Application web statique (SPA) de consultation de statistiques BMX racing, alimentée par l'API publique Sqorz **et par JSTiming** (compétitions UEC, depuis 2026-09-03). Elle permet de rechercher un coureur, visualiser ses performances par événement, comparer plusieurs coureurs, et naviguer dans les classements de championnats.
 
 Architecture : tout-en-un dans `index.html` (HTML + CSS + JS inline, ~3000 lignes). Pas de framework, pas de build step.
 
@@ -201,9 +201,22 @@ Depuis 2026-09-02, `slimCompetitor` (`build-index.js`) **conserve** ces champs s
 
 Feature **100 % côté client** (spec `docs/superpowers/specs/2026-09-02-indice-perf-design.md`) : un score 0–1000 par pilote, par année et carrière, qui combine rang pondéré par les participants (`zScore` → `500 + 500·z/√3`), constance par phase (±10 %, proxy « classé ⇒ finales » pour les Mondiaux), chrono transpondeur (z-score sur log temps, centré, strict — poids `PERF_CHRONO_W` = 0,3), classements de séries (même z, année = dernier événement), sous coefs de niveau légers (Régional 0,9 / National 1,0 / UCI 1,15, clamp [5,1000]). DNF/DNS/DSQ final = pénalité graduée par la phase atteinte (`PERF_DNF_SCORES` : finale ≈ 700 · demi ≈ 550 · quart ≈ 400 · manche/inconnu ≈ 250, × coef).
 
-Affichage : chip **🏅 carrière** sur la carte pilote (tous niveaux), composant « 🏅 Indice de performance » dans l'onglet **Stats** de chaque partie (carrière + par année, avec encadré « ℹ️ Comment est-il calculé ? »), badges **🏅 … · N eng.** à côté des séparateurs d'année de la timeline. Calibré sur données réelles (2026-09-02) : médiane population ≈ 500, front runners > 800, HEITZ 829 / ANJOUBAULT 709 (carrière = moyenne des moyennes annuelles).
+Affichage : chip **🏅 carrière** sur la carte pilote (tous niveaux), composant « 🏅 Indice de performance » dans l'onglet **Stats** de chaque partie (carrière + par année, avec encadré « ℹ️ Comment est-il calculé ? »), badges **🏅 … · N eng.** à côté des séparateurs d'année de la timeline. Calibré sur données réelles (2026-09-02) : médiane population ≈ 500, front runners > 800, HEITZ 829 / ANJOUBAULT 709 (carrière = moyenne des moyennes annuelles). Depuis la spec UEC : `PERF_LEVEL_COEFS.uec = 1,15` (comme UCI) ; les pilotes non classés en UEC (classes 6-10 ans sans overall) sont pénalisés via `perfDeepestPhase` sur leurs phases conservées.
 
 ---
+
+## Source JSTiming (UEC — Coupe/Championnats d'Europe)
+
+Depuis la spec `docs/superpowers/specs/2026-09-03-uec-jstiming-design.md`, les compétitions UEC (publiées sur `results.jstiming.com`, absentes de Sqorz) sont intégrées comme **4ᵉ niveau** « 🇪🇺 UEC » entre National et UCI :
+
+- **Plateforme** : Laravel + Inertia (SPA Vue) — les données sont embarquées en JSON dans l'attribut `data-payload` du HTML (HTML-unescape + `JSON.parse`). Pas d'API dédiée, **pas de CORS** → crawl côté Node uniquement (`build-uec.js`). `robots.txt` : rien d'interdit.
+- **Endpoints** : `GET /` (liste des organisateurs, UEC = `99bf5559-…`), `GET /{orgUuid}?page=N` (événements passés, 15/page, ~130 événements, 9 pages), `GET /event/{uuid}` (round par défaut), `GET /event/{uuid}/{roundSlug}` (`moto-1round-1`, `moto-2lcq`, `moto-3`, `14-finals`, `12-finals`, `finals`, `overall`…).
+- **Format** : `heats` (une course par heat, `class_code` = G15/B15/MJ/MU/ME/WJ/WU/WE…) contenant `riders` (`id` stable type `"10076737690G"` — **à trimmer**, `name` « Prénom NOM », `rank`, `result`, `additional_columns`). Le round `overall` donne le classement final par classe ; les rounds de course donnent les positions par course + chronos (`c11`=Start, `c12`=Split 1, `c14`=Finish quand `*_cname` le dit).
+- **Pièges vérifiés en recette** : `start_date`/`end_date` au format **`DD-MM-YYYY`** (→ `jdToIso`) ; classes 6-10 ans **sans classement overall** (`colRank: "G"`, ranks vides → pilotes avec phases mais `rank` absent, géré par l'indice de perf via `perfDeepestPhase`) ; le slug `moto-2lcq` contient **toutes** les manches 2 (pas seulement les LCQ) ; chronos seulement pour les classes 15+/Junior/U23/Élite ; `column_name_result` = `Time` seulement sur les heats chronométrés.
+- **Mapping D6** : Finish→`time` (« ⏱️ Chrono »), Split 1→`corner2Time` (« ⏱️ Virage 1 »), Start→`hillTime` (« ⏱️ Butte ») — réutilise tout le pipeline chrono existant.
+- **Sorties** : `uec-index.json` + `uec-index.events.ndjson` + `uec-index.meta.json` (format slim aligné : `fn/ln/gn/rank/plate/d[n,r,tm,ct,ht]` + `jid` → `riderId` après `expandIndex()`), orga unique `uec` (« UEC — Union Européenne de Cyclisme »), `series: []` (D4 : JSTiming n'expose aucune série multi-manches).
+- **Cache de contenu** (`.cache/uec/`, sha256 par URL + ETag) : le crawl hebdo ne re-traite que les pages modifiées. `DELAY_MS=150`, retry ×3.
+- **Tests** : `node --test tests/uec-parse.test.js` (helpers de parsing) et `node tests/e2e-uec.js` (E2E hors navigateur avec index réels ; nécessite `uec-index.json` — cf. `node build-uec.js --limit 3`).
 
 ## Organisation UCI (Mondiaux)
 
@@ -279,13 +292,14 @@ Fichier séparé (≈2,8 Mo) généré par le même `build-index.js` à partir d
 - 1 édition = 4 événements (un par jour : WED/THU/FRI/SAT).
 - `groupName` = code pays (ex. `FRA`) et non le club local.
 
-## Navigation par niveaux (Global / Régional / National / UCI)
+## Navigation par niveaux (Global / Régional / National / UEC / UCI)
 
-Depuis la spec `docs/superpowers/specs/2026-09-02-separation-niveaux-design.md`, la vue pilote est organisée en **2 rangées d'onglets** :
+Depuis la spec `docs/superpowers/specs/2026-09-02-separation-niveaux-design.md` (+ UEC : spec `2026-09-03-uec-jstiming-design.md`), la vue pilote est organisée en **2 rangées d'onglets** :
 
-1. **Rangée 1 — parties** : `📊 Global | 📍 Régional | 🇫🇷 National | 🌍 UCI` (constante `LEVELS` dans `index.html`, clés `global|regional|national|uci`).
-   - **Global** = agrégation des trois niveaux (événements + séries concaténés, toutes stats confondues) — **défaut au premier rendu** (aucun `partPref` mémorisé).
-   - **National** = les 5 comptes FFC (`NATIONAL_ACCOUNTS` : `ffc` + 4 zones `ffcbmxne/no/so/sudest`) — 185 événements / 35 séries ; **Régional** = toutes les autres orgs de l'index FR (520 événements / 73 séries, vérifié : aucun croisement entre les deux groupes) ; **UCI** = l'index `uci-index.json`.
+1. **Rangée 1 — parties** : `📊 Global | 📍 Régional | 🇫🇷 National | 🇪🇺 UEC | 🌍 UCI` (constante `LEVELS` dans `index.html`, clés `global|regional|national|uec|uci`).
+   - **Global** = agrégation des quatre niveaux (événements + séries concaténés, toutes stats confondues) — **défaut au premier rendu** (aucun `partPref` mémorisé).
+   - **National** = les 5 comptes FFC (`NATIONAL_ACCOUNTS` : `ffc` + 4 zones `ffcbmxne/no/so/sudest`) — 185 événements / 35 séries ; **Régional** = toutes les autres orgs de l'index FR (520 événements / 73 séries, vérifié : aucun croisement entre les deux groupes) ; **UEC** = l'index `uec-index.json` (JSTiming, événements uniquement) ; **UCI** = l'index `uci-index.json`.
+   - Les matches UEC/UCI sont identifiés par l'index d'origine (`lastUecMatches`/`lastUciMatches`), **pas par `levelOf()`** (qui ne connaît que les comptes FR).
    - Une partie n'est affichée que si le pilote actif a des données à ce niveau (badge = nombre d'engagements). La partie choisie est mémorisée en `localStorage` (`partPref`) ; sans préférence, repli sur la première partie disponible (donc Global). Le mini-sélecteur de la comparaison 2 pilotes propose les mêmes parties (Global compris).
 2. **Rangée 2 — sous-vues** (de la partie active, défaut Stats) : `📈 Stats | 🏆 Championnats | 🏁 Courses`, chacune recalculée sur les seuls résultats du niveau.
 
@@ -299,6 +313,8 @@ La comparaison 2 pilotes a son propre mini-sélecteur de niveau (mêmes parties,
 |---------|------|
 | `index.html` | Application complète (HTML/CSS/JS inline, ~3500 lignes) |
 | `build-index.js` | Script de génération des index (`pilots-index.json` FR + `uci-index.json` UCI) |
+| `build-uec.js` | Script de génération de l'index UEC (`uec-index.json`) depuis JSTiming — crawl Node, cache `.cache/uec/` |
+| `uec-index.json` | Index UEC (Coupe/Championnats d'Europe) — ne pas éditer à la main |
 | `uci-index.json` | Index UCI (Mondiaux BMX Racing) — ne pas éditer à la main |
 | `worker.js` | Cloudflare Worker — proxy de cache API |
 | `service-worker.js` | Service Worker — cache du shell de l'app (PWA, enregistré dans `index.html`, chemins relatifs, index de données exclus du cache) |

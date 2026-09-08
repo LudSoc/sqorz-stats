@@ -21,8 +21,12 @@ C'est un outil de la suite « Sqorz Hub » (frères : `sqorz-head2head`, `sqorz-
 | `index.html` | L'app complète (HTML+CSS+JS inline). À ne PAS confondre avec un fichier JS séparé. |
 | `pilots-index.json` | Index pré-calculé de tous les pilotes FR (~79 Mo). **Généré, jamais édité à la main.** |
 | `uci-index.json` | Index UCI (Mondiaux BMX Racing, ~2,8 Mo). Chargé en parallèle, optionnel (si absent, l'app continue sans l'onglet UCI). **Généré, jamais édité à la main.** |
+| `uec-index.json` | Index UEC (Coupe/Championnats d'Europe via JSTiming, ~6 Mo estimé). Chargé en parallèle, optionnel (onglet 🇪🇺 UEC). **Généré par `build-uec.js`, jamais édité à la main.** |
 | `build-index.js` | Script Node qui génère les index par région (`node build-index.js [regionCode...]` ; par défaut FR + UCI). |
-| `.github/workflows/build-index.yml` | Cron hebdo (lundi 3h UTC) : `node build-index.js` puis commit du JSON. |
+| `build-uec.js` | Script Node qui génère `uec-index.json` depuis JSTiming (`node build-uec.js [--limit N] [--match SUBSTR] [--no-cache]`) — crawl des pages Inertia (`data-payload`), cache de contenu `.cache/uec/`. |
+| `tests/uec-parse.test.js` | Tests unitaires des helpers de parsing de `build-uec.js` (`node --test tests/`). |
+| `tests/e2e-uec.js` | E2E hors navigateur : exécute l'IIFE d'`index.html` avec les index réels, vérifie recherche/rendu/indice UEC (`node tests/e2e-uec.js`). |
+| `.github/workflows/build-index.yml` | Cron hebdo (lundi 3h UTC) : `node build-index.js` + `node build-uec.js`, publication R2 (6 fichiers) et commit des metas. |
 | `worker.js` | Cloudflare Worker : proxy de cache API Sqorz (KV). Utile pour chauffer le cache, pas utilisé par l'app. |
 | `warm-kv.sh` | Script shell qui pré-chauffe le KV Cloudflare via le worker proxy. |
 | `service-worker.js` | Service Worker PWA : cache des assets (app shell uniquement). |
@@ -35,10 +39,10 @@ C'est un outil de la suite « Sqorz Hub » (frères : `sqorz-head2head`, `sqorz-
 
 ## Flux de données dans l'app (index.html)
 
-1. **Chargement** : `loadPilotsIndex()` charge `./pilots-index.json` puis `./uci-index.json` (séquentiel, via `loadIndexFile(url, label, estimatedSize)` : streaming + barre de progression). L'index UCI est **optionnel** (`.catch` → index vide si fichier absent). Chaque JSON est **compressé** (clés courtes) puis `expandIndex()` le décompresse en structure complète.
+1. **Chargement** : `loadPilotsIndex()` charge `./pilots-index.json` puis `./uci-index.json` puis `./uec-index.json` (via `loadIndexCached`, cache client piloté par meta.json). Les index UCI et UEC sont **optionnels** (`.catch` → index vide si fichier absent). Chaque JSON est **compressé** (clés courtes) puis `expandIndex()` le décompresse en structure complète.
 2. **Recherche** : `searchLocal(query)` parcourt TOUT l'index en mémoire (événements + séries), matche par tokens normalisés (`norm()` : minuscules, sans accents, sans ponctuation). Une « match » = un pilote × un événement × une classe.
 3. **Filtrage par pilote** : les homonymes sont regroupés par clé `norm(firstName lastName)` → `pilotMap`. L'utilisateur choisit via `.pilot-picker` (sinon auto = pilote le plus récent).
-4. **Rendu** : `render(matches, sortMode, seriesMatches, uciMatches, uciSeriesMatches)` partitionne d'abord les résultats par **niveau** (`levelOf(accountCode)` + constante `NATIONAL_ACCOUNTS` : 5 comptes FFC = national, reste de la France = régional, index UCI = uci, cf. spec « séparation niveaux ») — **Global** (premier onglet, défaut) = concaténation événements + séries des trois niveaux. Puis affiche **2 rangées d'onglets** : rangée 1 = parties (**📊 Global / 📍 Régional / 🇫🇷 National / 🌍 UCI**, badge = engagements, masquées si vides, choix mémorisé `partPref` en localStorage) ; rangée 2 = sous-vues de la partie active (**📈 Stats** — dashboard + 4 graphiques SVG, **🏆 Championnats** — séries, **🏁 Courses** — timeline verticale), recalculées sur le seul niveau (Global = tous). Puis `initAnimations()` (count-up + IntersectionObserver sur timeline).
+4. **Rendu** : `render(matches, sortMode, seriesMatches, uciMatches, uciSeriesMatches, uecMatches)` partitionne d'abord les résultats par **niveau** (`levelOf(accountCode)` + constante `NATIONAL_ACCOUNTS` : 5 comptes FFC = national, reste de la France = régional, index UCI = uci, index UEC = uec, cf. spec « séparation niveaux » + spec UEC) — **Global** (premier onglet, défaut) = concaténation événements + séries des quatre niveaux. Puis affiche **2 rangées d'onglets** : rangée 1 = parties (**📊 Global / 📍 Régional / 🇫🇷 National / 🇪🇺 UEC / 🌍 UCI**, badge = engagements, masquées si vides, choix mémorisé `partPref` en localStorage) ; rangée 2 = sous-vues de la partie active (**📈 Stats** — dashboard + 4 graphiques SVG, **🏆 Championnats** — séries, **🏁 Courses** — timeline verticale), recalculées sur le seul niveau (Global = tous). Puis `initAnimations()` (count-up + IntersectionObserver sur timeline).
 5. **État URL** : `?name=…&year=…&sort=…` via `pushStateUrl()`/`replaceStateUrl()`. Au load, l'état est restauré (`init()`), avec cache des résultats de recherche (6h, localStorage) pour éviter de refaire le scan.
 
 ### Compétences clés de l'index (décompressé par `expandIndex`)
@@ -56,8 +60,9 @@ C'est un outil de la suite « Sqorz Hub » (frères : `sqorz-head2head`, `sqorz-
 ### Recherche & état
 - `norm(s)` — normalisation (NFD, minuscules, alphanumérique + espaces). Utilisée pour matcher noms/clubs.
 - `matchPilot(firstName, lastName, tokens)` — tous les tokens doivent être inclus dans le nom complet.
-- `searchInIndex(index, query)` — scan mémoire générique ; `searchLocal(query)` = index FR, `searchUci(query)` = index UCI.
+- `searchInIndex(index, query)` — scan mémoire générique ; `searchLocal(query)` = index FR, `searchUci(query)` = index UCI, `searchUec(query)` = index UEC.
 - État UCI : `lastUciMatches` / `lastUciSeriesMatches` (remplis dans `searchSelected`, filtrés par année dans `renderFiltered`, inclus dans le cache résultats 6h sous `uciMatches`/`uciSeriesMatches`).
+- État UEC : `lastUecMatches` (idem UCI, cache sous `uecMatches`) ; comparaison : `lastCompareUecMatches`. Cache résultats **V3** (nouveau champ + nouvelle source → version incrémentée).
 - Dans `render()` : `pilotSource` = matches FR, ou UCI si pas de FR ; `primaryUciMatches` suivent la même clé `norm(name)` que le pilote sélectionné ; `uciStats = computeStats(primaryUciMatches)` (computeStats est déjà générique).
 - `searchPilotsForAc(query)` — autocomplétion : filtre le **pré-index des noms** (`nameIndex`, construit UNE fois au chargement par `buildNameIndex()`), trie par nombre d'occurrences, max 12 (`AC_MAX`). Ne couvre que l'index FR. Chaque champ d'autocomplétion est **debouncé** (150 ms).
 - `expandIndex(idx)` — convertit les clés courtes en clés longues + reconstruit `competitorRankDetails` / `seriesRankCompetitorEvents`.
@@ -75,7 +80,7 @@ Points délicats :
 - `gateResults[gate]` : classements en manche par ligne de départ (pour « meilleure/pire ligne »), seulement si gate 1-8 et result 1-20.
 
 ### Indice de performance (spec indice-perf-design.md)
-Échelle **0–1000**, calculé côté client, aucune donnée ajoutée. Helpers : `perfScoreRang` (500 + 500·z/√3 via `zScore` — rang pondéré par champ), `perfConstance`/`perfCoefConstance` (½·%top4 + ½·finales ; finale atteinte = phase finale valide **ou** rang classé — proxy Mondiaux), `perfChronoScore` (z-score sur log temps, centré, strict — biais linéaire éliminé par calibration), `perfEngagement` (blend chrono `PERF_CHRONO_W`=0,3 ; DNF/DNS/DSQ = `PERF_DNF_SCORES` gradué par phase la plus profonde atteinte via `perfDeepestPhase` : finale 700 / demi 550 / quart 400 / manche 250 — un DNF en manche n'est pas éliminatoire, seule la progression compte ; phases des non-classés conservées par `build-index.js`), `perfSeriesScore` (z sur S classés, année = dernier événement conné), `perfLevel`/`computePerfIndices` (coefs `PERF_LEVEL_COEFS` 0,9/1,0/1,15, clamp [5,1000] après coef ; **carrière = moyenne des moyennes annuelles**, §4.7).
+Échelle **0–1000**, calculé côté client, aucune donnée ajoutée. Coefs de niveau : `PERF_LEVEL_COEFS` = Régional 0,9 / National 1,0 / **UEC 1,15** / UCI 1,15. Helpers : `perfScoreRang` (500 + 500·z/√3 via `zScore` — rang pondéré par champ), `perfConstance`/`perfCoefConstance` (½·%top4 + ½·finales ; finale atteinte = phase finale valide **ou** rang classé — proxy Mondiaux), `perfChronoScore` (z-score sur log temps, centré, strict — biais linéaire éliminé par calibration), `perfEngagement` (blend chrono `PERF_CHRONO_W`=0,3 ; DNF/DNS/DSQ = `PERF_DNF_SCORES` gradué par phase la plus profonde atteinte via `perfDeepestPhase` : finale 700 / demi 550 / quart 400 / manche 250 — un DNF en manche n'est pas éliminatoire, seule la progression compte ; phases des non-classés conservées par `build-index.js`), `perfSeriesScore` (z sur S classés, année = dernier événement conné), `perfLevel`/`computePerfIndices` (coefs `PERF_LEVEL_COEFS` 0,9/1,0/1,15, clamp [5,1000] après coef ; **carrière = moyenne des moyennes annuelles**, §4.7).
 
 Rendu : `renderPerfComponent` (composant « 🏅 Indice de performance » dans l'onglet Stats de chaque niveau : carrière + par année, avec encadré « ℹ️ Comment est-il calculé ? »), chip `🏅` sur la carte pilote (5ᵉ paramètre de `renderPilotCard` = carrière Global), badges `🏅 N · M eng.` par année dans `renderTimeline` (3ᵉ paramètre `perfByYear`). Calibré sur données réelles 2026-09-02 (ancrage : médiane population ≈ 500, front runners > 800, Mondiaux ≈ 960–1000).
 
@@ -117,6 +122,13 @@ Rendu : `renderPerfComponent` (composant « 🏅 Indice de performance » dans l
 - Filtres : événements avec `publish !== false`, classes vides sautées, phases filtrées si pas de `phaseName`/`result`. `slimCompetitor` conserve les **champs chrono** de l'API (`time`, `hillTime`, `corner2Time` → `tm`/`ht`/`ct`) quand présents (épreuves chronométrées par transpondeur — spec chronos-transpondeur).
 - Sortie par région : `{ generated, orgs, events, series }` (JSON.stringify, non minifié). Le workflow GitHub commite `pilots-index.json` ET `uci-index.json`.
 
+### Orga UEC (`build-uec.js`)
+
+- Source **JSTiming** (`results.jstiming.com`), orga UEC = uuid `99bf5559-4864-4496-9976-9681ae1834b7` (~130 événements passés, filtrés sur `button_text_view == "Results"`).
+- Par événement : round `overall` (classements finaux + `classOptions`) + chaque round de course (positions + chronos `c11`/`c12`/`c14` → `ht`/`ct`/`tm`). Jointure riders par **id JSTiming** (trim) → `jid`.
+- Particularités vérifiées : dates `DD-MM-YYYY` ; classes 6-10 ans sans overall (ranks vides → `rank` absent, phases conservées) ; chronos seulement 15+/Junior/U23/Élite ; `series: []`.
+- Cache de contenu `.cache/uec/` (sha256 + ETag) — le crawl hebdo ne re-traite que les pages modifiées. Extrapolation volume : **≈ 6 Mo** non compressé pour 130 événements (mesuré sur échantillon, spec D10).
+
 ### Orga UCI (`ucibmxworlds`)
 
 - Région `UCI` = « Union Cycliste Internationale », 1 seule orga : `ucibmxworlds` (« UCI BMX Racing »).
@@ -133,7 +145,7 @@ Rendu : `renderPerfComponent` (composant « 🏅 Indice de performance » dans l
 
 ### Service Worker (`service-worker.js`)
 - Enregistré dans `index.html` (`navigator.serviceWorker.register('./service-worker.js')`). Chemins **relatifs** (`./`, `./index.html`) — l'app vit sur un sous-chemin (/sqorz-stats/). Stratégie réseau d'abord avec fallback cache ; fallback de navigation vers le shell hors-ligne.
-- **Les index de données ne sont JAMAIS cachés** (`NO_CACHE` : `pilots-index.json`, `uci-index.json`) — ils passent directement par le navigateur.
+- **Les index de données ne sont JAMAIS cachés** (`NO_CACHE` : `pilots-index.json`, `uci-index.json`, `uec-index.json`) — ils passent directement par le navigateur.
 - Bump de version : `CACHE_NAME = 'sqorz-v2'` (l'activate purge les anciens caches).
 
 ### Cache navigateur (localStorage dans index.html)

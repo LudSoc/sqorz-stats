@@ -1376,6 +1376,7 @@
 (() => {
   let pilotsIndex = null;
   let uciIndex = null; // index UCI (Mondiaux BMX Racing) — chargé en parallèle, optionnel
+  let uecIndex = null; // index UEC (Coupe/Championnats d'Europe, JSTiming) — optionnel
 
   // ===== Niveaux de compétition (spec « séparation niveaux », D1–D3, D13) =====
   // Les 5 comptes FFC (fédération + 4 zones) organisent tout le niveau national ;
@@ -1383,9 +1384,10 @@
   // Vérifié sur les données 2023-2026 : aucune série croisée entre les deux groupes.
   const NATIONAL_ACCOUNTS = new Set(['ffc', 'ffcbmxne', 'ffcbmxno', 'ffcbmxso', 'ffcbmxsudest']);
   const LEVELS = [
-    { key: 'global',   label: '📊 Global' },    // agrégation Régional + National + UCI (défaut au 1ᵉʳ rendu)
+    { key: 'global',   label: '📊 Global' },    // agrégation Régional + National + UEC + UCI (défaut au 1ᵉʳ rendu)
     { key: 'regional', label: '📍 Régional' },  // emoji épingle de localisation (D13 — facile à changer ici)
     { key: 'national', label: '🇫🇷 National' },
+    { key: 'uec',      label: '🇪🇺 UEC' },      // JSTiming : Coupe/Championnats d'Europe (spec UEC, D1)
     { key: 'uci',      label: '🌍 UCI' },
   ];
   function levelOf(accountCode) {
@@ -1438,11 +1440,14 @@
   function searchUci(query) {
     return searchInIndex(uciIndex, query);
   }
+  function searchUec(query) {
+    return searchInIndex(uecIndex, query);
+  }
 
   // --- Cache des derniers résultats de recherche ---
   // Versionné : à chaque changement de format des données en cache (ex. ajout des
   // chronos tm/ht/ct) on incrémente, pour ignorer les caches périmés (D8 spec chronos).
-  const RESULTS_CACHE_VERSION = 2;
+  const RESULTS_CACHE_VERSION = 3; // V3 : ajout des matches UEC (spec UEC §5.4)
   const RESULTS_CACHE_KEY = 'sqorzResultsCacheV' + RESULTS_CACHE_VERSION;
   const RESULTS_CACHE_TTL = 6 * 60 * 60 * 1000; // 6h
 
@@ -1473,7 +1478,7 @@
   function resultsCacheKey(query) {
     return query;
   }
-  function saveResultsCache(query, matches, seriesMatches, uciMatches, uciSeriesMatches) {
+  function saveResultsCache(query, matches, seriesMatches, uciMatches, uciSeriesMatches, uecMatches) {
     try {
       const payload = JSON.stringify({
         cacheKey: resultsCacheKey(query),
@@ -1482,6 +1487,7 @@
         seriesMatches: seriesMatches.map(slimSeriesMatch),
         uciMatches: (uciMatches || []).map(slimMatch),
         uciSeriesMatches: (uciSeriesMatches || []).map(slimSeriesMatch),
+        uecMatches: (uecMatches || []).map(slimMatch),
       });
       localStorage.setItem(RESULTS_CACHE_KEY, payload);
     } catch (e) {
@@ -1774,6 +1780,8 @@
       for (const cls of (ev.classes || [])) {
         for (const c of (cls.competitors || [])) {
           c.firstName = c.fn; c.lastName = c.ln; c.groupName = c.gn;
+          // ID pilote JSTiming (index UEC uniquement) : identité intra-UEC stable (spec UEC §4.3)
+          if (c.jid != null) c.riderId = c.jid;
           c.competitorRankDetails = (c.d || []).map(d => ({
             phaseName: d.n, result: d.r,
             ...(d.rp  != null ? { racePosition:  d.rp  } : {}),
@@ -1817,6 +1825,7 @@
   const INDEX_CACHE_URLS = {
     pilots: 'https://sqorz.local/cache/pilots-index.json',
     uci:    'https://sqorz.local/cache/uci-index.json',
+    uec:    'https://sqorz.local/cache/uec-index.json',
   };
 
   async function openIndexCache() {
@@ -1967,6 +1976,19 @@
         console.warn('[sqorz] uci-index.json indisponible :', e.message);
         return { events: [], series: [] };
       });
+      // Index UEC (Coupe/Championnats d'Europe via JSTiming) — optionnel, même traitement
+      uecIndex = await loadIndexCached({
+        key: 'uec',
+        metaUrl: './uec-index.meta.json',
+        urls: IS_LOCAL
+          ? ['./uec-index.json', `${R2_BASE}/uec-index.json`, `${RELEASE_BASE}/uec-index.json`]
+          : [`${R2_BASE}/uec-index.json`, `${RELEASE_BASE}/uec-index.json`, './uec-index.json'],
+        label: 'index UEC (Europe)',
+        estimatedSize: 8_000_000,
+      }).catch(e => {
+        console.warn('[sqorz] uec-index.json indisponible :', e.message);
+        return { events: [], series: [] };
+      });
 
       buildNameIndex();
       nameInp.disabled = false;
@@ -1991,7 +2013,7 @@
     saveRecentSearch(query);
 
     const searchKey = norm(query);
-    if (searchKey === lastSearchKey && (lastMatches.length || lastSeriesMatches.length || lastUciMatches.length || lastUciSeriesMatches.length)) {
+    if (searchKey === lastSearchKey && (lastMatches.length || lastSeriesMatches.length || lastUciMatches.length || lastUciSeriesMatches.length || lastUecMatches.length)) {
       renderFiltered();
       return;
     }
@@ -2004,6 +2026,7 @@
     selectedComparePilotKey = null;
     lastUciMatches = [];
     lastUciSeriesMatches = [];
+    lastUecMatches = [];
     document.getElementById('compareInputCard').hidden = true;
     document.getElementById('compareInp').value = '';
     document.getElementById('compareStatus').textContent = '';
@@ -2015,31 +2038,36 @@
 
     const { events: matches, series: seriesMatches } = searchLocal(query);
     const { events: uciMatches, series: uciSeriesMatches } = searchUci(query);
+    const { events: uecMatches } = searchUec(query);
 
     lastMatches = matches;
     lastSeriesMatches = seriesMatches;
     lastUciMatches = uciMatches;
     lastUciSeriesMatches = uciSeriesMatches;
+    lastUecMatches = uecMatches;
     lastSearchKey = searchKey;
 
     const srMsg = seriesMatches.length ? ` · ${seriesMatches.length} classement(s) de championnat` : '';
     const uciMsg = uciMatches.length ? ` · ${uciMatches.length} résultat(s) UCI` : '';
-    setStatus(`${matches.length} résultat(s) trouvé(s)${srMsg}${uciMsg}.`);
-    const totalHits = matches.length + seriesMatches.length + uciMatches.length + uciSeriesMatches.length;
+    const uecMsg = uecMatches.length ? ` · ${uecMatches.length} résultat(s) UEC` : '';
+    setStatus(`${matches.length} résultat(s) trouvé(s)${srMsg}${uciMsg}${uecMsg}.`);
+    const totalHits = matches.length + seriesMatches.length + uciMatches.length + uciSeriesMatches.length + uecMatches.length;
     resultsFiltersEl.hidden = totalHits === 0;
     document.getElementById('compareToggleBtn').disabled = totalHits === 0;
     renderFiltered();
-    if (totalHits) saveResultsCache(norm(nameInp.value.trim()), matches, seriesMatches, uciMatches, uciSeriesMatches);
+    if (totalHits) saveResultsCache(norm(nameInp.value.trim()), matches, seriesMatches, uciMatches, uciSeriesMatches, uecMatches);
   }
 
   let lastMatches = [];
   let lastSeriesMatches = [];
   let lastUciMatches = [];
   let lastUciSeriesMatches = [];
+  let lastUecMatches = []; // matches UEC du pilote (index JSTiming, spec UEC §5.3)
   let lastSearchKey = null; // clé du dernier appel API (query|orgs)
   let subTabsHtml = {}; // sous-onglets (Stats/Championnats/Courses) par partie — reconstruit à chaque render()
   let lastCompareMatches = [];
   let lastCompareUciMatches = []; // matches UCI du 2ᵉ pilote (comparaison par niveau, D10)
+  let lastCompareUecMatches = []; // matches UEC du 2ᵉ pilote (comparaison par niveau, spec UEC)
   let compareActive = false;
   let comparePart = null; // niveau de comparaison H2H ; null = partie active de la fiche (D16)
   let selectedPilotKey = null; // null = auto (plus récent), sinon clé norm() du pilote choisi
@@ -2065,7 +2093,11 @@
       return d.startsWith(y + '-');
     });
     const filteredUciSeries = !y ? lastUciSeriesMatches : lastUciSeriesMatches.filter(sm => seriesYears(sm).has(y));
-    render(filtered, sortSel.value, filteredSeries, filteredUci, filteredUciSeries);
+    const filteredUec = !y ? lastUecMatches : lastUecMatches.filter(m => {
+      const d = m.event.eventDate || m.event.eventEndDate || '';
+      return d.startsWith(y + '-');
+    });
+    render(filtered, sortSel.value, filteredSeries, filteredUci, filteredUciSeries, filteredUec);
   }
 
   function ordFr(n){ return n === 1 ? '1er' : `${n}e`; }
@@ -2857,15 +2889,18 @@
     return PILOT_COLORS[Math.abs(hash) % PILOT_COLORS.length];
   }
 
-  function renderPilotCard(matches, seriesMatches, stats, uciMatches = [], perfCareer = null) {
+  function renderPilotCard(matches, seriesMatches, stats, uciMatches = [], perfCareer = null, uecMatches = []) {
     const sortedEv = [...matches].sort((a, b) =>
       (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
     const sortedUciEv = [...uciMatches].sort((a, b) =>
       (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
+    const sortedUecEv = [...uecMatches].sort((a, b) =>
+      (b.event.eventDate || '').localeCompare(a.event.eventDate || ''));
 
     const baseCmp = (sortedEv.find(m => m.competitor.firstName || m.competitor.lastName)
       || seriesMatches.find(m => m.competitor.firstName || m.competitor.lastName)
-      || sortedUciEv.find(m => m.competitor.firstName || m.competitor.lastName))?.competitor;
+      || sortedUciEv.find(m => m.competitor.firstName || m.competitor.lastName)
+      || sortedUecEv.find(m => m.competitor.firstName || m.competitor.lastName))?.competitor;
     if (!baseCmp) return '';
 
     const firstName = baseCmp.firstName || '';
@@ -2874,10 +2909,12 @@
     if (!fullName) return '';
 
     const plate = sortedEv.find(m => m.competitor.plate)?.competitor.plate
-               || sortedUciEv.find(m => m.competitor.plate)?.competitor.plate || null;
+               || sortedUciEv.find(m => m.competitor.plate)?.competitor.plate
+               || sortedUecEv.find(m => m.competitor.plate)?.competitor.plate || null;
     const club  = sortedEv.find(m => m.competitor.groupName)?.competitor.groupName
                || seriesMatches.find(m => m.competitor.groupName)?.competitor.groupName
                || sortedUciEv.find(m => m.competitor.groupName)?.competitor.groupName
+               || sortedUecEv.find(m => m.competitor.groupName)?.competitor.groupName
                || null;
     const age   = sortedEv.find(m => m.competitor.age != null)?.competitor.age
                ?? sortedUciEv.find(m => m.competitor.age != null)?.competitor.age ?? null;
@@ -2933,14 +2970,16 @@
 
     const { events: found } = searchLocal(query);
     const { events: foundUci } = searchUci(query);
+    const { events: foundUec } = searchUec(query);
 
-    if (!found.length && !foundUci.length) {
+    if (!found.length && !foundUci.length && !foundUec.length) {
       st.textContent = `Aucun résultat pour « ${query} » dans les mêmes organisations.`;
       return;
     }
     st.textContent = '';
     lastCompareMatches = found;
     lastCompareUciMatches = foundUci;
+    lastCompareUecMatches = foundUec;
     comparePart = null; // re-sync sur la partie active (D16)
     selectedComparePilotKey = null;
     compareActive = true;
@@ -3235,7 +3274,12 @@
   function findClassCompetitors(m) {
     const key = `${m.account.accountCode}/${m.event.eventId}/${m.cls?.perpetualClassCode || m.cls?.className || ''}`;
     if (_chronoClassCache.has(key)) return _chronoClassCache.get(key);
-    const index = m.account.accountCode === 'ucibmxworlds' ? uciIndex : pilotsIndex;
+    // Index d'origine du match : UCI (Mondiaux) et UEC (JSTiming) ont leur propre index,
+    // tout le reste vient de l'index FR (les comptes FR ne peuvent pas collisionner
+    // les UUID d'événements JSTiming).
+    const index = m.account.accountCode === 'ucibmxworlds' ? uciIndex
+      : m.account.accountCode === 'uec' ? uecIndex
+      : pilotsIndex;
     let out = null;
     for (const ev of (index && index.events) || []) {
       if (ev.account.accountCode !== m.account.accountCode) continue;
@@ -3320,7 +3364,7 @@
   // ===== INDICE DE PERFORMANCE (spec indice-perf-design, §4 — calibré §7 le 2026-09-02) =====
   // Échelle 0–1000. Signaux : rang pondéré par les participants (z-score, brique existante),
   // constance par phase, chrono transpondeur (z-log strict), séries, coef léger par niveau.
-  const PERF_LEVEL_COEFS = { regional: 0.9, national: 1.0, uci: 1.15 }; // §4.5 (léger)
+  const PERF_LEVEL_COEFS = { regional: 0.9, national: 1.0, uec: 1.15, uci: 1.15 }; // §4.5 (léger)
   const PERF_CHRONO_W = 0.3;   // poids du composant chrono dans le blend (§4.3, fourchette 0.3–0.4)
   // Pénalité DNF/DNS/DSQ final, graduée par la phase la plus profonde ATTEINTE (§4.4) :
   // un DNF en manche n'est PAS éliminatoire — le pilote peut se qualifier quand même pour les
@@ -3695,8 +3739,8 @@
       </div>`;
   }
 
-  function render(matches, sortMode = 'date-desc', seriesMatches = [], uciMatches = [], uciSeriesMatches = []) {
-    if (!matches.length && !seriesMatches.length && !uciMatches.length && !uciSeriesMatches.length) {
+  function render(matches, sortMode = 'date-desc', seriesMatches = [], uciMatches = [], uciSeriesMatches = [], uecMatches = []) {
+    if (!matches.length && !seriesMatches.length && !uciMatches.length && !uciSeriesMatches.length && !uecMatches.length) {
       resultsEl.innerHTML = '<div class="card empty">Aucun pilote ne correspond à cette recherche.</div>';
       document.body.classList.remove('has-results');
       return;
@@ -3742,6 +3786,9 @@
     const primaryUciSeriesMatches = activeKey
       ? uciSeriesMatches.filter(sm => norm(`${sm.competitor.firstName||''} ${sm.competitor.lastName||''}`).trim() === activeKey)
       : uciSeriesMatches;
+    const primaryUecMatches = activeKey
+      ? uecMatches.filter(m => norm(`${m.competitor.firstName||''} ${m.competitor.lastName||''}`).trim() === activeKey)
+      : uecMatches;
 
     const stats = hasEventMatches ? computeStats(primaryMatches) : null;
     const uciStats = primaryUciMatches.length ? computeStats(primaryUciMatches) : null;
@@ -3755,11 +3802,12 @@
       global:   { events: [], series: [] },
       regional: { events: [], series: [] },
       national: { events: [], series: [] },
+      uec:      { events: primaryUecMatches, series: [] }, // D4 : pas de séries JSTiming en v1
       uci:      { events: primaryUciMatches, series: primaryUciSeriesMatches },
     };
     for (const m of primaryMatches) levelData[levelOf(m.account.accountCode)].events.push(m);
     for (const sm of primarySeriesMatches) levelData[levelOf(sm.account.accountCode)].series.push(sm);
-    levelData.global.events = [...levelData.regional.events, ...levelData.national.events, ...levelData.uci.events];
+    levelData.global.events = [...levelData.regional.events, ...levelData.national.events, ...levelData.uec.events, ...levelData.uci.events];
     levelData.global.series = [...levelData.regional.series, ...levelData.national.series, ...levelData.uci.series];
 
     // ===== Indices de performance par niveau (spec indice-perf) =====
@@ -3854,15 +3902,16 @@
     const compareResultsEl = document.getElementById('compareResults');
     if (compareResultsEl) {
       let compareHtml = '';
-      if (compareActive && (lastCompareMatches.length || lastCompareUciMatches.length)) {
+      if (compareActive && (lastCompareMatches.length || lastCompareUciMatches.length || lastCompareUecMatches.length)) {
         // Défaut du mini-sélecteur de comparaison : Global s'il est dispo, sinon la partie active (D16)
         if (comparePart == null || !partsAvailable.some(l => l.key === comparePart)) {
           comparePart = partsAvailable.some(l => l.key === 'global') ? 'global' : activePart;
         }
-        const p2ByLevel = { global: [], regional: [], national: [], uci: [] };
+        const p2ByLevel = { global: [], regional: [], national: [], uec: [], uci: [] };
         for (const m of lastCompareMatches) p2ByLevel[levelOf(m.account.accountCode)].push(m);
         p2ByLevel.uci = lastCompareUciMatches;
-        p2ByLevel.global = [...p2ByLevel.regional, ...p2ByLevel.national, ...p2ByLevel.uci];
+        p2ByLevel.uec = lastCompareUecMatches;
+        p2ByLevel.global = [...p2ByLevel.regional, ...p2ByLevel.national, ...p2ByLevel.uec, ...p2ByLevel.uci];
         compareHtml = renderCompareSection({ levelData, p2ByLevel, parts: partsAvailable, part: comparePart });
       }
       compareResultsEl.innerHTML = compareHtml;
@@ -3892,7 +3941,7 @@
         <div class="pilot-picker-list">${items}</div>
       </div>`);
     }
-    const pilotCardHtml = renderPilotCard(primaryMatches, primarySeriesMatches, stats || uciStats, primaryUciMatches, perfIndices.global.career);
+    const pilotCardHtml = renderPilotCard(primaryMatches, primarySeriesMatches, stats || uciStats, primaryUciMatches, perfIndices.global.career, primaryUecMatches);
 
     // Rangée 1 : parties (D11, D13)
     let partsNavHtml = '';
@@ -4050,11 +4099,11 @@
   document.getElementById('compareSearchBtn').addEventListener('click', searchCompare);
   document.getElementById('compareInp').addEventListener('keydown', e => {
     if (e.key === 'Enter') searchCompare();
-  });
-  document.getElementById('compareCloseBtn').addEventListener('click', () => {
+  });    document.getElementById('compareCloseBtn').addEventListener('click', () => {
     document.getElementById('compareInputCard').hidden = true;
     lastCompareMatches = [];
     lastCompareUciMatches = [];
+    lastCompareUecMatches = [];
     compareActive = false;
     comparePart = null;
     selectedComparePilotKey = null;
@@ -4157,6 +4206,7 @@
         lastSeriesMatches = cached.seriesMatches;
         lastUciMatches = cached.uciMatches || [];
         lastUciSeriesMatches = cached.uciSeriesMatches || [];
+        lastUecMatches = cached.uecMatches || [];
         lastSearchKey = norm(state.name);
         resultsFiltersEl.hidden = false;
         document.getElementById('compareToggleBtn').disabled = false;

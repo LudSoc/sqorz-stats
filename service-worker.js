@@ -6,7 +6,7 @@ const INDEX_CACHE_NAME = 'sqorz-index-v1';
 const ASSETS = ['./', './index.html'];
 // Index de données volumineux régénérés chaque semaine : on ne les met JAMAIS en cache
 // (ils passent directement par le navigateur, comme avant)
-const NO_CACHE = ['pilots-index.json', 'uci-index.json'];
+const NO_CACHE = ['pilots-index.json', 'uci-index.json', 'uec-index.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(

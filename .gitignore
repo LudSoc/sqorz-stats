@@ -6,3 +6,8 @@ pilots-index.json
 pilots-index.events.ndjson
 uci-index.json
 uci-index.events.ndjson
+uec-index.json
+uec-index.events.ndjson
+
+# Cache de crawl (build-uec.js, JSTiming)
+.cache/
