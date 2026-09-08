@@ -428,6 +428,11 @@ async function main() {
     console.log(`Taille moyenne par événement : ${(avg / 1024).toFixed(0)} Ko`);
     if (optLimit || optMatch) console.log(`Extrapolation 130 événements : ≈ ${(avg * 130 / 1024 / 1024).toFixed(1)} Mo`);
   }
+  // Forces de plateau (indice v2) — run complet seulement (pas en --limit/--match).
+  if (!optLimit && !optMatch) {
+    const { computeFieldFiles } = require('./build-field.js');
+    computeFieldFiles(['uec-index.json'], { outFile: 'field-strength-uec.json', label: 'UEC' });
+  }
 }
 
 if (require.main === module) {

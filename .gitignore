@@ -8,6 +8,8 @@ uci-index.json
 uci-index.events.ndjson
 uec-index.json
 uec-index.events.ndjson
+field-strength-fr.json
+field-strength-uec.json
 
 # Cache de crawl (build-uec.js, JSTiming)
 .cache/

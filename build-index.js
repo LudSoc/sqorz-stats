@@ -249,10 +249,16 @@ async function buildRegion(regionCode, outFile) {
 async function main() {
   const requested = process.argv.slice(2).filter(a => !a.startsWith('-'));
   const regions = requested.length ? requested : ['FR', 'UCI'];
+  const built = [];
   for (const regionCode of regions) {
     const outFile = regionCode.toUpperCase() === 'FR' ? 'pilots-index.json' : regionCode.toLowerCase() + '-index.json';
     await buildRegion(regionCode, outFile);
+    built.push(outFile);
   }
+  // Forces de plateau (indice v2) sur les index Sqorz générés — spec force-plateau.
+  // Exécuté après les régions pour lire les fichiers frais.
+  const { computeFieldFiles } = require('./build-field.js');
+  computeFieldFiles(built, { outFile: 'field-strength-fr.json', label: 'FR+UCI' });
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

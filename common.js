@@ -236,12 +236,102 @@
     }
   }
 
+  // ===== Forces de plateau (spec force-plateau §3-§4.1) =====
+  // Chargement optionnel de field-strength-{fr,uec}.json (R2 + cache, jamais
+  // bloquant) : retourne { classes, medFs } ou null (fallback silencieux v1).
+  // Le format est validé (v === 1) pour ignorer les futures versions inconnues.
+  async function loadFieldStrength({ metaUrl, url, cacheKey, tag = '[sqorz:fs]' }) {
+    const fail = m => { console.warn(tag + ' ' + m); return null; };
+    let wantSha = null;
+    try {
+      const metaRes = await fetch(metaUrl);
+      if (metaRes.ok) {
+        const meta = await metaRes.json();
+        wantSha = (meta && meta.index && meta.index.sha256) || null;
+      }
+    } catch (e) { return fail('meta indisponible (' + metaUrl + ') : ' + (e && e.message)); }
+    const cache = await openIndexCache(tag);
+    const readJson = async res => {
+      try { return await res.json(); }
+      catch (e) { return null; }
+    };
+    const valid = j => j && j.v === 1 && j.classes && typeof j.classes === 'object' && j.medFs && typeof j.medFs === 'object'
+      ? { classes: j.classes, medFs: j.medFs } : null;
+    if (cache) {
+      try {
+        const res = await cache.match(cacheKey);
+        if (res) {
+          const sha = res.headers.get('x-index-sha');
+          if ((wantSha && sha === wantSha) || !wantSha) {
+            const hit = valid(await readJson(res));
+            if (hit) return hit;
+          }
+        }
+      } catch (e) { /* lecture du cache : on continue vers le réseau */ }
+    }
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return fail('HTTP ' + res.status + ' — ' + url);
+      const got = valid(await readJson(res));
+      if (!got) return fail('format inattendu — ' + url);
+      if (cache && wantSha) {
+        try {
+          await cache.put(cacheKey, new Response(JSON.stringify({ v: 1, classes: got.classes, medFs: got.medFs }), {
+            headers: { 'Content-Type': 'application/json', 'X-Index-Sha': wantSha },
+          }));
+        } catch (e) { /* écriture du cache : non bloquant */ }
+      }
+      return got;
+    } catch (err) {
+      if (cache) {
+        try {
+          const stale = await cache.match(cacheKey);
+          if (stale) {
+            const old = valid(await readJson(stale));
+            if (old) return old;
+          }
+        } catch (e) { /* dernier recours indisponible */ }
+      }
+      return fail(err && err.message);
+    }
+  }
+
+  // Shrinkage d'une moyenne annuelle vers 500 selon le nombre d'engagements
+  // (spec force-plateau §4.2) : mean' = (n·mean + m·500) / (n + m).
+  function perfShrinkMean(mean, n, m = PERF_SHRINK_M) {
+    return (n * mean + m * 500) / (n + m);
+  }
+
+  // Ajustement force du plateau à partir d'une entrée [fs, n] (spec force-plateau
+  // §4.1) : exclusion exacte de soi-même depuis la moyenne inclusive.
+  // Sans ctx / clé inconnue / classe à 1 noté → 0 (formule v1 inchangée).
+  // ownBase = score pré-coef clampé (même unité que les ratings du build).
+  function fieldAdjust(ctx, key, ownBase, year, k = PERF_FIELD_K) {
+    if (!ctx) return 0;
+    const med = ctx.medFs && ctx.medFs[year];
+    const entry = ctx.classes && ctx.classes[key];
+    if (med == null || entry == null || !Array.isArray(entry)) return 0;
+    const fs = entry[1] > 1 ? (entry[0] * entry[1] - ownBase) / (entry[1] - 1) : med;
+    return k * (fs - med);
+  }
+
+  // Score final d'un engagement (spec force-plateau §4.1) : double clamp
+  // identique au build (base coéfée clampée, puis ajustement clampé).
+  // Jamais ajusté sur les DNF (isDnf) ni sans ctx / fs manquante (v1).
+  function applyFieldScore(raw, coef, fsKey, year, ctx, isDnf) {
+    const base = perfClamp(raw * coef);
+    if (isDnf || !ctx) return base;
+    return perfClamp(base + fieldAdjust(ctx, fsKey, perfClamp(raw), year));
+  }
+
   // ===== Indice de performance (spec indice-perf-design, §4 + §7.4) =====
   // Échelle 0–1000. Seuls les helpers purs vivent ici ; perfEngagement/perfLevel
   // restent côté apps (ils dépendent de findClassCompetitors, spécifique à chaque index).
   const PERF_LEVEL_COEFS = { regional: 0.93, national: 1.0, uec: 1.05, uci: 1.05 }; // §4.5 (léger, réduit §7.4)
   const PERF_RANG_EXP = 2.5;   // exposant convexe du score de rang pour z > 0 (§7.4)
   const PERF_CHRONO_W = 0.3;   // poids du composant chrono dans le blend (§4.3)
+  const PERF_FIELD_K = 0.3;    // poids de l'ajustement force du plateau (spec force-plateau §4.1)
+  const PERF_SHRINK_M = 2;     // force du shrinkage des moyennes annuelles vers 500 (spec force-plateau §4.2)
   const PERF_DNF_SCORES = { final: 700, semi: 550, quarter: 400, moto: 250 }; // §4.4
   const perfClamp = v => Math.max(5, Math.min(1000, v));
   // Score de rang : 500 + 500·(z/√3)^2,5 pour z > 0 (convexe — le podium se détache
@@ -326,7 +416,8 @@
     norm, escape, humanError, zScore,
     isFinalPhase, isMotoPhase, isSemiPhase, isNotTimedPhase, num, perfHasKnockout,
     expandIndex, INDEX_CACHE_NAME, openIndexCache, loadIndexCached,
-    PERF_LEVEL_COEFS, PERF_RANG_EXP, PERF_CHRONO_W, PERF_DNF_SCORES,
+    PERF_LEVEL_COEFS, PERF_RANG_EXP, PERF_CHRONO_W, PERF_FIELD_K, PERF_SHRINK_M, PERF_DNF_SCORES,
+    loadFieldStrength, perfShrinkMean, fieldAdjust, applyFieldScore,
     perfClamp, perfScoreRang, perfBestTime, perfChronoScore,
     perfConstance, perfCoefConstance, perfDeepestPhase,
     fmtDateFr, formatDataDates,

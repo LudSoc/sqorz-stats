@@ -19,10 +19,12 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Générer les index (Sqorz + UEC/JSTiming)
+      - name: Générer les index (Sqorz + UEC/JSTiming) et les forces de plateau
         run: |
           node build-index.js
           node build-uec.js
+          # (build-index.js et build-uec.js génèrent aussi field-strength-{fr,uec}.json
+          # via build-field.js — indice v2, spec force-plateau)
 
       - name: Vérifier si les index ont changé (sha256 vs meta commité)
         id: changed
@@ -31,7 +33,7 @@ jobs:
           const fs = require('fs');
           const { execSync } = require('child_process');
           let changed = false;
-          for (const base of ['pilots-index', 'uci-index', 'uec-index']) {
+          for (const base of ['pilots-index', 'uci-index', 'uec-index', 'field-strength-fr', 'field-strength-uec']) {
             const m = JSON.parse(fs.readFileSync(base + '.meta.json', 'utf8'));
             try {
               const old = JSON.parse(execSync('git show HEAD:' + base + '.meta.json', { stdio: ['pipe', 'pipe', 'ignore'] }).toString());
@@ -47,7 +49,7 @@ jobs:
 
       # Upload inconditionnel : `aws s3 cp` est idempotent et le bucket peut
       # être vide ou partiel même quand le sha n'a pas changé (premier run,
-      # objet supprimé...) — on republie toujours les 6 fichiers.
+      # objet supprimé...) — on republie toujours les 10 fichiers.
       - name: Publier les index sur R2
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -63,6 +65,8 @@ jobs:
             [uci-index.events.ndjson]=application/x-ndjson
             [uec-index.json]=application/json
             [uec-index.events.ndjson]=application/x-ndjson
+            [field-strength-fr.json]=application/json
+            [field-strength-uec.json]=application/json
           )
           for f in "${!TYPES[@]}"; do
             aws s3 cp "$f" "s3://$BUCKET/$f" \
@@ -83,7 +87,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pilots-index.meta.json uci-index.meta.json uec-index.meta.json
+          git add pilots-index.meta.json uci-index.meta.json uec-index.meta.json field-strength-fr.meta.json field-strength-uec.meta.json
           if git diff --cached --quiet; then
             echo "Aucun changement — rien à commiter."
           else

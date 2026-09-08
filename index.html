@@ -1380,15 +1380,21 @@
   const {
     norm, escape, humanError, zScore,
     isFinalPhase, isMotoPhase, isNotTimedPhase, num, perfHasKnockout,
-    expandIndex, loadIndexCached,
-    PERF_LEVEL_COEFS, PERF_CHRONO_W, PERF_DNF_SCORES,
+    expandIndex, loadIndexCached, loadFieldStrength,
+    PERF_LEVEL_COEFS, PERF_CHRONO_W, PERF_DNF_SCORES, PERF_FIELD_K,
     perfClamp, perfScoreRang, perfBestTime, perfChronoScore,
-    perfConstance, perfCoefConstance, perfDeepestPhase,
+    perfConstance, perfCoefConstance, perfDeepestPhase, perfShrinkMean, applyFieldScore,
     formatDataDates,
   } = window.SqorzCommon;
   let pilotsIndex = null;
   let uciIndex = null; // index UCI (Mondiaux BMX Racing) — chargé en parallèle, optionnel
   let uecIndex = null; // index UEC (Coupe/Championnats d'Europe, JSTiming) — optionnel
+  let perfFrField = null;  // { classes, medFs } — forces de plateau FR (indice v2, optionnel)
+  let perfUecField = null; // idem UEC — silent fallback v1 si absents
+  // Clés de classe = même convention que findClassCompetitors et le build (build-field.js).
+  const fieldKeyOfEvent = m => `${m.account.accountCode}/${m.event.eventId}/${m.cls?.perpetualClassCode || m.cls?.className || ''}`;
+  const fieldKeyOfSeries = sm => `${sm.account.accountCode}/series:${sm.series?.seriesId || ''}/${sm.cls?.perpetualClassCode || sm.cls?.className || ''}`;
+  const fieldCtxFor = m => (m.account && m.account.accountCode === 'uec') ? perfUecField : perfFrField;
 
   // ===== Niveaux de compétition (spec « séparation niveaux », D1–D3, D13) =====
   // Les 5 comptes FFC (fédération + 4 zones) organisent tout le niveau national ;
@@ -1775,6 +1781,20 @@
     uci:    'https://sqorz.local/cache/uci-index.json',
     uec:    'https://sqorz.local/cache/uec-index.json',
   };
+  // Clés cache des forces de plateau (indice v2, cf. SqorzCommon.loadFieldStrength).
+  const FIELD_CACHE_URLS = {
+    fr:  'https://sqorz.local/cache/field-strength-fr.json',
+    uec: 'https://sqorz.local/cache/field-strength-uec.json',
+  };
+  // Config d'un fichier de forces : meta en même-origine, données R2 (local d'abord en dev).
+  function fieldCfg(key, file) {
+    return {
+      metaUrl: `./${file}.meta.json`,
+      url: IS_LOCAL ? `./${file}.json` : `${R2_BASE}/${file}.json`,
+      cacheKey: FIELD_CACHE_URLS[key],
+      tag: `[sqorz:fs-${key}]`,
+    };
+  }
 
   // Configs de chargement : FR (requis) puis UCI/UEC en arrière-plan (optionnels).
   function indexCfg(key, name, estimatedSize) {
@@ -1847,6 +1867,16 @@
     uecIndex = uec;
     showDataDates();
     refreshSearchWithSecondary();
+    // Forces de plateau (indice v2, optionnel) puis refresh final si chargées.
+    const [frF, uecF] = await Promise.all([
+      loadFieldStrength(fieldCfg('fr', 'field-strength-fr')),
+      loadFieldStrength(fieldCfg('uec', 'field-strength-uec')),
+    ]);
+    if (frF || uecF) {
+      perfFrField = frF;
+      perfUecField = uecF;
+      refreshSearchWithSecondary();
+    }
   }
 
   // Si une recherche est affichée (et que la saisie n'a pas changé depuis),
@@ -3250,10 +3280,9 @@
       if (d > maxDate) maxDate = d;
     }
     const year = perfYearOf(maxDate);
-    const score = (typeof sr === 'number' && sr < 100000)
-      ? (perfScoreRang(sr, sm.totalCompetitors || 1) ?? 250)
-      : 250;
-    return { raw: score, year };
+    const classed = typeof sr === 'number' && sr < 100000;
+    const score = classed ? (perfScoreRang(sr, sm.totalCompetitors || 1) ?? 250) : 250;
+    return { raw: score, nDnf: classed ? 0 : 1, year };
   }
 
   // Agrégation par niveau → { career, years: [{year, mean, n, seriesN, dnfN}], yearMap }
@@ -3267,14 +3296,14 @@
       a.dnfN += o.nDnf || 0;
       if (o.series) a.seriesN++;
     };
-    for (const m of events) { const e = perfEngagement(m); acc(e.year, { score: perfClamp(e.raw * coef), nDnf: e.nDnf }); }
-    for (const sm of series) { const s = perfSeriesScore(sm); acc(s.year, { score: perfClamp(s.raw * coef), series: 1 }); }
+    for (const m of events) { const e = perfEngagement(m); acc(e.year, { score: applyFieldScore(e.raw, coef, fieldKeyOfEvent(m), e.year, fieldCtxFor(m), e.nDnf), nDnf: e.nDnf }); }
+    for (const sm of series) { const s = perfSeriesScore(sm); acc(s.year, { score: applyFieldScore(s.raw, coef, fieldKeyOfSeries(sm), s.year, fieldCtxFor(sm), s.nDnf), series: 1 }); }
     const years = [...byYear.keys()].filter(y => y !== '????').sort((a, b) => b.localeCompare(a));
     const yearRows = years.map(y => {
       const a = byYear.get(y);
       return {
         year: y,
-        mean: a.n ? Math.round(a.scores / a.n) : null,
+        mean: a.n ? Math.round(perfShrinkMean(a.scores / a.n, a.n)) : null,
         n: a.n, seriesN: a.seriesN, dnfN: a.dnfN,
       };
     });
@@ -3310,6 +3339,8 @@
         <li><strong>Chrono transpondeur</strong> — sur les épreuves chronométrées, le meilleur temps du pilote est comparé aux autres chronométrés de la même catégorie lors de l'épreuve (environ ¼ du score).</li>
         <li><strong>Non-classements</strong> — un DNF, DNS ou DSQ final est pénalisé selon la phase la plus profonde atteinte (sa progression, avant coef niveau) : éliminé en manches ≈ 250, quart ≈ 400, demi-finale ≈ 550, finale ≈ 700. Un DNF en manche n'élimine pas : s'il s'est qualifié jusqu'en finale, il est noté comme finaliste. Une pénalité, pas un zéro.</li>
         <li><strong>Championnats</strong> — un classement de série compte comme une course, noté selon le nombre de pilotes classés.</li>
+        <li><strong>Force du plateau</strong> — à rang égal, battre un plateau fort vaut plus : le score est ajusté selon le niveau moyen des adversaires de la course (neutre sur un plateau typique, jamais sur les DNF).</li>
+        <li><strong>Petits échantillons</strong> — les moyennes annuelles sont resserrées vers 500 selon le nombre d'engagements (le « N eng. » affiché explique la force du resserrement).</li>
         <li><strong>Niveau de compétition</strong> — le même rang n'a pas la même valeur partout : régional ×0,93, national ×1,0, international ×1,05.</li>
       </ul>
       <div class="perf-example">
@@ -3320,9 +3351,9 @@
           <li>éliminé en manches (DNF, sans phase finale atteinte) → <strong>250</strong> (qualifié jusqu'en finale, ça serait ≈ 700)</li>
           <li>série 4ᵉ sur 25 → ≈ <strong>720</strong></li>
         </ul>
-        <p>Année = (812 + 526 + 250 + 720) / 4 ≈ <strong>577</strong>. L'indice carrière = la moyenne des indices annuels.</p>
+        <p>Année = moyenne resserrée vers 500 (4 eng.) : (4×577 + 2×500) / 6 ≈ <strong>551</strong>. L'indice carrière = la moyenne des indices annuels.</p>
       </div>
-      <p>L'indice d'une année = la moyenne de ses engagements. L'indice carrière = la moyenne des indices annuels, pour qu'une saison chargée ne pèse pas plus qu'une autre.</p>
+      <p>L'indice d'une année = la moyenne de ses engagements, resserrée vers 500 selon leur nombre. L'indice carrière = la moyenne des indices annuels, pour qu'une saison chargée ne pèse pas plus qu'une autre.</p>
     </div>
   </details>
   <div class="stats-dashboard">
