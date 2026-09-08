@@ -60,7 +60,7 @@ score_rang = clamp(500 + 500 · z / √3 , 5, 1000)
 
 - 1ᵉʳ d'une grande classe → ≈ 990–1000 ; médiane → ≈ 500 ; dernier → ≈ 5.
 - **Pondération participants intrinsèque** : un même rang dans un champ plus grand → z plus grand → score plus haut (5ᵉ/10 ≈ 600, 5ᵉ/50 ≈ 920).
-- Exemple réel (CdF 2026, U19 H, 75 pilotes, HEITZ 1ᵉʳ) : z = 1,709 → score_rang ≈ **993**.
+- Exemple réel (CdF 2026, U19 H, 75 pilotes, HEITZ 1ᵉʳ) : z = 1,709 → score_rang ≈ **984** (993 avant le resserrement §7.4).
 
 ### 4.2 Constance par phase (multiplicateur ±)
 
@@ -200,7 +200,7 @@ Implémenté dans `index.html` (une seule passe par `render()`) — noms réels 
 | Élément | Détail |
 |---|---|
 | Helpers | `perfScoreRang`, `perfBestTime`, `perfChronoScore`, `perfConstance`/`perfCoefConstance`, `perfEngagement`, `perfSeriesScore`, `perfLevel`, `computePerfIndices` — réutilisent `zScore`, `isMotoPhase`/`isFinalPhase`, `isNotTimedPhase`, `num`, `findClassCompetitors` (mémoïsé) |
-| Valeurs | `PERF_LEVEL_COEFS` (0,9/1,0/1,15), `PERF_CHRONO_W` (0,3), `PERF_DNF_SCORE` (250), clamp `perfClamp` [5, 1000] |
+| Valeurs | `PERF_LEVEL_COEFS` (0,93/1,0/1,05), `PERF_CHRONO_W` (0,3), `PERF_DNF_SCORE` (250), clamp `perfClamp` [5, 1000], exposant rang `PERF_RANG_EXP` (2,5, §7.4) |
 | Rendu | `renderPerfComponent` (onglet Stats, par niveau) ; chip `🏅` sur la carte pilote (`renderPilotCard`, 5ᵉ paramètre = carrière Global) ; badges `🏅 … · N eng.` par année dans `renderTimeline` (3ᵉ paramètre `perfByYear`) ; CSS `.pilot-index` / `.tl-index-badge` / `.perf-year-row` |
 | Tests | unitaires (`unit-perf.cjs`, 22 ✅ : extrêmes 5/500/1000, pondération participants, constance, chrono z-log, DNF, coefs+clamp, séries, attribution d'année) + E2E (`e2e-perf.cjs`, 12 ✅ : HEITZ/ANJOUBAULT, chips, Stats, badges) |
 
@@ -239,6 +239,18 @@ Prototype Node exécuté sur l'index réel complet (211 759 engagements FR valid
 > Note : les « CARRIÈRE » du prototype de calibration (840 / 750) étaient des moyennes **par engagement** (l'année à 52 eng. pesait plus) ; la spec §4.7 et l'implémentation retiennent la **moyenne des moyennes annuelles** (chaque année pèse pareil) → 829 / 709. Les valeurs par année diffèrent de ±10–20 pts car l'app comptabilise aussi les **séries** dans l'année (ex. HEITZ 2025 : 18 eng. dont 4 sér.).
 
 Coïncide avec le classement intuitif : Élite national HEITZ > ANJOUBAULT > TOPENOT, et Mondiaux ≈ 960–1000 (HEITZ médaillé).
+
+### 7.4 Correctif saturation — ✅ APPLIQUÉ (2026-09-08)
+
+**Constat (recette UEC)** : Merlin Guigo — 2 courses UEC 2026 (11ᵉ/65 éliminé en demie + 4ᵉ/58 en finale) — affichait un indice **1000**. Cause : `sr × constance(×1,1) × niveau(×1,15)` saturait au plafond dès le top ~20 % des gros champs (ex. 11ᵉ/65 : sr 838 × 1,1 × 1,15 → 1000), et le proxy « rang classé ⇒ finale atteinte » offrait le bonus finale aux éliminés en demie dont les phases KO sont publiées (UEC).
+
+**Changements** (code + `category_stats`, même formule) :
+- `perfScoreRang` : `500 + 500·(z/√3)^2,5` pour z > 0 (courbe convexe, linéaire sous la médiane) — 4ᵉ/58 ≈ 862 au lieu de 940, 11ᵉ/65 ≈ 689 au lieu de 838 ; 1ᵉʳ grand champ ≈ 984, médiane 500 et bas de tableau inchangés.
+- Proxy finale : le rang classé ne vaut « finale atteinte » que **sans phases KO publiées** (`perfHasKnockout` : semi/demi/quart/quarter/1/8/1/16) — les Mondiaux UCI (pas de phases KO) gardent le proxy, les éliminés en demie UEC/FR perdent le bonus.
+- `perfCoefConstance` : `0,95 + 0,1·c` ∈ [0,97, 1,05] (bonus/malus deux fois moindre).
+- `PERF_LEVEL_COEFS` : 0,93 / 1,0 / **1,05** / **1,05** (bonus international +5 % au lieu de +15 %).
+
+**Effets mesurés** (index réels, chronos inclus) : Merlin Guigo UEC 2026 : 1000 → **844** (737 + 951) ; HEITZ carrière 829 → **759** (2026 : 921 → 817) ; ANJOUBAULT 726 → **629**. Distribution brute des scores de rang (échantillon FR) : médiane **500 inchangée**, p75 750 → 589, p90 901 → 788, p99 984 → 960. Repères conservés : ~500 milieu, 800+ parmi les meilleurs, 900+ niveau mondial.
 
 ## 8. Points restants (recette visuelle, non bloquants)
 

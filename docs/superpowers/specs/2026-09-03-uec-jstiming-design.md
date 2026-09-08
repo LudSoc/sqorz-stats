@@ -85,7 +85,7 @@ Aucune modification des index existants (`pilots-index.json`, `uci-index.json`).
 | D5 | Événements à indexer | **Courses seulement** (`button_text_view == "Results"`) — ignorer pratiques « Gate times » et pages Entries sans résultats |
 | D6 | Chronos UEC | **Mapper sur les libellés existants** : Finish→`time` (« ⏱️ Chrono »), Split 1→`corner2Time` (« ⏱️ Virage 1 »), Start→`hillTime` (« ⏱️ Butte ») — réutilise tout le pipeline chrono existant |
 | D7 | Pipeline de génération | **Nouveau script `build-uec.js`** (dédié JSTiming), exécuté par le même workflow GitHub hebdo |
-| D8 | Indice de performance | **Oui, coef UEC = ×1,15** (même que UCI) — `PERF_LEVEL_COEFS.uec = 1.15` |
+| D8 | Indice de performance | **Oui, coef UEC = ×1,05** (même que UCI) — `PERF_LEVEL_COEFS.uec = 1.05` (1,15 à l'origine, réduit à 1,05 par le correctif saturation du 2026-09-08, cf. spec indice-perf §7.4) |
 | D9 | Stratégie de crawl | **Crawl complet hebdo avec cache de contenu** (sha256 par URL : ne re-télécharge pas les pages identiques), DELAY_MS=150, retry |
 | D10 | Impact taille | **Build de test d'abord** : mesurer `uec-index.json` sur un échantillon puis complet avant d'implémenter l'app (même méthode que la spec chronos) |
 
@@ -182,7 +182,7 @@ uecIndex = await loadIndexFile('./uec-index.json', 'index UEC (Europe)', 40_000_
 
 ### 5.6 Indice de performance
 
-- `PERF_LEVEL_COEFS` : ajouter `uec: 1.15` (D8).
+- `PERF_LEVEL_COEFS` : ajouter `uec: 1.05` (D8 — 1,15 à l'origine, 1,05 depuis le correctif saturation du 2026-09-08, cf. spec indice-perf §7.4).
 - `computePerfIndices(levelData)` boucle déjà sur `LEVELS` → l'UEC est automatiquement calculé ; Global l'inclut via `levelData.global`.
 
 ### 5.7 Sous-vues de la partie UEC
@@ -248,7 +248,7 @@ uecIndex = await loadIndexFile('./uec-index.json', 'index UEC (Europe)', 40_000_
 
 1. **Build de test** : scraper 2–3 événements UEC (1 Coupe, 1 Championnats d'Europe) → mesurer la taille slim par événement, extrapoler les 126 événements, valider le volume (objectif < 40 Mo).
 2. Vérifier sur les données réelles : riders présents en course mais absents de l'overall (DNS général ?), positions DNF dans les heats, classes sans overall.
-3. Valider l'indice 🏅 UEC sur un pilote médaillé européen (ordre intuitif, coef 1,15 vs 1,0 national).
+3. Valider l'indice 🏅 UEC sur un pilote médaillé européen (ordre intuitif, coef 1,05 vs 1,0 national — voir correctif saturation spec indice-perf §7.4).
 4. Recette mobile : poids de chargement supplémentaire (index UEC téléchargé en parallèle, progress bar).
 
 ## 9. Plan d'implémentation
@@ -263,7 +263,7 @@ uecIndex = await loadIndexFile('./uec-index.json', 'index UEC (Europe)', 40_000_
 | 6 | `LEVELS` : insérer 🇪🇺 UEC entre national et uci | `index.html` |
 | 7 | `searchUec` + `lastUecMatches` + Global 4 niveaux | `index.html` |
 | 8 | Cache résultats V3 + `uecMatches` | `index.html` |
-| 9 | `PERF_LEVEL_COEFS.uec = 1.15` | `index.html` |
+| 9 | `PERF_LEVEL_COEFS.uec = 1.05` (1,15 avant le correctif saturation du 2026-09-08) | `index.html` |
 | 10 | `NO_CACHE` : ajouter `uec-index.json` | `service-worker.js` |
 | 11 | Tests unitaires + E2E + non-régression | — |
 | 12 | Docs (`CLAUDE.md`, `PROJECT-CONTEXT.md`, addendum ici) | — |
@@ -283,7 +283,7 @@ uecIndex = await loadIndexFile('./uec-index.json', 'index UEC (Europe)', 40_000_
 | 6 | `LEVELS` + 🇪🇺 UEC | ✅ | Entre national et uci (D1) |
 | 7 | `searchUec` + Global 4 niveaux | ✅ | `lastUecMatches` + `lastCompareUecMatches` ; Global = concat des 4 niveaux (D2) |
 | 8 | Cache résultats V3 | ✅ | `RESULTS_CACHE_VERSION = 3`, champ `uecMatches` |
-| 9 | `PERF_LEVEL_COEFS.uec = 1.15` | ✅ | D8 |
+| 9 | `PERF_LEVEL_COEFS.uec = 1.15` → **1,05** depuis le correctif saturation du 2026-09-08 (spec indice-perf §7.4) | ✅ | D8 |
 | 10 | `NO_CACHE` service worker | ✅ | `uec-index.json` ajouté |
 | 11 | Tests | ✅ | `node --test tests/uec-parse.test.js` (9 tests : dates, noms, phases, colonnes chrono, temps, payload Inertia) + `node tests/e2e-uec.js` (IIFE exécuté avec index réels : recherche UEC, rendu 5 parties, chronos, 🏅, non-régression FR) |
 | 12 | Docs | ✅ | `CLAUDE.md`, `PROJECT-CONTEXT.md`, présent addendum |

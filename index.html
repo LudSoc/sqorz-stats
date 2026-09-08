@@ -3361,10 +3361,13 @@
     return `<div class="chrono-block">${rows.join('')}</div>`;
   }
 
-  // ===== INDICE DE PERFORMANCE (spec indice-perf-design, §4 — calibré §7 le 2026-09-02) =====
+  // ===== INDICE DE PERFORMANCE (spec indice-perf-design, §4 — calibré §7 le 2026-09-02,
+  // resserré le 2026-09-08 : courbe convexe en haut + bonus réduits, cf. commit) =====
   // Échelle 0–1000. Signaux : rang pondéré par les participants (z-score, brique existante),
   // constance par phase, chrono transpondeur (z-log strict), séries, coef léger par niveau.
-  const PERF_LEVEL_COEFS = { regional: 0.9, national: 1.0, uec: 1.15, uci: 1.15 }; // §4.5 (léger)
+  // Correctif saturation (cas Merlin Guigo : 11e/65 + 4e/58 en UEC = 1000) : l'ancien
+  // `sr × constance(×1,1) × niveau(×1,15)` saturait à 1000 dès le top ~20 % des gros champs.
+  const PERF_LEVEL_COEFS = { regional: 0.93, national: 1.0, uec: 1.05, uci: 1.05 }; // §4.5 (léger, réduit)
   const PERF_CHRONO_W = 0.3;   // poids du composant chrono dans le blend (§4.3, fourchette 0.3–0.4)
   // Pénalité DNF/DNS/DSQ final, graduée par la phase la plus profonde ATTEINTE (§4.4) :
   // un DNF en manche n'est PAS éliminatoire — le pilote peut se qualifier quand même pour les
@@ -3373,10 +3376,16 @@
   const PERF_DNF_SCORES = { final: 700, semi: 550, quarter: 400, moto: 250 };
   const perfClamp = v => Math.max(5, Math.min(1000, v));
   const perfYearOf = d => (d || '').slice(0, 4) || '????';
-  // Score de rang : 500 + 500·z/√3 — 1ᵉʳ d'un gros champ ≈ 1000, médiane ≈ 500, dernier ≈ 5 (§4.1)
+  // Score de rang : 500 + 500·(z/√3)^2,5 pour z > 0 (courbe convexe), linéaire en
+  // dessous de la médiane. 1ᵉʳ d'un gros champ ≈ 980-1000, médiane ≈ 500, dernier ≈ 5 (§4.1).
+  // L'exposant creuse l'écart podium vs fond de top-20 (ex. 4e/58 ≈ 880 au lieu de 940,
+  // 11e/65 ≈ 700 au lieu de 840) : seul un vrai podium d'un gros champ approche 1000.
+  const PERF_RANG_EXP = 2.5;
   function perfScoreRang(rank, total) {
     const z = zScore(rank, total);
-    return z == null ? null : perfClamp(500 + 500 * z / Math.sqrt(3));
+    if (z == null) return null;
+    if (z <= 0) return perfClamp(500 + 500 * z / Math.sqrt(3));
+    return perfClamp(500 + 500 * Math.pow(Math.min(1, z / Math.sqrt(3)), PERF_RANG_EXP));
   }
   // Meilleur temps valable du pilote (phases DNF/DNS/DSQ et temps ≤ 0 exclus — même règle que les chronos timeline)
   function perfBestTime(details) {
@@ -3399,7 +3408,17 @@
     return perfClamp(500 + 500 * (mu - Math.log(pilotBest)) / sd / Math.sqrt(3));
   }
   // Constance : ½·(% manches top 4) + ½·(finales atteintes) ; « finale atteinte » = phase finale
-  // valide OU rang final classé (proxy Mondiaux sans phases knock-out publiées) (§4.2)
+  // valide OU rang final classé SANS phases à élimination directe publiées (proxy Mondiaux
+  // sans phases knock-out publiées) (§4.2). Si des demies/quarts/8es sont présents dans les
+  // détails sans phase finale, le pilote a été éliminé avant la finale : pas de bonus
+  // (corrige les éliminés en demie UEC qui touchaient le bonus via leur rang classé).
+  function perfHasKnockout(details) {
+    for (const d of details || []) {
+      const n = (d.phaseName || '').toLowerCase();
+      if (/semi|demi|quart|quarter|1\/8|1\/16|huitieme|seizieme/.test(n)) return true;
+    }
+    return false;
+  }
   function perfConstance(details, rank) {
     let validMotos = 0, top4 = 0;
     for (const d of details || []) {
@@ -3411,10 +3430,10 @@
     for (const d of details || []) {
       if (isFinalPhase(d) && typeof d.result === 'number' && d.result < 100000) { finaleOk = true; break; }
     }
-    if (!finaleOk && typeof rank === 'number' && rank < 100000) finaleOk = true;
+    if (!finaleOk && typeof rank === 'number' && rank < 100000 && !perfHasKnockout(details)) finaleOk = true;
     return 0.5 * pctTop4 + 0.5 * (finaleOk ? 1 : 0.4);
   }
-  const perfCoefConstance = c => 0.9 + 0.2 * c; // ∈ [0.94, 1.1] (moyenne ≈ 1,02 mesurée)
+  const perfCoefConstance = c => 0.95 + 0.1 * c; // ∈ [0.97, 1.05] (bonus/malus deux fois moindre qu'avant)
 
   // Phase la plus profonde ATTEINTE par un non-classé, d'après les phases présentes dans ses
   // détails (elles reflètent sa participation : éliminé en manches = manches seules, qualifié
@@ -3524,22 +3543,22 @@
     <div class="perf-how-body">
       <p>L'indice estime le niveau d'un pilote sur une échelle de 0 à 1000, à partir de ses seuls résultats. Repères : ~500 = milieu du peloton, 800+ = parmi les meilleurs, 900+ = niveau mondial.</p>
       <ul>
-        <li><strong>Rang selon le nombre de partants</strong> — gagner sur 4 n'est pas gagner sur 100 : chaque course est notée par la position statistique du pilote dans son champ (1ᵉʳ d'un gros champ ≈ 1000, médiane ≈ 500).</li>
-        <li><strong>Constance</strong> — manches de qualification dans le top 4 et finale atteinte : un pilote régulier est légèrement bonifié, un qualifié de justesse légèrement pénalisé (facteur ×0,94 à ×1,1).</li>
+        <li><strong>Rang selon le nombre de partants</strong> — gagner sur 4 n'est pas gagner sur 100 : chaque course est notée par la position statistique du pilote dans son champ (1ᵉʳ d'un gros champ ≈ 980-1000, médiane ≈ 500). La courbe est resserrée en haut : un podium vaut nettement plus qu'une place en fond de top-20 (ex. 4ᵉ/58 ≈ 880, 11ᵉ/65 ≈ 700).</li>
+        <li><strong>Constance</strong> — manches de qualification dans le top 4 et finale atteinte : un pilote régulier est légèrement bonifié, un qualifié de justesse légèrement pénalisé (facteur ×0,97 à ×1,05). Un éliminé en demie ne touche pas le bonus finale (même s'il est classé), sauf quand les phases à élimination directe ne sont pas publiées.</li>
         <li><strong>Chrono transpondeur</strong> — sur les épreuves chronométrées, le meilleur temps du pilote est comparé aux autres chronométrés de la même catégorie lors de l'épreuve (environ ¼ du score).</li>
-        <li><strong>Non-classements</strong> — un DNF, DNS ou DSQ final est pénalisé selon la phase la plus profonde atteinte (sa progression) : éliminé en manches ≈ 250, quart ≈ 400, demi-finale ≈ 550, finale ≈ 700. Un DNF en manche n'élimine pas : s'il s'est qualifié jusqu'en finale, il est noté comme finaliste. Une pénalité, pas un zéro.</li>
+        <li><strong>Non-classements</strong> — un DNF, DNS ou DSQ final est pénalisé selon la phase la plus profonde atteinte (sa progression, avant coef niveau) : éliminé en manches ≈ 250, quart ≈ 400, demi-finale ≈ 550, finale ≈ 700. Un DNF en manche n'élimine pas : s'il s'est qualifié jusqu'en finale, il est noté comme finaliste. Une pénalité, pas un zéro.</li>
         <li><strong>Championnats</strong> — un classement de série compte comme une course, noté selon le nombre de pilotes classés.</li>
-        <li><strong>Niveau de compétition</strong> — le même rang n'a pas la même valeur partout : régional ×0,9, national ×1,0, international ×1,15.</li>
+        <li><strong>Niveau de compétition</strong> — le même rang n'a pas la même valeur partout : régional ×0,93, national ×1,0, international ×1,05.</li>
       </ul>
       <div class="perf-example">
         <p><strong>Exemple anonyme</strong> — pilote national, 4 engagements en 2025 :</p>
         <ul>
-          <li>5ᵉ sur 40 (chrono 35,20 s) → rang ≈ 888, constance ×1,1, chrono ≈ 846 → (888×1,1 + 0,3×846)/1,3 ≈ <strong>946</strong></li>
-          <li>12ᵉ sur 30 (sans chrono) → ≈ <strong>648</strong></li>
+          <li>5ᵉ sur 40 (chrono 35,20 s) → rang ≈ 764, constance ×1,05, chrono ≈ 846 → (764×1,05 + 0,3×846)/1,3 ≈ <strong>812</strong></li>
+          <li>12ᵉ sur 30 (sans chrono) → ≈ <strong>526</strong></li>
           <li>éliminé en manches (DNF, sans phase finale atteinte) → <strong>250</strong> (qualifié jusqu'en finale, ça serait ≈ 700)</li>
-          <li>série 4ᵉ sur 25 → ≈ <strong>860</strong></li>
+          <li>série 4ᵉ sur 25 → ≈ <strong>720</strong></li>
         </ul>
-        <p>Année = (946 + 648 + 250 + 860) / 4 ≈ <strong>676</strong>. L'indice carrière = la moyenne des indices annuels.</p>
+        <p>Année = (812 + 526 + 250 + 720) / 4 ≈ <strong>577</strong>. L'indice carrière = la moyenne des indices annuels.</p>
       </div>
       <p>L'indice d'une année = la moyenne de ses engagements. L'indice carrière = la moyenne des indices annuels, pour qu'une saison chargée ne pèse pas plus qu'une autre.</p>
     </div>
