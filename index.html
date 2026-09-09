@@ -1919,6 +1919,7 @@
     lastCompareUciMatches = [];
     compareActive = false;
     comparePart = null;
+    activeSubtabs = {}; // nouvelle recherche : on repart sur Stats partout
     selectedPilotKey = null;
     selectedComparePilotKey = null;
     lastUciMatches = [];
@@ -1967,6 +1968,14 @@
   let lastCompareUecMatches = []; // matches UEC du 2ᵉ pilote (comparaison par niveau, spec UEC)
   let compareActive = false;
   let comparePart = null; // niveau de comparaison H2H ; null = partie active de la fiche (D16)
+  let activeSubtabs = {}; // sous-vue active par partie (ex. {global:'courses'}) — survit aux re-rendus (tri, refresh arrière-plan) ; Stats par défaut
+  // Sous-vue à activer : le choix mémorisé s'il existe encore, sinon la première.
+  // Testé (helper pur).
+  function activeSubFor(partKey, subDefs, stored) {
+    const keys = (subDefs || []).map(s => s.key);
+    if (!keys.length) return null;
+    return (stored && keys.includes(stored)) ? stored : keys[0];
+  }
   let selectedPilotKey = null; // null = auto (plus récent), sinon clé norm() du pilote choisi
   let selectedComparePilotKey = null; // idem pour le pilote de comparaison
   function seriesYears(sm) {
@@ -3780,11 +3789,13 @@
     // Toujours rendue (masquée si la partie n'a qu'une seule sous-vue) pour
     // pouvoir être reconstruite à chaque changement de partie.
     const subs = subTabsHtml[activePart] || [];
+    const activeSub = activeSubFor(activePart, subs, activeSubtabs[activePart]);
     let subNavBtns = '';
     if (subs.length > 1) {
-      subNavBtns = subs.map((s, i) => {
+      subNavBtns = subs.map((s) => {
         const badge = s.count != null ? `<span class="tab-badge">${s.count}</span>` : '';
-        return `<button type="button" class="tab-btn${i === 0 ? ' active' : ''}" data-subtab-btn="${s.key}" role="tab" aria-selected="${i === 0}">${s.label}${badge}</button>`;
+        const on = s.key === activeSub;
+        return `<button type="button" class="tab-btn${on ? ' active' : ''}" data-subtab-btn="${s.key}" role="tab" aria-selected="${String(on)}">${s.label}${badge}</button>`;
       }).join('');
     }
     const subNavHtml = rowTabsHtml(subNavBtns, `sub-row${subs.length > 1 ? '' : ' hidden'}`);
@@ -3793,8 +3804,9 @@
 
     for (const l of partsAvailable) {
       const sDefs = subTabsHtml[l.key];
-      const subPanels = sDefs.map((s, i) =>
-        `<div class="subtab-panel${i === 0 ? ' active' : ''}" data-subtab="${s.key}">${levelPanels[l.key][s.key]}</div>`
+      const partActiveSub = activeSubFor(l.key, sDefs, activeSubtabs[l.key]);
+      const subPanels = sDefs.map((s) =>
+        `<div class="subtab-panel${s.key === partActiveSub ? ' active' : ''}" data-subtab="${s.key}">${levelPanels[l.key][s.key]}</div>`
       ).join('');
       html.push(`<section class="tab-panel${l.key === activePart ? ' active' : ''}" data-tab="${l.key}" data-part="${l.key}" role="tabpanel">${subPanels}</section>`);
     }
@@ -3851,8 +3863,9 @@
       }
       const panel = resultsEl.querySelector(`.tab-panel[data-part="${key}"]`);
       if (panel) {
+        activeSubtabs[key] = subs[0] ? subs[0].key : null; // D14 : retour sur Stats
         panel.querySelectorAll('.subtab-panel').forEach(p => {
-          p.classList.toggle('active', p.dataset.subtab === (subs[0] ? subs[0].key : ''));
+          p.classList.toggle('active', p.dataset.subtab === activeSubtabs[key]);
         });
       }
       // Centre l'onglet choisi dans la barre défilante
@@ -3864,6 +3877,8 @@
     const subBtn = e.target.closest('[data-subtab-btn]');
     if (subBtn && resultsEl.contains(subBtn)) {
       const key = subBtn.dataset.subtabBtn;
+      const activePanel = resultsEl.querySelector('.tab-panel[data-part].active');
+      if (activePanel && activePanel.dataset.part) activeSubtabs[activePanel.dataset.part] = key;
       const subNav = resultsEl.querySelector('.pilot-sticky-header .sub-row .tabs-nav');
       subNav?.querySelectorAll('.tab-btn').forEach(b => {
         const on = b.dataset.subtabBtn === key;

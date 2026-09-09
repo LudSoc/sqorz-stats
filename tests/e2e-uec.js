@@ -86,8 +86,9 @@ const indexes = {
 // Le IIFE n'expose rien : on injecte un hook de test + les index réels, et on
 // retire le init() async (dont le .catch réseau réassignerait les index à vide).
 const HOOK = `
-;window.__test = { searchLocal, searchUci, searchUec, render, norm, computeStats, levelOf,
-  __setCompare: (m) => { compareActive = true; lastCompareMatches = m; } };
+;window.__test = { searchLocal, searchUci, searchUec, render, norm, computeStats, levelOf, activeSubFor,
+  __setCompare: (m) => { compareActive = true; lastCompareMatches = m; },
+  __setActiveSub: (part, sub) => { activeSubtabs[part] = sub; } };
 `;
 const initIdx = mainScript.indexOf('(async function init()');
 if (initIdx < 0) { console.error('init() introuvable'); process.exit(1); }
@@ -169,6 +170,21 @@ const perfVals = perfChunk
   : [];
 const perfValsOk = perfVals.length === 2 && /^\d+$/.test(perfVals[0]) && /^\d+$/.test(perfVals[1]);
 check('indice perf chiffré pour les deux pilotes', perfValsOk, perfVals.length === 2 ? `p1=${perfVals[0]} p2=${perfVals[1]}` : 'ligne introuvable');
+
+// --- 6. Sous-onglet actif persisté entre les rendus (bug Courses → Stats) ---
+check('activeSubFor garde un choix valable', T.activeSubFor('global', [{ key: 'stats' }, { key: 'courses' }], 'courses') === 'courses');
+check('activeSubFor replie sur le premier si choix invalide', T.activeSubFor('global', [{ key: 'stats' }, { key: 'courses' }], 'zzz') === 'stats');
+check('activeSubFor sans sous-vue → null', T.activeSubFor('global', [], 'courses') === null);
+function activeSubOf(html, part) {
+  const sec = html.split(`<section class="tab-panel`).slice(1).find(s => s.includes(`data-part="${part}"`));
+  if (!sec) return null;
+  const m = sec.match(/<div class="subtab-panel active" data-subtab="([^"]+)"/);
+  return m ? m[1] : null;
+}
+T.__setActiveSub('global', 'courses');
+T.render(local.events, 'date-desc', local.series, uci.events, uci.series, uec.events);
+const reOut = global.document.getElementById('results').innerHTML || '';
+check('Courses reste actif après re-rendu (refresh arrière-plan)', activeSubOf(reOut, 'global') === 'courses');
 
 console.log(failures ? `\n${failures} échec(s)` : '\nTous les tests E2E passent.');
 process.exit(failures ? 1 : 0);
