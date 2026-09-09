@@ -1,0 +1,1234 @@
+{
+ "_meta": {
+  "generated": "2026-09-09",
+  "source": "Annuaire FFC (wp-json sn/cpt/clubs, 13 régions + DOM) + adjudication manuelle",
+  "entries": 245
+ },
+ "mapping": {
+  "BESANC": {
+   "name": "BMX BESANCON",
+   "city": "BESANCON",
+   "src": "auto"
+  },
+  "JOUE-T": {
+   "name": "BMX CLUB JOUE L TOURS",
+   "city": "JOUE LES TOURS",
+   "src": "auto"
+  },
+  "COURNO": {
+   "name": "BMX CLUB COURNON D'AUVERGNE",
+   "city": "COURNON D'AUVERGNE CEDEX",
+   "src": "auto"
+  },
+  "EVREUX": {
+   "name": "EVREUX BMX",
+   "city": "EVREUX",
+   "src": "auto"
+  },
+  "NOGENT": {
+   "name": "BMX NOGENT LE ROI",
+   "city": "NOGENT LE ROI",
+   "src": "auto"
+  },
+  "COMPIE": {
+   "name": "BMX COMPIEGNE VENETTE",
+   "city": "CLAIROIX",
+   "src": "auto"
+  },
+  "CARQUE": {
+   "name": "CARQUEFOU BMX CLUB",
+   "city": "CARQUEFOU",
+   "src": "auto"
+  },
+  "ISSOIR": {
+   "name": "U. S. ISSOIRE BMX",
+   "city": "ISSOIRE",
+   "src": "auto"
+  },
+  "VESOUL": {
+   "name": "CC Pays Vesoul Hte-Saône",
+   "city": "COLOMBE LES VESOUL",
+   "src": "auto"
+  },
+  "BORDEA": {
+   "name": "STADE BORDELAIS BMX",
+   "city": "BORDEAUX CEDEX",
+   "src": "auto"
+  },
+  "QUEVER": {
+   "name": "BMX QUEVERT",
+   "city": "QUEVERT",
+   "src": "auto"
+  },
+  "VERNEU": {
+   "name": "VERNEUIL BMX",
+   "city": "VERNEUIL SUR AVRE",
+   "src": "auto"
+  },
+  "BOLBEC": {
+   "name": "CO BOLBEC NOINTOT BMX",
+   "city": "BOLBEC",
+   "src": "auto"
+  },
+  "FONTEN": {
+   "name": "FONTENAY RIDERS",
+   "city": "FONTENAY LE COMTE",
+   "src": "auto"
+  },
+  "DESCAR": {
+   "name": "DESCARTES BMX",
+   "city": "DESCARTES",
+   "src": "auto"
+  },
+  "CAMPSA": {
+   "name": "BCC CAMPSAS",
+   "city": "CAMPSAS",
+   "src": "auto"
+  },
+  "TREGUE": {
+   "name": "BMX TREGUEUX C.D'ARMOR",
+   "city": "QUESSOY",
+   "src": "auto"
+  },
+  "SARRIA": {
+   "name": "BMX CLUB SARRIANS",
+   "city": "SARRIANS",
+   "src": "auto"
+  },
+  "SAULON": {
+   "name": "B.C.SAULON LA CHAPELLE",
+   "city": "SAULON LA CHAPELLE",
+   "src": "auto"
+  },
+  "CHABEU": {
+   "name": "VALENCE CHABEUIL BMX CLUB",
+   "city": "CHABEUIL",
+   "src": "auto"
+  },
+  "MOURS": {
+   "name": "BMX MOURS-ROMANS",
+   "city": "MOURS ST EUSEBE",
+   "src": "auto"
+  },
+  "CARPEN": {
+   "name": "BMX CARPENTRAS",
+   "city": "CARPENTRAS",
+   "src": "auto"
+  },
+  "MACHEC": {
+   "name": "MACHECOUL BMX CLUB",
+   "city": "MACHECOUL",
+   "src": "auto"
+  },
+  "RONCQ": {
+   "name": "BMX CLUB  RONCQ",
+   "city": "RONCQ",
+   "src": "auto"
+  },
+  "BERTRA": {
+   "name": "ASGU BERTRANGES BMX",
+   "city": "URZY",
+   "src": "auto"
+  },
+  "SOUES": {
+   "name": "SOUES OMNISPORT BMX",
+   "city": "SOUES",
+   "src": "auto"
+  },
+  "MONTEL": {
+   "name": "MONTELIMAR BMX RACING",
+   "city": "MONTELIMAR",
+   "src": "auto"
+  },
+  "CAVAIL": {
+   "name": "BMX CLUB CAVAILLON",
+   "city": "CAVAILLON",
+   "src": "auto"
+  },
+  "THEILLA": {
+   "name": "THEILLAY BMX CLUB",
+   "city": "THEILLAY",
+   "src": "auto"
+  },
+  "MOZAC": {
+   "name": "MOZAC BMX",
+   "city": "MOZAC",
+   "src": "auto"
+  },
+  "BOLLEN": {
+   "name": "AC BOLLENE",
+   "city": "BOLLENE",
+   "src": "auto"
+  },
+  "SCHWEN": {
+   "name": "VCU SCHWENHEIM",
+   "city": "SCHWENHEIM",
+   "src": "auto"
+  },
+  "CAEN": {
+   "name": "CAEN BMX",
+   "city": "CAEN",
+   "src": "auto"
+  },
+  "VALLET": {
+   "name": "BMX CLUB DE VALLET",
+   "city": "VALLET",
+   "src": "auto"
+  },
+  "NANTES": {
+   "name": "UC NANTES ATLANTIQUE",
+   "city": "NANTES",
+   "src": "auto"
+  },
+  "CALAIS": {
+   "name": "CALAIS BMX",
+   "city": "CALAIS",
+   "src": "auto"
+  },
+  "AVIGNO": {
+   "name": "BMX CLUB AVIGNON LES ANGLES",
+   "city": "AVIGNON",
+   "src": "auto"
+  },
+  "LOURDE": {
+   "name": "LOURDES VTT",
+   "city": "LOURDES",
+   "src": "auto"
+  },
+  "AZAY": {
+   "name": "AZAY BMX CLUB",
+   "city": "AZAY SUR CHER AZAY SUR CHER",
+   "src": "auto"
+  },
+  "DAMPIE": {
+   "name": "FREE BIKE DAMPIERROIS",
+   "city": "DAMPIERRE EN BURLY",
+   "src": "auto"
+  },
+  "PORTES": {
+   "name": "B.C. PORTOIS",
+   "city": "PORTES LES VALENCE",
+   "src": "auto"
+  },
+  "CHALET": {
+   "name": "GUIDON CHALETTOIS",
+   "city": "VILLEMANDEUR",
+   "src": "auto"
+  },
+  "GERZAT": {
+   "name": "GERZAT ARVERNE BMX",
+   "city": "GERZAT",
+   "src": "auto"
+  },
+  "ORCINE": {
+   "name": "BMX CLUB ORCINES",
+   "city": "ORCINES",
+   "src": "auto"
+  },
+  "FLERS": {
+   "name": "BMX CLUB DE FLERS",
+   "city": "MESSEI",
+   "src": "auto"
+  },
+  "NOZAY": {
+   "name": "NOS BMX CLUB-NOZAY",
+   "city": "NOZAY",
+   "src": "auto"
+  },
+  "MESSIG": {
+   "name": "BC MESSIGNY ET VANTOUX",
+   "city": "CLENAY SAINT JULIEN",
+   "src": "auto"
+  },
+  "CANEJA": {
+   "name": "CANEJAN BMX CLUB",
+   "city": "CANEJAN",
+   "src": "auto"
+  },
+  "BEAUNE": {
+   "name": "BEAUNE BMX",
+   "city": "BEAUNE",
+   "src": "auto"
+  },
+  "ANGLET": {
+   "name": "UCS ANGLET",
+   "city": "ANGLET",
+   "src": "auto"
+  },
+  "LIMOGE": {
+   "name": "BMX  CLUB DE LIMOGES",
+   "city": "LIMOGES",
+   "src": "auto"
+  },
+  "CHOLET": {
+   "name": "CHOLET BMX",
+   "city": "CHOLET",
+   "src": "auto"
+  },
+  "CERNAY": {
+   "name": "BMX CERNAY",
+   "city": "GUEBERSHWIHR",
+   "src": "auto"
+  },
+  "QUIERS": {
+   "name": "BCC QUIERS S/BEZONDE",
+   "city": "QUIERS SUR BEZONDE",
+   "src": "auto"
+  },
+  "ARLEUX": {
+   "name": "BMX ARLEUX",
+   "city": "ARLEUX",
+   "src": "auto"
+  },
+  "VITRE": {
+   "name": "BMX PAYS DE VITRE",
+   "city": "VITRE",
+   "src": "auto"
+  },
+  "GUIPAV": {
+   "name": "GUIPAVAS BMX",
+   "city": "GUIPAVAS",
+   "src": "auto"
+  },
+  "STRASB": {
+   "name": "BMX STRASBOURG",
+   "city": "STRASBOURG",
+   "src": "auto"
+  },
+  "LIEVIN": {
+   "name": "LIEVIN BMX",
+   "city": "ECURIE",
+   "src": "auto"
+  },
+  "PUGET": {
+   "name": "BMX PUGET VILLE",
+   "city": "PUGET VILLE",
+   "src": "auto"
+  },
+  "DRAGUI": {
+   "name": "BMX DRACENOIS",
+   "city": "DRAGUIGNAN",
+   "src": "auto"
+  },
+  "CAVIGN": {
+   "name": "CAVIGNAC BMX CLUB",
+   "city": "CAVIGNAC",
+   "src": "auto"
+  },
+  "ALENCO": {
+   "name": "BMX CORBENOIS PAYS D'ALENCON",
+   "city": "ST GERMAIN DU CORBEIS",
+   "src": "auto"
+  },
+  "TURQUA": {
+   "name": "TURQUANT BMX",
+   "city": "TURQUANT",
+   "src": "auto"
+  },
+  "CHANGE": {
+   "name": "US CHANGE BMX",
+   "city": "CHANGE",
+   "src": "auto"
+  },
+  "LONGUE": {
+   "name": "LONGUENESSE BMX",
+   "city": "LONGUENESSE",
+   "src": "auto"
+  },
+  "CHAMPE": {
+   "name": "BMX CHAMPEY PAYS D'HERICOURT",
+   "city": "VILLAFANS",
+   "src": "auto"
+  },
+  "BOUSCA": {
+   "name": "US BOUSCATAISE BMX",
+   "city": "LE BOUSCAT",
+   "src": "auto"
+  },
+  "CHAMPA": {
+   "name": "BMX CLUB CHAMPAGNELAIS",
+   "city": "CHAMPAGNE LES MARAIS",
+   "src": "auto"
+  },
+  "CORNIL": {
+   "name": "BMX CORNILLON",
+   "city": "CORNILLON - CONFOUX",
+   "src": "auto"
+  },
+  "LUISAN": {
+   "name": "LUISANT BMX CLUB",
+   "city": "VIEUVICQ",
+   "src": "auto"
+  },
+  "DAMPAR": {
+   "name": "AC DAMPARIS TAVAUX",
+   "city": "DAMPARIS",
+   "src": "auto"
+  },
+  "CHEVRO": {
+   "name": "BMX CLUB LA CHEVROLIERE",
+   "city": "LA CHEVROLIERE",
+   "src": "auto"
+  },
+  "CONTRI": {
+   "name": "BMX CONTRISSON",
+   "city": "CONTRISSON",
+   "src": "auto"
+  },
+  "ANNECY": {
+   "name": "ANNECY BMX CLUB",
+   "city": "CRAN GEVRIER",
+   "src": "auto"
+  },
+  "RIANS": {
+   "name": "BICROSS RIANNAIS BERRY",
+   "city": "RIANS",
+   "src": "auto"
+  },
+  "MARCHI": {
+   "name": "BMX CLUB DE MARCHIENNES",
+   "city": "MARCHIENNES",
+   "src": "auto"
+  },
+  "DARDIL": {
+   "name": "BMX VTT DARDILLY",
+   "city": "DARDILLY CEDEX",
+   "src": "auto"
+  },
+  "ENTREC": {
+   "name": "BMX CLUB ENTRECHAUX",
+   "city": "ENTRECHAUX",
+   "src": "auto"
+  },
+  "NAZELL": {
+   "name": "UC AMBOISE NAZELLES NEGRON",
+   "city": "NAZELLES NEGRON",
+   "src": "auto"
+  },
+  "AIZENA": {
+   "name": "AIZENAY BMX CLUB",
+   "city": "NOTRE DAME DE RIEZ",
+   "src": "auto"
+  },
+  "COLMAR": {
+   "name": "ENTENTE CYCLISTE COLMAR",
+   "city": "COLMAR",
+   "src": "auto"
+  },
+  "DENGUI": {
+   "name": "BICROSS CLUB DENGUIN",
+   "city": "DENGUIN",
+   "src": "auto"
+  },
+  "ARTIGU": {
+   "name": "ARTIGUES VELO CLUB",
+   "city": "ARTIGUES PRES BORDEAUX",
+   "src": "auto"
+  },
+  "SAVENA": {
+   "name": "BMX SAVENAY",
+   "city": "SAVENAY",
+   "src": "auto"
+  },
+  "VOISIN": {
+   "name": "VOISINS BMX CLUB",
+   "city": "VOISINS LE BRETONNEUX",
+   "src": "auto"
+  },
+  "MAUVES": {
+   "name": "BMX CLUB DE MAUVES",
+   "city": "MAUVES",
+   "src": "auto"
+  },
+  "HENNEB": {
+   "name": "HENNEBONT BMX",
+   "city": "HENNEBONT",
+   "src": "auto"
+  },
+  "ESTREE": {
+   "name": "ESTREES BMX",
+   "city": "ESTREES SAINT DENIS",
+   "src": "auto"
+  },
+  "FRONTI": {
+   "name": "BMX CLUB FRONTIGNAN",
+   "city": "FRONTIGNAN",
+   "src": "auto"
+  },
+  "CORNIM": {
+   "name": "CORNIMONT BMX",
+   "city": "GERARDMER",
+   "src": "auto"
+  },
+  "MARMAN": {
+   "name": "CC MARMANDAIS",
+   "city": "MARMANDE",
+   "src": "auto"
+  },
+  "FLEURB": {
+   "name": "FLEURBAIX BMX",
+   "city": "FLEURBAIX",
+   "src": "auto"
+  },
+  "MAUGUI": {
+   "name": "VELO CLUB MELGORIEN MAUGUIO CARNON",
+   "city": "MAUGUIO",
+   "src": "auto"
+  },
+  "NORD": {
+   "name": "NORD BMX CLUB",
+   "city": "MARCQ EN BAREUIL",
+   "src": "auto"
+  },
+  "LIVRON": {
+   "name": "BMX LIVRON",
+   "city": "LIVRON SUR DROME",
+   "src": "auto"
+  },
+  "ERAGNY": {
+   "name": "BC ERAGNY",
+   "city": "ERAGNY SUR OISE",
+   "src": "auto"
+  },
+  "BREUIL": {
+   "name": "BMX BREUILLET",
+   "city": "BREUILLET",
+   "src": "auto"
+  },
+  "GUJAN": {
+   "name": "BMX GUJANAIS",
+   "city": "GUJAN MESTRAS",
+   "src": "auto"
+  },
+  "BETTAN": {
+   "name": "SLO BETTANCOURT",
+   "city": "BETTANCOURT LA FERREE",
+   "src": "auto"
+  },
+  "PIERRE": {
+   "name": "BMX CLUB PIERRELATTE",
+   "city": "PIERRELATTE",
+   "src": "auto"
+  },
+  "FAGNIE": {
+   "name": "RACING CLUB FAGNIÈRES",
+   "city": "FAGNIERES",
+   "src": "auto"
+  },
+  "RHUYS": {
+   "name": "RHUYS BMX",
+   "city": "SARZEAU",
+   "src": "auto"
+  },
+  "BOURGE": {
+   "name": "BOURGES BMX RC",
+   "city": "BOURGES",
+   "src": "auto"
+  },
+  "CLAYES": {
+   "name": "BMX LES CLAYES SOUS BOIS",
+   "city": "LES CLAYES SOUS BOIS",
+   "src": "auto"
+  },
+  "BEAULI": {
+   "name": "A.V. BEAULIEU MANDEURE",
+   "city": "MANDEURE",
+   "src": "auto"
+  },
+  "CHERBO": {
+   "name": "CHERBOURG BMX",
+   "city": "CHERBOURG EN COTENTIN",
+   "src": "auto"
+  },
+  "MARTRA": {
+   "name": "ESC BICROSS CLUB DE  MARTRAGNY",
+   "city": "MOULINS EN BESSIN",
+   "src": "auto"
+  },
+  "NIORT": {
+   "name": "BMX CLUB NIORTAIS",
+   "city": "NIORT",
+   "src": "auto"
+  },
+  "CORNOU": {
+   "name": "CORNOUAILLE BMX",
+   "city": "PLOGONNEC",
+   "src": "auto"
+  },
+  "BARBAZ": {
+   "name": "BARBAZAN BMX",
+   "city": "TARBES",
+   "src": "auto"
+  },
+  "SORLIN": {
+   "name": "BIKE CLUB SAINT SORLIN",
+   "city": "SAINT SORLIN EN VALLOIRE",
+   "src": "auto"
+  },
+  "ROUBAI": {
+   "name": "VC ROUBAIX LILLE METROPOLE",
+   "city": "ROUBAIX",
+   "src": "auto"
+  },
+  "CHANTE": {
+   "name": "ASC BMX CHANTEPIE",
+   "city": "CHANTEPIE",
+   "src": "auto"
+  },
+  "REDON": {
+   "name": "BMX CLUB DE REDON",
+   "city": "SAINT JEAN LA POTERIE",
+   "src": "auto"
+  },
+  "MONTGE": {
+   "name": "MONTGERON BC",
+   "city": "MONTGERON",
+   "src": "auto"
+  },
+  "SOTTEV": {
+   "name": "NORMANDY BMX CLUB SOTTEVILLAIS",
+   "city": "SOTTEVILLE LES ROUEN",
+   "src": "auto"
+  },
+  "OSNY": {
+   "name": "OSNY BMX CLUB",
+   "city": "OSNY",
+   "src": "auto"
+  },
+  "SUCY94": {
+   "name": "BMX SUCY 94",
+   "city": "SUCY EN BRIE",
+   "src": "auto"
+  },
+  "LOCMAR": {
+   "name": "LOCMARIA BMX",
+   "city": "LOCMARIA PLOUZANE",
+   "src": "auto"
+  },
+  "BOUTIG": {
+   "name": "BC BOUTIGNY",
+   "city": "BOUTIGNY",
+   "src": "auto"
+  },
+  "HYERES": {
+   "name": "BMX CLUB DE HYERES",
+   "city": "HYERES",
+   "src": "auto"
+  },
+  "OMEGA": {
+   "name": "BICROSS CLUB OMEGA",
+   "city": "BOIS DE NEFLES ST-PAUL",
+   "src": "auto"
+  },
+  "TAMPON": {
+   "name": "VELO CLUB DU TAMPON",
+   "city": "LE TAMPON",
+   "src": "auto"
+  },
+  "ESP": {
+   "name": "ESPOIR CYCLISTE GUYANAIS",
+   "city": "REMIRE MONTJOLY",
+   "src": "auto"
+  },
+  "LAGORG": {
+   "name": "BMX LA GORGUE",
+   "city": "LA GORGUE",
+   "src": "auto"
+  },
+  "NIMES": {
+   "name": "NIMES CYCLISME",
+   "city": "NIMES",
+   "src": "auto"
+  },
+  "OLIVET": {
+   "name": "OLIVET BICROSS",
+   "city": "OLIVET",
+   "src": "auto"
+  },
+  "AUBERV": {
+   "name": "CM AUBERVILLIERS 93",
+   "city": "AUBERVILLIERS",
+   "src": "auto"
+  },
+  "GOLBEY": {
+   "name": "CYCLE GOLBEEN",
+   "city": "GOLBEY",
+   "src": "auto"
+  },
+  "LIMONE": {
+   "name": "BMX VTT LIMONEST",
+   "city": "LIMONEST",
+   "src": "auto"
+  },
+  "ETUPES": {
+   "name": "CC ETUPES LE DOUBS PAYS DE MONTBELIARD",
+   "city": "ETUPES",
+   "src": "auto"
+  },
+  "YZEURE": {
+   "name": "BMX YZEURE",
+   "city": "YZEURE CEDEX",
+   "src": "auto"
+  },
+  "TAURIO": {
+   "name": "BMX VAL DU TAURION",
+   "city": "SAINT PRIEST TAURION",
+   "src": "auto"
+  },
+  "VOREPP": {
+   "name": "VOIRON VOREPPE BMX",
+   "city": "VOREPPE",
+   "src": "auto"
+  },
+  "ROANNE": {
+   "name": "UNION BMX DU ROANNAIS",
+   "city": "ROANNE",
+   "src": "auto"
+  },
+  "ACIGNE": {
+   "name": "TEAM ACIGNE BMX",
+   "city": "ACIGNE",
+   "src": "auto"
+  },
+  "GRENOB": {
+   "name": "BMX GRENOBLE ISERE",
+   "city": "LE VERSOUD",
+   "src": "auto"
+  },
+  "TREPOR": {
+   "name": "AS TREPORT CYCLISME",
+   "city": "LE TREPORT",
+   "src": "auto"
+  },
+  "NEUVIL": {
+   "name": "BMX NEUVILLE",
+   "city": "NEUVILLE SUR SAONE",
+   "src": "auto"
+  },
+  "COLLER": {
+   "name": "COLLERIDER BMX",
+   "city": "LA COLLE SUR LOUP",
+   "src": "auto"
+  },
+  "GREOUX": {
+   "name": "TEAM GREOUX BIKE",
+   "city": "GREOUX LES BAINS",
+   "src": "auto"
+  },
+  "CONDAT": {
+   "name": "CONDAT BMX CLUB",
+   "city": "CONDAT/VIENNE",
+   "src": "auto"
+  },
+  "AVEYRO": {
+   "name": "AVEYRON BMX",
+   "city": "VALADY",
+   "src": "auto"
+  },
+  "MONTLU": {
+   "name": "MONTLUCON BMX",
+   "city": "MONTLUCON",
+   "src": "auto"
+  },
+  "BETHEN": {
+   "name": "BETHENIVILLE OPEN BMX RACE",
+   "city": "BETHENIVILLE",
+   "src": "auto"
+  },
+  "CREPY": {
+   "name": "CREPY BMX",
+   "city": "CREPY EN VALOIS CREPY EN VALOIS",
+   "src": "auto"
+  },
+  "OLMES": {
+   "name": "VELO CLUB DU PAYS D'OLMES",
+   "city": "AIGUES-VIVES",
+   "src": "auto"
+  },
+  "CONLIE": {
+   "name": "VELO CLUB DE CONLIE",
+   "city": "CONLIE",
+   "src": "auto"
+  },
+  "BLAVET": {
+   "name": "CC DU BLAVET",
+   "city": "ROSTRENEN",
+   "src": "auto"
+  },
+  "MIOS": {
+   "name": "BICROSS DE MIOS",
+   "city": "MIOS",
+   "src": "auto"
+  },
+  "THEIX": {
+   "name": "BMX THEIX",
+   "city": "THEIX NOYALO",
+   "src": "auto"
+  },
+  "LEMANS": {
+   "name": "LE MANS SARTHE VELO",
+   "city": "LE MANS",
+   "src": "auto"
+  },
+  "STLEGE": {
+   "name": "SAINT LEGER BMX",
+   "city": "ST LEGER DE LA MARTINIERE 79500",
+   "src": "auto"
+  },
+  "COGNAC": {
+   "name": "COGNAC BMX",
+   "city": "COGNAC",
+   "src": "auto"
+  },
+  "COTIER": {
+   "name": "AIN'PULSION COTIERE BMX",
+   "city": "THIL",
+   "src": "auto"
+  },
+  "BREST": {
+   "name": "BREST BMX 29",
+   "city": "BREST",
+   "src": "auto"
+  },
+  "CHAMBO": {
+   "name": "CJ MONT PRÈS CHAMBORD BMX",
+   "city": "ST CLAUDE DE DIRAY",
+   "src": "auto"
+  },
+  "KITCHE": {
+   "name": "KITCHEN RIDER",
+   "city": "VANNES",
+   "src": "auto"
+  },
+  "MASSY": {
+   "name": "VC MASSY PALAISEAU BC",
+   "city": "MASSY",
+   "src": "auto"
+  },
+  "OLERON": {
+   "name": "PC OLERONAIS",
+   "city": "ST PIERRE D'OLERON",
+   "src": "auto"
+  },
+  "MEYZIE": {
+   "name": "BMX CLUB DE MEYZIEU",
+   "city": "MEYZIEU",
+   "src": "auto"
+  },
+  "BIGUGL": {
+   "name": "BMX RACE BIGUGLIA",
+   "city": "BIGUGLIA",
+   "src": "auto"
+  },
+  "BAILLE": {
+   "name": "BMX BAILLEUL SUR THERAIN",
+   "city": "BAILLEUL SUR THERAIN",
+   "src": "auto"
+  },
+  "MERVIL": {
+   "name": "MERVILLE BCC",
+   "city": "MERVILLE",
+   "src": "auto"
+  },
+  "REINS": {
+   "name": "VAL DE REINS CYCLISTE",
+   "city": "AMPLEPUIS",
+   "src": "auto"
+  },
+  "FOUILL": {
+   "name": "FOUILLOUSE BMX",
+   "city": "LA FOUILLOUSE",
+   "src": "auto"
+  },
+  "SPEEDR": {
+   "name": "BMX SPEED RACING",
+   "city": "SAINT GENEST MALIVAUX",
+   "src": "auto"
+  },
+  "PORTPE": {
+   "name": "PORT PEDALES ASSOCIATION",
+   "city": "LE PORT CEDEX",
+   "src": "auto"
+  },
+  "POSSES": {
+   "name": "BMX RACE POSSESSION",
+   "city": "LA POSSESSION",
+   "src": "auto"
+  },
+  "CHAUMO": {
+   "name": "V.C.CHAUMONTAIS",
+   "city": "VERBIESLES",
+   "src": "auto"
+  },
+  "STE-CO": {
+   "name": "SAINTE CONSORCE BMX TEAM",
+   "city": "STE CONSORCE",
+   "src": "auto"
+  },
+  "GHOSTR": {
+   "name": "BMX GHOSTRIDERS",
+   "city": "TOULON",
+   "src": "auto"
+  },
+  "CHELLE": {
+   "name": "BC CHELLES",
+   "city": "CHELLES",
+   "src": "auto"
+  },
+  "MONTAU": {
+   "name": "MONTAUBAN CYCLISME 82",
+   "city": "MONTAUBAN",
+   "src": "auto"
+  },
+  "TONNEI": {
+   "name": "LVC TONNEINS",
+   "city": "TONNEINS",
+   "src": "auto"
+  },
+  "CESAR": {
+   "name": "CESAR BIKE",
+   "city": "LAUDUN",
+   "src": "auto"
+  },
+  "FRANCO": {
+   "name": "BCVO FRANCONVILLE",
+   "city": "FRANCONVILLE",
+   "src": "auto"
+  },
+  "CAMBR": {
+   "name": "CC CAMBRESIEN",
+   "city": "ESNES",
+   "src": "auto"
+  },
+  "TOURNA": {
+   "name": "MARIN TOURNAN BICROSS",
+   "city": "SOLERS",
+   "src": "auto"
+  },
+  "COUVRO": {
+   "name": "BIKES RACING COUVROT",
+   "city": "COUVROT",
+   "src": "auto"
+  },
+  "PLOUGA": {
+   "name": "PLOUGASTEL BMX",
+   "city": "PLOUGASTEL DAOULAS",
+   "src": "auto"
+  },
+  "CILAOS": {
+   "name": "CILAOS BIKE TEAM",
+   "city": "CILAOS",
+   "src": "auto"
+  },
+  "CREUSE": {
+   "name": "CREUSE OXYGENE",
+   "city": "GUERET GUERET",
+   "src": "auto"
+  },
+  "MONTES": {
+   "name": "MONTESSON BMX",
+   "city": "MONTESSON",
+   "src": "auto"
+  },
+  "EXCELS": {
+   "name": "EXCELSIOR",
+   "city": "BAIE-MAHAULT",
+   "src": "auto"
+  },
+  "CAN": {
+   "name": "CANEJAN BMX CLUB",
+   "city": "CANEJAN",
+   "src": "auto"
+  },
+  "VERRIE": {
+   "name": "BC VTT VERRIERES",
+   "city": "VERRIERES LE BUISSON",
+   "src": "auto"
+  },
+  "VEN": {
+   "name": "BMX COMPIEGNE VENETTE",
+   "city": "CLAIROIX",
+   "src": "auto"
+  },
+  "SCO": {
+   "name": "SCO CYCLISME ANGERS",
+   "city": "ANGERS",
+   "src": "auto"
+  },
+  "TERRAS": {
+   "name": "BICROSS CLUB DU TERRASSONNAIS",
+   "city": "TERRASSON LAVILLEDIEU",
+   "src": "auto"
+  },
+  "TARASC": {
+   "name": "FAMILY BMX TARASCON",
+   "city": "TARASCON",
+   "src": "auto"
+  },
+  "DIJON": {
+   "name": "S.C.OLYMPIQUE DE DIJON",
+   "city": "DIJON",
+   "src": "auto"
+  },
+  "LAT": {
+   "name": "PRESQU'ILE BMX",
+   "city": "LA TURBALLE",
+   "src": "auto"
+  },
+  "KRONOS": {
+   "name": "KRONOS ACADEMY PARIS SACLAY",
+   "city": "SACLAY",
+   "src": "auto"
+  },
+  "EST": {
+   "name": "ESTREES BMX",
+   "city": "ESTREES SAINT DENIS",
+   "src": "auto"
+  },
+  "FOIX": {
+   "name": "GUIDON FUXEEN",
+   "city": "FOIX",
+   "src": "auto"
+  },
+  "RIDEON": {
+   "name": "RIDE ON BIKE",
+   "city": "AVRILLE",
+   "src": "auto"
+  },
+  "LEMAN": {
+   "name": "LE MANS SARTHE VELO",
+   "city": "LE MANS",
+   "src": "auto"
+  },
+  "RIDING": {
+   "name": "BMX RIDING CLUB",
+   "city": "PONT D OUILLY",
+   "src": "auto"
+  },
+  "BUNNY": {
+   "name": "BUNNY HOP CLUB",
+   "city": "BRIANCON",
+   "src": "auto"
+  },
+  "CRAZY": {
+   "name": "CRAZY WOOD VTT",
+   "city": "BIGNAN",
+   "src": "auto"
+  },
+  "ECU": {
+   "name": "LIEVIN BMX",
+   "city": "ECURIE",
+   "src": "auto"
+  },
+  "MONTIV": {
+   "name": "BMX CLUB MONTIVILLIERS",
+   "city": "MONTIVILLIERS",
+   "src": "auto"
+  },
+  "COURON": {
+   "name": "AAC BMX  PETIT COURONNE",
+   "city": "PETIT COURONNE",
+   "src": "auto"
+  },
+  "COTENT": {
+   "name": "VC COTE PICARDE",
+   "city": "MERS LES BAINS",
+   "src": "auto"
+  },
+  "BICLUB": {
+   "name": "BI CLUB CHAPELLOIS",
+   "city": "LA CHAPELLE ST MESMIN",
+   "src": "manual"
+  },
+  "LR-YON": {
+   "name": "BMX CLUB LA ROCHE SUR YON",
+   "city": "LA ROCHE SUR YON",
+   "src": "manual"
+  },
+  "LPMIRA": {
+   "name": "BMX CLUB LES PENNES MIRABEAU",
+   "city": "LES PENNES MIRABEAU",
+   "src": "manual"
+  },
+  "STAVER": {
+   "name": "ST AVERTIN SPORTS BMX",
+   "city": "SAINT AVERTIN",
+   "src": "manual"
+  },
+  "ARGTAN": {
+   "name": "ARGENTAN BMX",
+   "city": "ARGENTAN",
+   "src": "manual"
+  },
+  "STNAZA": {
+   "name": "SAINT NAZAIRE BMX CLUB",
+   "city": "SAINT NAZAIRE",
+   "src": "manual"
+  },
+  "STBRIE": {
+   "name": "SAINT BRIEUC BMX",
+   "city": "PLOUFRAGAN",
+   "src": "manual"
+  },
+  "MONTME": {
+   "name": "MONTMELIAN BMX",
+   "city": "MONTMELIAN",
+   "src": "manual"
+  },
+  "ASTBMX": {
+   "name": "AST BMX RACE",
+   "city": "LE MESNIL REAUME",
+   "src": "manual"
+  },
+  "AVNSAN": {
+   "name": "AVENSAN VELO NATURE",
+   "city": "AVENSAN",
+   "src": "manual"
+  },
+  "STMAXI": {
+   "name": "BMX MAXIMOIS",
+   "city": "SAINTE MAXIME",
+   "src": "manual"
+  },
+  "RID07": {
+   "name": "BMX RIDERS 07",
+   "city": "LAVILLEDIEU",
+   "src": "manual"
+  },
+  "CHANCX": {
+   "name": "AS CHANCEAUX BMX",
+   "city": "CHANCEAUX SUR CHOISILLE",
+   "src": "manual"
+  },
+  "LUCBMX": {
+   "name": "LUC BMX",
+   "city": "LILLE",
+   "src": "manual"
+  },
+  "VALBMX": {
+   "name": "VAL BMX",
+   "city": "TORCY",
+   "src": "manual"
+  },
+  "PRQBMX": {
+   "name": "PRESQU'ILE BMX",
+   "city": "LA TURBALLE",
+   "src": "manual"
+  },
+  "PTEVEQ": {
+   "name": "BMX. PONT EVEQUE",
+   "city": "PONT EVEQUE",
+   "src": "manual"
+  },
+  "STQUEN": {
+   "name": "BMX DE SAINT QUENTIN",
+   "city": "SAINT QUENTIN",
+   "src": "manual"
+  },
+  "STMARC": {
+   "name": "BMX MARCELLINOIS",
+   "city": "SAINT MARCELLIN EN FOREZ",
+   "src": "manual"
+  },
+  "MTDMAR": {
+   "name": "STADE MONTOIS BMX",
+   "city": "MONT DE MARSAN",
+   "src": "manual"
+  },
+  "MER": {
+   "name": "BICROSS CLUB MEROIS",
+   "city": "MER",
+   "src": "manual"
+  },
+  "UVA": {
+   "name": "UV ANGERIENNE",
+   "city": "ST JEAN D ANGELY",
+   "src": "manual"
+  },
+  "STP3CH": {
+   "name": "B.C. ST PAUL 3 CHATEAUX",
+   "city": "SAINT PAUL TROIS CHATEAUX",
+   "src": "manual"
+  },
+  "CHARTR": {
+   "name": "C CHARTRES BMX",
+   "city": "CHARTRES",
+   "src": "manual"
+  },
+  "VILLSG": {
+   "name": "CC VILLENEUVE ST GERMAIN SOISSONS AISNE",
+   "city": "VILLENEUVE SAINT GERMAIN",
+   "src": "manual"
+  },
+  "BMXLUC": {
+   "name": "BMX LUCOIS",
+   "city": "LE LUC EN PROVENCE",
+   "src": "manual"
+  },
+  "PERNES": {
+   "name": "BMX PERNOIS",
+   "city": null,
+   "src": "manual"
+  },
+  "STEVIC": {
+   "name": "BMX CLUB STE VICTOIRE",
+   "city": null,
+   "src": "manual"
+  },
+  "CHGONT": {
+   "name": "BMX CHATEAU-GONTIER",
+   "city": null,
+   "src": "manual"
+  },
+  "STGEOR": {
+   "name": "CLUB AVENIR SAINT GEORGES",
+   "city": null,
+   "src": "manual"
+  },
+  "VITROL": {
+   "name": "VITROLLES VELO CLUB BMX",
+   "city": "VITROLLES",
+   "src": "manual"
+  },
+  "BLAGNA": {
+   "name": "BLAGNAC BMX",
+   "city": "BLAGNAC",
+   "src": "manual"
+  },
+  "USCBMX": {
+   "name": "US CAGNES BMX",
+   "city": "CAGNES SUR MER",
+   "src": "manual"
+  },
+  "BIKRAC": {
+   "name": "BIKE RACING ACADEMY",
+   "city": "SAIX",
+   "src": "manual"
+  },
+  "FAMILY": {
+   "name": "FAMILY BMX TARASCON",
+   "city": "TARASCON",
+   "src": "manual"
+  },
+  "BEYNOS": {
+   "name": "AIN'PULSION COTIERE BMX",
+   "city": "BEYNOST",
+   "src": "manual"
+  },
+  "MEDOC": {
+   "name": "Médoc BMX",
+   "city": "AVENSAN",
+   "src": "manual"
+  },
+  "CSSD": {
+   "name": "CLUB SPORTIF SAINT DENIS BMX 974",
+   "city": "SAINT-DENIS",
+   "src": "manual"
+  },
+  "UCBH": {
+   "name": "UC BASSIN HOUILLER",
+   "city": "SAINT AVOLD",
+   "src": "manual"
+  }
+ }
+}

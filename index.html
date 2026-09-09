@@ -1395,6 +1395,28 @@
   let uecIndex = null; // index UEC (Coupe/Championnats d'Europe, JSTiming) — optionnel
   let perfFrField = null;  // { classes, medFs } — forces de plateau FR (indice v2, optionnel)
   let perfUecField = null; // idem UEC — silent fallback v1 si absents
+  // --- Noms complets des clubs (clubs.json, cf. club_stats/tools/clubs/README.md) ---
+  // Normalisation compatible club_stats (conserve '-' et la ponctuation : JOUE-T ≠ JOUE T).
+  const normClubCode = s => (s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  let clubFullNames = new Map();
+  async function loadClubNames() {
+    try {
+      const r = await fetch('clubs.json', { cache: 'no-cache' });
+      if (!r.ok) return;
+      const j = await r.json();
+      const m = (j && j.mapping) || j || {};
+      for (const [k, v] of Object.entries(m)) {
+        if (k === '_meta' || !v || !v.name) continue;
+        clubFullNames.set(normClubCode(k), v.name);
+      }
+    } catch { /* repli : codes seuls */ }
+  }
+  // « BMX BESANCON (BESANC) » — repli sur le code seul si inconnu.
+  function clubDisplayName(raw) {
+    const code = (raw || '').trim();
+    const full = clubFullNames.get(normClubCode(code));
+    return full ? `${full} (${code})` : code;
+  }
   // Clés de classe = même convention que findClassCompetitors et le build (build-field.js).
   const fieldKeyOfEvent = m => `${m.account.accountCode}/${m.event.eventId}/${m.cls?.perpetualClassCode || m.cls?.className || ''}`;
   const fieldKeyOfSeries = sm => `${sm.account.accountCode}/series:${sm.series?.seriesId || ''}/${sm.cls?.perpetualClassCode || sm.cls?.className || ''}`;
@@ -1679,7 +1701,7 @@
       dropdown.innerHTML = items.map((p, i) =>
         `<div class="ac-item" data-idx="${i}" tabindex="-1">
           <span class="ac-name">${escape(p.firstName + ' ' + p.lastName)}</span>
-          ${p.groupName ? `<span class="ac-meta">${escape(p.groupName)}</span>` : ''}
+          ${p.groupName ? `<span class="ac-meta">${escape(clubDisplayName(p.groupName))}</span>` : ''}
         </div>`
       ).join('') + moreHtml;
       dropdown.classList.add('open');
@@ -1836,6 +1858,7 @@
     try {
       // Index FR : requis — l'UI devient utilisable dès qu'il est prêt.
       pilotsIndex = await loadIndexCached(indexCfg('pilots', 'index France', 83_000_000));
+      await loadClubNames();
       finishPrimaryLoad();
       // UCI + UEC : arrière-plan — la recherche affichée est rafraîchie à leur arrivée.
       loadSecondaryIndexes();
@@ -2741,7 +2764,7 @@
             <div class="champ-line">
               <div class="champ-category">
                 <span class="class-name">${escape(sm.cls.className || '—')}</span>
-                <div class="meta">${escape(c.firstName || '')} ${escape(c.lastName || '')}${c.groupName ? ` · ${escape(c.groupName)}` : ''}</div>
+                <div class="meta">${escape(c.firstName || '')} ${escape(c.lastName || '')}${c.groupName ? ` · ${escape(clubDisplayName(c.groupName))}` : ''}</div>
               </div>
               <div class="champ-rank">
                 <div class="rank-pill ${pillClass}" title="Classement général du championnat">${rk != null ? rk : '—'}</div>
@@ -2840,7 +2863,7 @@
           <div class="pilot-badges">
             ${perfCareer != null ? `<span class="pilot-index" title="Indice de performance carrière (tous niveaux, 0–1000)">🏅 ${perfCareer}</span>` : ''}
             ${age != null ? `<span class="pilot-age" title="Âge">🎂 ${age} ans</span>` : ''}
-            ${club ? `<a class="pilot-club" href="${CLUB_BASE}?club=${encodeURIComponent(norm(club))}" target="_blank" rel="noopener noreferrer" title="Stats du club">📍 ${escape(club)}</a>` : ''}
+            ${club ? `<a class="pilot-club" href="${CLUB_BASE}?club=${encodeURIComponent(normClubCode(club))}" target="_blank" rel="noopener noreferrer" title="Stats du club">📍 ${escape(clubDisplayName(club))}</a>` : ''}
           </div>
           ${dnxHtml}
         </div>
@@ -2937,7 +2960,7 @@
         const avInner = p.plate
           ? `<span style="font-size:${p.plate.length<=3?11:9}px;font-weight:900">${escape(p.plate)}</span>`
           : escape([p.cmp.firstName?.[0], p.cmp.lastName?.[0]].filter(Boolean).join('').toUpperCase() || '?');
-        const meta = [p.plate ? `#${escape(p.plate)}` : null, p.club ? escape(p.club) : null].filter(Boolean).join(' · ');
+        const meta = [p.plate ? `#${escape(p.plate)}` : null, p.club ? escape(clubDisplayName(p.club)) : null].filter(Boolean).join(' · ');
         const isActive = k === cmpActiveKey;
         return `<button type="button" class="pilot-pick-btn${isActive?' active':''}" data-compare-pilot-key="${escape(k)}">
           <div class="ppav" style="background:${color}">${avInner}</div>
@@ -3071,11 +3094,11 @@
       <div class="compare-pilots">
         <div class="compare-pilot">
           <div class="cav" style="--cp-color:${p1Color}">${avInner(p1c, p1Plate)}</div>
-          <div><div class="cpname">${escape(p1Name)}</div><div class="cpsub">${escape(p1Club||'—')}</div>${p1Age != null ? `<div class="cpsub">${p1Age} ans</div>` : ''}</div>
+          <div><div class="cpname">${escape(p1Name)}</div><div class="cpsub">${escape(p1Club ? clubDisplayName(p1Club) : '—')}</div>${p1Age != null ? `<div class="cpsub">${p1Age} ans</div>` : ''}</div>
         </div>
         <div class="compare-pilot">
           <div class="cav" style="--cp-color:${p2Color}">${avInner(p2c, p2Plate)}</div>
-          <div><div class="cpname">${escape(p2Name)}</div><div class="cpsub">${escape(p2Club||'—')}</div>${p2Age != null ? `<div class="cpsub">${p2Age} ans</div>` : ''}</div>
+          <div><div class="cpname">${escape(p2Name)}</div><div class="cpsub">${escape(p2Club ? clubDisplayName(p2Club) : '—')}</div>${p2Age != null ? `<div class="cpsub">${p2Age} ans</div>` : ''}</div>
         </div>
       </div>
       <div class="compare-rows">${rowsHtml}</div>
@@ -3463,7 +3486,7 @@
             <div class="class-line">
               <div class="cl-info">
                 <div><span class="class-name">${clNameHtml}</span></div>
-                <div class="meta">${escape(c.firstName)} ${escape(c.lastName)}${c.plate ? ` · #${escape(c.plate)}` : ''}${c.groupName ? ` · ${escape(c.groupName)}` : ''}</div>
+                <div class="meta">${escape(c.firstName)} ${escape(c.lastName)}${c.plate ? ` · #${escape(c.plate)}` : ''}${c.groupName ? ` · ${escape(clubDisplayName(c.groupName))}` : ''}</div>
                 ${phases ? `<div class="phases">${phases}</div>` : ''}
               </div>
               <div class="cl-right">
@@ -3754,7 +3777,7 @@
         const avInner = p.plate
           ? `<span style="font-size:${p.plate.length<=3?11:9}px;font-weight:900">${escape(p.plate)}</span>`
           : escape([p.cmp.firstName?.[0], p.cmp.lastName?.[0]].filter(Boolean).join('').toUpperCase() || '?');
-        const meta = [p.plate ? `#${escape(p.plate)}` : null, p.club ? escape(p.club) : null].filter(Boolean).join(' · ');
+        const meta = [p.plate ? `#${escape(p.plate)}` : null, p.club ? escape(clubDisplayName(p.club)) : null].filter(Boolean).join(' · ');
         const isActive = k === activeKey;
         return `<button type="button" class="pilot-pick-btn${isActive?' active':''}" data-pilot-key="${escape(k)}">
           <div class="ppav" style="background:${color}">${avInner}</div>
