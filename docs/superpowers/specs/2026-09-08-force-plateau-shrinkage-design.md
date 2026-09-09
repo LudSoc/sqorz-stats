@@ -26,7 +26,8 @@ Contrainte forte (comme la v1) : **aucune régénération des index existants**,
 | 7 | Portée | Événements **et séries** (plateau d'une série = ses classés, année = règle existante) |
 | 8 | Artifact | **Fichier séparé** `field-strength.json` (+ `field-strength.meta.json`), R2, **optionnel** (fallback silencieux = formule v1) |
 | 9 | Clé de classe | **Identique à `findClassCompetitors`** : `${accountCode}\|${eventId}\|${perpetualClassCode \|\| className}` (zéro collision FR/UEC, déjà prouvée) |
-| 10 | Shrinkage | Sur les **moyennes annuelles** : `(n·mean + m·500)/(n+m)`, **m = 2** (m=1 inutile, m=4 brutal, §7) |
+| 10 | Shrinkage | Sur les **moyennes annuelles** : `(w·mean + m·500)/(w+m)`, **m = 2**, **w = Σ poids** (pas le compteur) |
+| 16 | Poids de preuve | `classé ? taille_plateau / 12 : 0,25` — 12 = taille médiane mesurée (3035 classes 2026, p10 = 2, p90 = 54) : une course typique ≈ 1, une finale mondiale ≈ 10, un DNF ≈ 0,25 |
 | 11 | Récence | **Abandonnée le 2026-09-08** : le shrinkage stabilise déjà ; pas de pondération temporelle, pas d'affichage « niveau actuel » (la carrière reste la moyenne des moyennes annuelles) |
 | 12 | Homonymes | Politique `norm()` existante (même limite que les comparaisons) — documentée, non résolue ici |
 | 13 | Mix Cruiser/20" UEC | Sans objet : les plateaux sont **par classe**, jamais mélangés (le regroupement B17+C17 n'existait que dans le protocole de test) |
@@ -88,13 +89,14 @@ score_event = clamp(clamp(raw × coef_niveau) + 0,3 · (fs_excl − medFs[année
 
 `raw` = existant (blend `sr × constance [+ chrono]`, pré-coef). Double clamp identique au build (`SqorzCommon.applyFieldScore`, parité testée). Rien d'autre ne change (DNF §4.4 v1, séries : même ajustement avec le plateau de la série, clé `compte/series:<id>/<code>`).
 
-### 4.2 Moyennes annuelles (shrinkage, m = 2)
+### 4.2 Moyennes annuelles (shrinkage pondéré par la preuve, m = 2)
 
 ```
-moyenne_année(Y) = (n·mean(adj) + 2·500) / (n + 2)
+poids(e) = classé ? taille_plateau / 12 : 0,25     // 12 = taille médiane mesurée (3035 classes 2026)
+moyenne_année(Y) = (w·mean(adj) + 2·500) / (w + 2)  // w = Σ poids (pas le compteur)
 ```
 
-Appliqué dans `perfLevel` (sqorz_stats) et `computePerfIndex` (category) : badges timeline, Stats « par année », colonne 🏅 — partout où une moyenne annuelle s'affiche. Le `n` affiché (« N eng. ») explique la force du shrinkage. La carrière reste la moyenne des moyennes annuelles (shrinkées).
+Appliqué dans `perfLevel` (sqorz_stats) et `computePerfIndex` (category) : badges timeline, Stats « par année », colonne 🏅 — partout où une moyenne annuelle s'affiche. La moyenne reste simple (tous les engagements à égalité) ; seule la force du resserrement suit la preuve. Le `n` affiché (« N eng. ») reste un compteur. La carrière reste la moyenne des moyennes annuelles (shrinkées).
 
 ### 4.3 Exemple chiffré (prototype — Merlin Guigo, UEC 2026, cas d'origine du §7.4 v1)
 
@@ -159,7 +161,8 @@ Fermiers 2026 (≥3 vict., champ moy. < 12) : décotés quand le score est haut 
   - ANJOUBAULT : histo 616 (saison 2026 faible : 382 — le shrinkage seul ne la masque pas, c'est voulu)
 - **Fermiers** (≥3 victoires, champ moyen < 12) : −39 à −48 chacun (ex. 5 vict./5 eng. champ 3,2 : 668 → 620).
 - **Sensibilité k** (moyenne 2026) : monotone et douce — Merlin 844/854/860/869, HEITZ 804/819/825/838 pour k = 0/0,2/0,3/0,5 → **k = 0,3**.
-- **Sensibilité m** : m=1 quasi inutile, m=4 brutal sur gros n (Merlin n=16 : −73) → **m = 2** (à n=2, divise l'écart à 500 par deux).
+- **Sensibilité m** : m=1 quasi inutile, m=4 brutal sur gros n (Merlin n=16 : −73) → **m = 2** (à n=2 et poids 2, divise l'écart à 500 par deux).
+- **Poids effectifs (2026-09-08, chemin production)** : Gaillard UCI 2026 (2 eng., 78+57 partants, w=11,25) : **705 → 847** (+142) ; Gaillard podiums 2024 (2/118 + 3/57, w=14,58) : **743 → 926** (+183). Fermiers rediscriminés : 5 vict. champ 3,2 : 620 → ~567 (mieux qu'avant). Population (moyennes annuelles 15 042 pilotes) : médiane 433 → 413, p90 617 → 655 — dispersion accrue voulue (les bons gros plateaux comptent, les micro-échantillons s'écrasent) ; médiane des scores d'engagement stable (474 → 472).
 
 ## 8. Points restants (recette, non bloquants)
 

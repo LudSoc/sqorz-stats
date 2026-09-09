@@ -296,10 +296,19 @@
     }
   }
 
-  // Shrinkage d'une moyenne annuelle vers 500 selon le nombre d'engagements
-  // (spec force-plateau §4.2) : mean' = (n·mean + m·500) / (n + m).
-  function perfShrinkMean(mean, n, m = PERF_SHRINK_M) {
-    return (n * mean + m * 500) / (n + m);
+  // Poids de preuve d'un engagement pour le shrinkage (spec force-plateau §4.2) :
+  // taille du plateau / médiane (un finaliste mondial pèse ~10 courses
+  // régionales), DNF/DNS/DSQ = 0,25 (présent mais non informatif).
+  function perfWeight(total, isDnf) {
+    if (isDnf) return 0.25;
+    return (total || 0) / PERF_SHRINK_DIV;
+  }
+
+  // Shrinkage d'une moyenne annuelle vers 500 selon la PREUVE apportée
+  // (spec force-plateau §4.2) : mean' = (w·mean + m·500) / (w + m),
+  // où w = somme des poids des engagements (pas leur compteur).
+  function perfShrinkMean(mean, w, m = PERF_SHRINK_M) {
+    return (w * mean + m * 500) / (w + m);
   }
 
   // Ajustement force du plateau à partir d'une entrée [fs, n] (spec force-plateau
@@ -332,6 +341,9 @@
   const PERF_CHRONO_W = 0.3;   // poids du composant chrono dans le blend (§4.3)
   const PERF_FIELD_K = 0.3;    // poids de l'ajustement force du plateau (spec force-plateau §4.1)
   const PERF_SHRINK_M = 2;     // force du shrinkage des moyennes annuelles vers 500 (spec force-plateau §4.2)
+  // Diviseur du poids de preuve : taille médiane d'une classe, mesurée sur
+  // 3035 classes 2026 (médiane 12, p10 = 2, p90 = 54). Une course typique ≈ 1.
+  const PERF_SHRINK_DIV = 12;
   const PERF_DNF_SCORES = { final: 700, semi: 550, quarter: 400, moto: 250 }; // §4.4
   const perfClamp = v => Math.max(5, Math.min(1000, v));
   // Score de rang : 500 + 500·(z/√3)^2,5 pour z > 0 (convexe — le podium se détache
@@ -416,8 +428,8 @@
     norm, escape, humanError, zScore,
     isFinalPhase, isMotoPhase, isSemiPhase, isNotTimedPhase, num, perfHasKnockout,
     expandIndex, INDEX_CACHE_NAME, openIndexCache, loadIndexCached,
-    PERF_LEVEL_COEFS, PERF_RANG_EXP, PERF_CHRONO_W, PERF_FIELD_K, PERF_SHRINK_M, PERF_DNF_SCORES,
-    loadFieldStrength, perfShrinkMean, fieldAdjust, applyFieldScore,
+    PERF_LEVEL_COEFS, PERF_RANG_EXP, PERF_CHRONO_W, PERF_FIELD_K, PERF_SHRINK_M, PERF_SHRINK_DIV, PERF_DNF_SCORES,
+    loadFieldStrength, perfShrinkMean, perfWeight, fieldAdjust, applyFieldScore,
     perfClamp, perfScoreRang, perfBestTime, perfChronoScore,
     perfConstance, perfCoefConstance, perfDeepestPhase,
     fmtDateFr, formatDataDates,

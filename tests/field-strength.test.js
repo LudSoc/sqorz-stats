@@ -259,9 +259,20 @@ test('contrat loadIndexCached : fichiers locaux en premier en dev local', () => 
   assert.equal(H.fieldCfg('fr', 'field-strength-fr').url, './field-strength-fr.json');
 });
 
-// --- shrinkage ---
-test('perfShrinkMean : resserre vers 500 selon n', () => {
-  assert.ok(Math.abs(SC.perfShrinkMean(577, 4) - 551.33) < 0.01);
+// --- shrinkage pondéré par la preuve ---
+test('perfShrinkMean : resserre vers 500 selon le poids (pas le compteur)', () => {
+  assert.ok(Math.abs(SC.perfShrinkMean(577, 4) - 551.33) < 0.01, 'poids 4 : comme avant');
   assert.equal(SC.perfShrinkMean(500, 99), 500);
-  assert.ok(SC.perfShrinkMean(844, 2) < 685 && SC.perfShrinkMean(844, 2) > 660, `n=2 : ${SC.perfShrinkMean(844, 2)}`);
+  // Exemple de l'aide : 4 courses (40, 30, DNF, série 25) → w = 8,17 → 562.
+  const w = 40 / 12 + 30 / 12 + 0.25 + 25 / 12;
+  assert.ok(Math.abs(SC.perfShrinkMean(577, w) - 562) < 1, `exemple aide : ${SC.perfShrinkMean(577, w)}`);
+});
+
+test('perfWeight : taille du plateau / 12, DNF = 0,25', () => {
+  assert.equal(SC.PERF_SHRINK_DIV, 12);
+  assert.ok(Math.abs(SC.perfWeight(40, false) - 40 / 12) < 1e-9);
+  assert.ok(Math.abs(SC.perfWeight(78, false) + SC.perfWeight(57, false) - 11.25) < 1e-9, 'Gaillard UEC : 11,25 unités');
+  assert.equal(SC.perfWeight(30, true), 0.25, 'DNF');
+  assert.equal(SC.perfWeight(0, false), 0, 'champ vide');
+  assert.equal(SC.perfWeight(undefined, false), 0);
 });

@@ -1383,7 +1383,7 @@
     expandIndex, loadIndexCached, loadFieldStrength,
     PERF_LEVEL_COEFS, PERF_CHRONO_W, PERF_DNF_SCORES, PERF_FIELD_K,
     perfClamp, perfScoreRang, perfBestTime, perfChronoScore,
-    perfConstance, perfCoefConstance, perfDeepestPhase, perfShrinkMean, applyFieldScore,
+    perfConstance, perfCoefConstance, perfDeepestPhase, perfShrinkMean, perfWeight, applyFieldScore,
     formatDataDates,
   } = window.SqorzCommon;
   let pilotsIndex = null;
@@ -3291,19 +3291,19 @@
     const byYear = new Map();
     const acc = (year, o) => {
       let a = byYear.get(year);
-      if (!a) { a = { scores: 0, n: 0, dnfN: 0, seriesN: 0 }; byYear.set(year, a); }
-      a.scores += o.score; a.n++;
+      if (!a) { a = { scores: 0, w: 0, n: 0, dnfN: 0, seriesN: 0 }; byYear.set(year, a); }
+      a.scores += o.score; a.w += o.w; a.n++;
       a.dnfN += o.nDnf || 0;
       if (o.series) a.seriesN++;
     };
-    for (const m of events) { const e = perfEngagement(m); acc(e.year, { score: applyFieldScore(e.raw, coef, fieldKeyOfEvent(m), e.year, fieldCtxFor(m), e.nDnf), nDnf: e.nDnf }); }
-    for (const sm of series) { const s = perfSeriesScore(sm); acc(s.year, { score: applyFieldScore(s.raw, coef, fieldKeyOfSeries(sm), s.year, fieldCtxFor(sm), s.nDnf), series: 1 }); }
+    for (const m of events) { const e = perfEngagement(m); acc(e.year, { score: applyFieldScore(e.raw, coef, fieldKeyOfEvent(m), e.year, fieldCtxFor(m), e.nDnf), w: perfWeight(m.totalParticipants, e.nDnf), nDnf: e.nDnf }); }
+    for (const sm of series) { const s = perfSeriesScore(sm); acc(s.year, { score: applyFieldScore(s.raw, coef, fieldKeyOfSeries(sm), s.year, fieldCtxFor(sm), s.nDnf), w: perfWeight(sm.totalCompetitors, s.nDnf), series: 1 }); }
     const years = [...byYear.keys()].filter(y => y !== '????').sort((a, b) => b.localeCompare(a));
     const yearRows = years.map(y => {
       const a = byYear.get(y);
       return {
         year: y,
-        mean: a.n ? Math.round(perfShrinkMean(a.scores / a.n, a.n)) : null,
+        mean: a.n ? Math.round(perfShrinkMean(a.scores / a.n, a.w)) : null,
         n: a.n, seriesN: a.seriesN, dnfN: a.dnfN,
       };
     });
@@ -3340,7 +3340,7 @@
         <li><strong>Non-classements</strong> — un DNF, DNS ou DSQ final est pénalisé selon la phase la plus profonde atteinte (sa progression, avant coef niveau) : éliminé en manches ≈ 250, quart ≈ 400, demi-finale ≈ 550, finale ≈ 700. Un DNF en manche n'élimine pas : s'il s'est qualifié jusqu'en finale, il est noté comme finaliste. Une pénalité, pas un zéro.</li>
         <li><strong>Championnats</strong> — un classement de série compte comme une course, noté selon le nombre de pilotes classés.</li>
         <li><strong>Force du plateau</strong> — à rang égal, battre un plateau fort vaut plus : le score est ajusté selon le niveau moyen des adversaires de la course (neutre sur un plateau typique, jamais sur les DNF).</li>
-        <li><strong>Petits échantillons</strong> — les moyennes annuelles sont resserrées vers 500 selon le nombre d'engagements (le « N eng. » affiché explique la force du resserrement).</li>
+        <li><strong>Petits échantillons</strong> — les moyennes annuelles sont resserrées vers 500 selon la preuve apportée : chaque course pèse sa taille de plateau rapportée à la médiane (12), un DNF/DNS/DSQ 0,25. Deux finales mondiales pèsent ainsi ~11 courses régionales. Le « N eng. » affiché reste un simple compteur.</li>
         <li><strong>Niveau de compétition</strong> — le même rang n'a pas la même valeur partout : régional ×0,93, national ×1,0, international ×1,05.</li>
       </ul>
       <div class="perf-example">
@@ -3351,7 +3351,7 @@
           <li>éliminé en manches (DNF, sans phase finale atteinte) → <strong>250</strong> (qualifié jusqu'en finale, ça serait ≈ 700)</li>
           <li>série 4ᵉ sur 25 → ≈ <strong>720</strong></li>
         </ul>
-        <p>Année = moyenne resserrée vers 500 (4 eng.) : (4×577 + 2×500) / 6 ≈ <strong>551</strong>. L'indice carrière = la moyenne des indices annuels.</p>
+        <p>Année = moyenne 577 resserrée selon la preuve (poids 8,2 : 40/12 + 30/12 + 0,25 + 25/12) : (8,2×577 + 2×500) / 10,2 ≈ <strong>562</strong>. L'indice carrière = la moyenne des indices annuels.</p>
       </div>
       <p>L'indice d'une année = la moyenne de ses engagements, resserrée vers 500 selon leur nombre. L'indice carrière = la moyenne des indices annuels, pour qu'une saison chargée ne pèse pas plus qu'une autre.</p>
     </div>
