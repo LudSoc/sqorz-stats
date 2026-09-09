@@ -27,3 +27,9 @@ test('dégradation gracieuse si le CDN common.js est en retard (helpers absents)
   assert.ok(src.includes('const favNow = typeof isFav'), 'isFav gardé via favNow');
   assert.ok(src.includes("typeof toggleFav !== 'function'"), 'toggleFav gardé au clic');
 });
+
+test('disclaimer UEC affiché sur la partie UEC (socle en retard toléré)', () => {
+  assert.ok(src.includes("activePart === 'uec'"), 'conditionné à la partie UEC');
+  assert.ok(src.includes("typeof UEC_SOURCE_NOTE === 'string'"), 'garde CDN');
+  assert.ok(src.includes('escape(UEC_SOURCE_NOTE)'), 'texte du socle échappé');
+});

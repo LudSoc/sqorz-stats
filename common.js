@@ -498,6 +498,11 @@
     return readJsonArray(SHARED_RECENT_KEY).slice(0, n);
   }
 
+  // ===== Disclaimer source UEC =====
+  // Les données UEC viennent de JSTiming (plateforme des organisateurs européens),
+  // pas de l'API Sqorz : intégration non officielle, couverture et formats variables.
+  const UEC_SOURCE_NOTE = 'Données UEC : résultats publiés sur JSTiming par les organisateurs — intégration non officielle, couverture et formats variables (ex. pas de classement overall 6-10 ans).';
+
   window.SqorzCommon = {
     norm, escape, humanError, zScore,
     isFinalPhase, isMotoPhase, isSemiPhase, isNotTimedPhase, num, perfHasKnockout,
@@ -509,5 +514,6 @@
     fmtDateFr, formatDataDates,
     renderDataDates, setTextStatus, setBarProgress,
     getFavs, isFav, toggleFav, pushRecent, getRecent,
+    UEC_SOURCE_NOTE,
   };
 })();
