@@ -51,3 +51,7 @@ test('clubs.json : copie conforme au canonique club_stats', () => {
   assert.ok(_meta && mapping && Object.keys(mapping).length >= 200);
   assert.equal(mapping.USCBMX.name, 'US CAGNES BMX');
 });
+
+test('pied de page : Sqorz et JSTiming (données UEC utilisées ici)', () => {
+  assert.ok(src.includes('>Sqorz</a> et <a href="https://www.jstiming.nl"'), 'double attribution');
+});
