@@ -2820,7 +2820,9 @@
     const lastName  = baseCmp.lastName  || '';
     const fullName  = `${firstName} ${lastName}`.trim();
     if (!fullName) return '';
-    pushRecent('pilots', norm(fullName), fullName);
+    // Garde : le CDN common.js peut être en retard d'un déploiement (socle partagé).
+    if (typeof pushRecent === 'function') pushRecent('pilots', norm(fullName), fullName);
+    const favNow = typeof isFav === 'function' && isFav('pilots', norm(fullName));
 
     const plate = sortedEv.find(m => m.competitor.plate)?.competitor.plate
                || sortedUciEv.find(m => m.competitor.plate)?.competitor.plate
@@ -2864,7 +2866,7 @@
         <div class="pilot-info">
           <div class="pilot-name" id="pilotNameHeading">${escape(fullName)}</div>
           <div class="pilot-badges">
-            <button class="fav-btn${isFav('pilots', norm(fullName)) ? ' on' : ''}" data-fav-pilot="${escape(norm(fullName))}" data-fav-name="${escape(fullName)}" title="${isFav('pilots', norm(fullName)) ? 'Suivi ✓ — cliquer pour ne plus suivre' : 'Suivre ce pilote'}">${isFav('pilots', norm(fullName)) ? '★' : '☆'}</button>
+            <button class="fav-btn${favNow ? ' on' : ''}" data-fav-pilot="${escape(norm(fullName))}" data-fav-name="${escape(fullName)}" title="${favNow ? 'Suivi ✓ — cliquer pour ne plus suivre' : 'Suivre ce pilote'}">${favNow ? '★' : '☆'}</button>
             ${perfCareer != null ? `<span class="pilot-index" title="Indice de performance carrière (tous niveaux, 0–1000)">🏅 ${perfCareer}</span>` : ''}
             ${age != null ? `<span class="pilot-age" title="Âge">🎂 ${age} ans</span>` : ''}
             ${club ? `<a class="pilot-club" href="${CLUB_BASE}?club=${encodeURIComponent(normClubCode(club))}" target="_blank" rel="noopener noreferrer" title="Stats du club">📍 ${escape(clubDisplayName(club))}</a>` : ''}
@@ -2880,7 +2882,7 @@
   // --- Favoris partagés (état inter-outils, cf. SqorzCommon.toggleFav) ---
   document.addEventListener('click', e => {
     const btn = e.target.closest('[data-fav-pilot]');
-    if (!btn || btn.disabled) return;
+    if (!btn || btn.disabled || typeof toggleFav !== 'function') return;
     const nowFav = toggleFav('pilots', btn.dataset.favPilot, btn.dataset.favName);
     btn.textContent = nowFav ? '★' : '☆';
     btn.classList.toggle('on', nowFav);

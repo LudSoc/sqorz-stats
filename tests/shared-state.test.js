@@ -21,3 +21,9 @@ test('fiche pilote : bouton ☆ avec état initial isFav', () => {
 test('fiche pilote vue → récents partagés', () => {
   assert.ok(src.includes("pushRecent('pilots', norm(fullName), fullName)"), 'pushRecent au rendu');
 });
+
+test('dégradation gracieuse si le CDN common.js est en retard (helpers absents)', () => {
+  assert.ok(src.includes("typeof pushRecent === 'function'"), 'pushRecent gardé');
+  assert.ok(src.includes('const favNow = typeof isFav'), 'isFav gardé via favNow');
+  assert.ok(src.includes("typeof toggleFav !== 'function'"), 'toggleFav gardé au clic');
+});
