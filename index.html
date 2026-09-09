@@ -1802,7 +1802,7 @@
     return {
       metaUrl: `./${file}.meta.json`,
       cacheKey: INDEX_CACHE_URLS[key],
-      urls: IS_LOCAL
+      sources: IS_LOCAL
         ? [`./${file}.json`, `${R2_BASE}/${file}.json`, `${RELEASE_BASE}/${file}.json`]
         : [`${R2_BASE}/${file}.json`, `${RELEASE_BASE}/${file}.json`, `./${file}.json`],
       tag: '[sqorz]', label: name, estimatedSize,

@@ -211,6 +211,54 @@ test('loadFieldStrength : ok / version inconnue / pannes → null', async () => 
   delete global.fetch;
 });
 
+// --- contrat de chargement : les cfgs de l'app correspondent aux params du socle ---
+// (régression : `urls:` au lieu de `sources:` rendait tout chargement impossible,
+// masqué tant que le cache correspondait aux metas — message « Hors ligne » généralisé
+// dès la rotation des metas).
+test('contrat loadIndexCached : indexCfg/fieldCfg fournissent les bonnes clés', () => {
+  const H = new Function('location', 'R2_BASE', 'RELEASE_BASE', 'INDEX_CACHE_URLS', 'FIELD_CACHE_URLS', 'setStatus', 'setProgress', [
+    stmt(html, 'const IS_LOCAL ='),
+    block(html, 'function indexCfg('),
+    block(html, 'function fieldCfg('),
+  ].join('\n') + '\nreturn { indexCfg, fieldCfg };')(
+    { hostname: 'ludsoc.github.io' },
+    'https://R2/',
+    'https://REL/',
+    { pilots: 'ck-p', uci: 'ck-u', uec: 'ck-e' },
+    { fr: 'ck-f', uec: 'ck-fe' },
+    () => {}, () => {},
+  );
+  const pilots = H.indexCfg('pilots', 'index France', 83_000_000);
+  assert.ok(Array.isArray(pilots.sources) && pilots.sources.length === 3, 'sources[3]');
+  assert.ok(!('urls' in pilots), 'pas de clé urls parasite');
+  assert.ok(pilots.sources[0].startsWith('https://R2/'), 'R2 en premier hors local');
+  assert.equal(typeof pilots.metaUrl, 'string');
+  assert.equal(typeof pilots.onStatus, 'function');
+  assert.equal(typeof pilots.onProgress, 'function');
+  const uci = H.indexCfg('uci', 'index UCI', 8_000_000);
+  assert.ok(uci.sources[0].includes('uci-index.json'), 'fichier UCI');
+  const f = H.fieldCfg('fr', 'field-strength-fr');
+  assert.deepEqual(Object.keys(f).sort(), ['cacheKey', 'metaUrl', 'tag', 'url'], 'clés loadFieldStrength');
+  assert.ok(f.url.startsWith('https://R2/'), 'données R2 hors local');
+});
+
+test('contrat loadIndexCached : fichiers locaux en premier en dev local', () => {
+  const H = new Function('location', 'R2_BASE', 'RELEASE_BASE', 'INDEX_CACHE_URLS', 'FIELD_CACHE_URLS', 'setStatus', 'setProgress', [
+    stmt(html, 'const IS_LOCAL ='),
+    block(html, 'function indexCfg('),
+    block(html, 'function fieldCfg('),
+  ].join('\n') + '\nreturn { indexCfg, fieldCfg };')(
+    { hostname: 'localhost' },
+    'https://R2/',
+    'https://REL/',
+    { pilots: 'ck-p', uci: 'ck-u', uec: 'ck-e' },
+    { fr: 'ck-f', uec: 'ck-fe' },
+    () => {}, () => {},
+  );
+  assert.equal(H.indexCfg('pilots', 'x', 1).sources[0], './pilots-index.json');
+  assert.equal(H.fieldCfg('fr', 'field-strength-fr').url, './field-strength-fr.json');
+});
+
 // --- shrinkage ---
 test('perfShrinkMean : resserre vers 500 selon n', () => {
   assert.ok(Math.abs(SC.perfShrinkMean(577, 4) - 551.33) < 0.01);
