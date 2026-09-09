@@ -1,11 +1,12 @@
-// Construit le mini-index de recherche du hub : top pilotes + clubs.
+// Construit le mini-index de recherche du hub : tous les pilotes + clubs.
 // Usage : node tools/build-hub-search.cjs [--top 1500]
 // Entrées : ../pilots-index.json (80 Mo, R2/release) + ../../club_stats/clubs.json (canonique).
-// Sortie : ../hub-search.json, à ventiler vers sqorz_hub/ (copie versionnée).
+// Sortie : ../hub-search.json (~740 Ko en full), à ventiler vers sqorz_hub/ (copie versionnée).
 const fs = require('fs');
 const path = require('path');
 
-const TOP = Math.max(100, parseInt((process.argv.find(a => a.startsWith('--top=')) || '--top=1500').split('=')[1], 10) || 1500);
+const topArg = process.argv.find(a => a.startsWith('--top='));
+const TOP = topArg ? Math.max(100, parseInt(topArg.split('=')[1], 10) || 1500) : Infinity;
 const DIR = __dirname;
 const idx = JSON.parse(fs.readFileSync(path.join(DIR, '..', 'pilots-index.json'), 'utf8'));
 const clubs = JSON.parse(fs.readFileSync(path.join(DIR, '..', '..', 'club_stats', 'clubs.json'), 'utf8'));
@@ -53,7 +54,7 @@ const cov = pilots.reduce((s, p) => s + p.e, 0);
 const out = {
   _meta: {
     generated: new Date().toISOString().slice(0, 10),
-    source: 'pilots-index.json (top ' + TOP + ' par engagements) + club_stats/clubs.json',
+    source: 'pilots-index.json (' + (Number.isFinite(TOP) ? 'top ' + TOP : 'tous') + ' par engagements) + club_stats/clubs.json',
     pilots: pilots.length,
     coverage: Math.round(1000 * cov / total) / 10,
   },
