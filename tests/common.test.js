@@ -180,3 +180,52 @@ test('setBarProgress : % plafonné à 99, masqué si !total', () => {
     assert.equal(els.progressWrap.hidden, true);
   });
 });
+
+// --- état partagé (favoris / récents) ---
+function withLS(fn) {
+  const store = {};
+  const prev = global.localStorage;
+  global.localStorage = {
+    getItem: k => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: k => { delete store[k]; },
+  };
+  try { return fn(store); } finally { global.localStorage = prev; }
+}
+
+test('favoris : toggle/isFav/getFavs, types isolés', () => {
+  withLS(() => {
+    assert.equal(SC.isFav('pilots', 'jean dupont'), false);
+    assert.equal(SC.toggleFav('pilots', 'jean dupont', 'Jean Dupont'), true);
+    assert.equal(SC.isFav('pilots', 'jean dupont'), true);
+    assert.deepEqual(SC.getFavs('pilots').map(f => f.key), ['jean dupont']);
+    assert.equal(SC.toggleFav('pilots', 'jean dupont'), false);
+    assert.deepEqual(SC.getFavs('pilots'), []);
+    assert.equal(SC.toggleFav('nope', 'x'), false);
+    assert.deepEqual(SC.getFavs('nope'), []);
+    SC.toggleFav('clubs', 'besanc', 'BMX BESANCON (BESANC)');
+    assert.equal(SC.isFav('clubs', 'besanc'), true);
+    assert.equal(SC.isFav('pilots', 'besanc'), false);
+  });
+});
+
+test('favoris : JSON corrompu → [] sans throw', () => {
+  withLS(store => {
+    store['sqorz.favs.pilots'] = 'pas du json{{{';
+    assert.deepEqual(SC.getFavs('pilots'), []);
+    assert.equal(SC.isFav('pilots', 'x'), false);
+  });
+});
+
+test('récents : dédupliqués, plus récent d’abord, plafonnés', () => {
+  withLS(() => {
+    SC.pushRecent('pilots', 'a', 'A');
+    SC.pushRecent('clubs', 'b', 'B');
+    SC.pushRecent('pilots', 'a', 'A');
+    assert.deepEqual(SC.getRecent(10).map(r => r.k), ['a', 'b']);
+    for (let i = 0; i < 25; i++) SC.pushRecent('pilots', 'p' + i, 'P' + i);
+    assert.equal(SC.getRecent(99).length, 20);
+    SC.pushRecent('inconnu', 'x'); // type invalide ignoré
+    assert.ok(!SC.getRecent(99).some(r => r.k === 'x'));
+  });
+});

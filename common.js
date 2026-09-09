@@ -452,6 +452,52 @@
     bar.style.width = Math.min(99, Math.round(100 * done / total)) + '%';
   }
 
+  // ===== État partagé inter-outils (même origine → localStorage commun) =====
+  // Convention d'écosystème (cf. pilier « état partagé ») :
+  //   sqorz.favs.pilots : [{ key, name }] — key = norm('Prénom NOM')
+  //   sqorz.favs.clubs  : [{ key, name }] — key = code normalisé compatible club_stats ('joue-t')
+  //   sqorz.recent      : [{ t, k, n, at }] — t ∈ { pilots, clubs }, 20 derniers, tous outils confondus.
+  // Les favoris n'ont pas d'UI ici : chaque app lit/écrit la même langue (le hub les affichera).
+  const FAV_KEYS = { pilots: 'sqorz.favs.pilots', clubs: 'sqorz.favs.clubs' };
+  const SHARED_RECENT_KEY = 'sqorz.recent';
+  const SHARED_RECENT_MAX = 20;
+  const hasLS = () => typeof localStorage !== 'undefined';
+  function readJsonArray(key) {
+    if (!hasLS()) return [];
+    try { const v = JSON.parse(localStorage.getItem(key)); return Array.isArray(v) ? v : []; }
+    catch { return []; }
+  }
+  function writeJson(key, val) {
+    if (!hasLS()) return;
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+  }
+  function getFavs(type) {
+    if (!FAV_KEYS[type]) return [];
+    return readJsonArray(FAV_KEYS[type]).filter(e => e && e.key);
+  }
+  function isFav(type, key) {
+    return !!key && getFavs(type).some(e => e.key === key);
+  }
+  // Bascule un favori ; retourne le nouvel état (true = désormais favori).
+  function toggleFav(type, key, name) {
+    if (!FAV_KEYS[type] || !key) return false;
+    const fav = !isFav(type, key);
+    let list = getFavs(type).filter(e => e.key !== key);
+    if (fav) list.unshift({ key, name: name || key, at: Date.now() });
+    writeJson(FAV_KEYS[type], list.slice(0, 200));
+    return fav;
+  }
+  function pushRecent(type, key, name) {
+    if (!key || (type !== 'pilots' && type !== 'clubs')) return;
+    const list = readJsonArray(SHARED_RECENT_KEY)
+      .filter(e => e && !(e.t === type && e.k === key));
+    list.unshift({ t: type, k: key, n: name || key, at: Date.now() });
+    writeJson(SHARED_RECENT_KEY, list.slice(0, SHARED_RECENT_MAX));
+  }
+  function getRecent(n = 10) {
+    return readJsonArray(SHARED_RECENT_KEY).slice(0, n);
+  }
+
   window.SqorzCommon = {
     norm, escape, humanError, zScore,
     isFinalPhase, isMotoPhase, isSemiPhase, isNotTimedPhase, num, perfHasKnockout,
@@ -462,5 +508,6 @@
     perfConstance, perfCoefConstance, perfDeepestPhase,
     fmtDateFr, formatDataDates,
     renderDataDates, setTextStatus, setBarProgress,
+    getFavs, isFav, toggleFav, pushRecent, getRecent,
   };
 })();
