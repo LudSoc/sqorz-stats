@@ -119,3 +119,64 @@ test('loadIndexCached : échec réseau → throw (l’appelant dégrade)', async
   }), /Failed to fetch/);
   delete global.fetch;
 });
+
+// --- helpers d'UI (renderDataDates, setTextStatus, setBarProgress) ---
+function fakeEl() {
+  return {
+    textContent: '', hidden: true, style: {},
+    _cls: new Set(),
+    classList: {
+      toggle: function (k, v) { v ? this._s.add(k) : this._s.delete(k); },
+      _s: null,
+    },
+  };
+}
+function withDoc(ids, fn) {
+  const els = {};
+  for (const id of ids) { els[id] = fakeEl(); els[id].classList._s = els[id]._cls; }
+  const prev = global.document;
+  global.document = { getElementById: id => els[id] || null };
+  try { return fn(els); } finally { global.document = prev; }
+}
+
+test('renderDataDates : écrit + révèle, null si rien', () => {
+  withDoc(['dataDateWrap', 'dataDate'], els => {
+    assert.equal(SC.renderDataDates([{ tag: 'FR', iso: '2026-09-07' }]), '07/09/2026');
+    assert.equal(els.dataDate.textContent, '07/09/2026');
+    assert.equal(els.dataDateWrap.hidden, false);
+    assert.equal(SC.renderDataDates([{ tag: 'FR', iso: null }]), null);
+    assert.equal(SC.renderDataDates([{ tag: 'FR', iso: '2026-09-07' }]), '07/09/2026'); // idempotent
+  });
+});
+
+test('renderDataDates : deux sources → libellés', () => {
+  withDoc(['dataDateWrap', 'dataDate'], els => {
+    assert.equal(
+      SC.renderDataDates([{ tag: 'FR', iso: '2026-09-07' }, { tag: 'UEC', iso: '2026-09-08' }]),
+      'FR 07/09/2026 · UEC 08/09/2026');
+  });
+});
+
+test('setTextStatus : texte + classe error préservant le reste', () => {
+  withDoc(['s'], els => {
+    els.s._cls.add('status');
+    SC.setTextStatus(els.s, 'Chargement…');
+    assert.equal(els.s.textContent, 'Chargement…');
+    assert.ok(!els.s._cls.has('error') && els.s._cls.has('status'));
+    SC.setTextStatus(els.s, 'Échec', true);
+    assert.ok(els.s._cls.has('error') && els.s._cls.has('status'));
+    SC.setTextStatus(null, 'x'); // no-op
+  });
+});
+
+test('setBarProgress : % plafonné à 99, masqué si !total', () => {
+  withDoc(['progressWrap', 'progressBar'], els => {
+    SC.setBarProgress(1, 2);
+    assert.equal(els.progressWrap.hidden, false);
+    assert.equal(els.progressBar.style.width, '50%');
+    SC.setBarProgress(999, 1000);
+    assert.equal(els.progressBar.style.width, '99%');
+    SC.setBarProgress(0, 0);
+    assert.equal(els.progressWrap.hidden, true);
+  });
+});

@@ -424,6 +424,34 @@
     return items.map(p => `${p.tag} ${p.text}`).join(' · ');
   }
 
+  // ===== Petits helpers d'UI partagés (statut, progression, fraîcheur) =====
+  // renderDataDates(sources) : écrit le texte de formatDataDates(sources) dans
+  // #dataDate et révèle #dataDateWrap. Retourne le texte, ou null si rien à afficher.
+  function renderDataDates(sources) {
+    const wrap = document.getElementById('dataDateWrap');
+    const el = document.getElementById('dataDate');
+    const text = formatDataDates(sources);
+    if (!wrap || !el || !text) return null;
+    el.textContent = text;
+    wrap.hidden = false;
+    return text;
+  }
+  // setTextStatus(el, msg, isError) : texte + classe 'error' (préserve les autres classes).
+  function setTextStatus(el, msg, isError = false) {
+    if (!el) return;
+    el.textContent = msg || '';
+    el.classList.toggle('error', !!isError);
+  }
+  // setBarProgress(done, total) : barre #progressBar dans #progressWrap (ids surchargeables).
+  function setBarProgress(done, total, wrapId = 'progressWrap', barId = 'progressBar') {
+    const wrap = document.getElementById(wrapId);
+    const bar = document.getElementById(barId);
+    if (!wrap || !bar) return;
+    if (!total) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    bar.style.width = Math.min(99, Math.round(100 * done / total)) + '%';
+  }
+
   window.SqorzCommon = {
     norm, escape, humanError, zScore,
     isFinalPhase, isMotoPhase, isSemiPhase, isNotTimedPhase, num, perfHasKnockout,
@@ -433,5 +461,6 @@
     perfClamp, perfScoreRang, perfBestTime, perfChronoScore,
     perfConstance, perfCoefConstance, perfDeepestPhase,
     fmtDateFr, formatDataDates,
+    renderDataDates, setTextStatus, setBarProgress,
   };
 })();

@@ -1388,7 +1388,7 @@
     PERF_LEVEL_COEFS, PERF_CHRONO_W, PERF_DNF_SCORES, PERF_FIELD_K,
     perfClamp, perfScoreRang, perfBestTime, perfChronoScore,
     perfConstance, perfCoefConstance, perfDeepestPhase, perfShrinkMean, perfWeight, applyFieldScore,
-    formatDataDates,
+    renderDataDates, setTextStatus,
   } = window.SqorzCommon;
   let pilotsIndex = null;
   let uciIndex = null; // index UCI (Mondiaux BMX Racing) — chargé en parallèle, optionnel
@@ -1572,8 +1572,7 @@
 
 
   function setStatus(msg, isError = false) {
-    statusEl.textContent = msg || '';
-    statusEl.classList.toggle('error', isError);
+    setTextStatus(statusEl, msg, isError);
   }
 
   function setProgress(done, total) {
@@ -1838,16 +1837,11 @@
 
   // Fraîcheur par source dans le pied de page (une seule date si identiques).
   function showDataDates() {
-    const wrap = document.getElementById('dataDateWrap');
-    const el = document.getElementById('dataDate');
-    const text = formatDataDates([
+    renderDataDates([
       { tag: 'FR', iso: pilotsIndex && pilotsIndex.generated },
       { tag: 'UEC', iso: uecIndex && uecIndex.generated },
       { tag: 'UCI', iso: uciIndex && uciIndex.generated },
     ]);
-    if (!wrap || !el || !text) return;
-    el.textContent = text;
-    wrap.hidden = false;
   }
 
   async function loadPilotsIndex() {
