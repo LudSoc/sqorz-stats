@@ -186,5 +186,30 @@ T.render(local.events, 'date-desc', local.series, uci.events, uci.series, uec.ev
 const reOut = global.document.getElementById('results').innerHTML || '';
 check('Courses reste actif après re-rendu (refresh arrière-plan)', activeSubOf(reOut, 'global') === 'courses');
 
+// --- 7. Structure HTML : panneaux équilibrés (bug </div> parasite qui expulsait
+// les graphiques hors du panneau Stats, les rendant visibles dans Courses) ---
+function countTag(html, tag) {
+  const open = (html.match(new RegExp('<' + tag + '(?=[\\s>])', 'g')) || []).length;
+  const close = (html.match(new RegExp('</' + tag + '>', 'g')) || []).length;
+  return [open, close];
+}
+const balDiv = countTag(reOut, 'div');
+const balDetails = countTag(reOut, 'details');
+const balSection = countTag(reOut, 'section');
+check('balises div équilibrées', balDiv[0] === balDiv[1], `${balDiv[0]} ouvrantes / ${balDiv[1]} fermantes`);
+check('balises details équilibrées', balDetails[0] === balDetails[1], `${balDetails[0]} / ${balDetails[1]}`);
+check('balises section équilibrées', balSection[0] === balSection[1], `${balSection[0]} / ${balSection[1]}`);
+const subPanels = reOut.split('<div class="subtab-panel').slice(1);
+for (const chunk of subPanels) {
+  const key = (chunk.match(/^ active?" data-subtab="([a-z]+)"/) || [])[1];
+  // Corps du panneau : jusqu'au prochain panneau (même niveau ou partie suivante).
+  const nextSub = chunk.indexOf('<div class="subtab-panel');
+  const nextPart = chunk.indexOf('<section class="tab-panel');
+  const cuts = [nextSub, nextPart].filter(i => i !== -1);
+  const body = cuts.length ? chunk.slice(0, Math.min(...cuts)) : chunk;
+  if (key === 'courses') check('panneau Courses sans graphiques', !body.includes('charts-grid'));
+  if (key === 'stats') check('panneau Stats avec graphiques', body.includes('charts-grid'));
+}
+
 console.log(failures ? `\n${failures} échec(s)` : '\nTous les tests E2E passent.');
 process.exit(failures ? 1 : 0);
