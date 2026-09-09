@@ -230,7 +230,3 @@ test('récents : dédupliqués, plus récent d’abord, plafonnés', () => {
   });
 });
 
-test('UEC_SOURCE_NOTE : mentionne JSTiming et le caractère non officiel', () => {
-  assert.ok(SC.UEC_SOURCE_NOTE.includes('JSTiming'), 'source nommée');
-  assert.ok(SC.UEC_SOURCE_NOTE.includes('non officielle'), 'statut précisé');
-});

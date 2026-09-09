@@ -1397,7 +1397,6 @@
     perfConstance, perfCoefConstance, perfDeepestPhase, perfShrinkMean, perfWeight, applyFieldScore,
     renderDataDates, setTextStatus,
     getFavs, isFav, toggleFav, pushRecent, getRecent,
-    UEC_SOURCE_NOTE,
   } = window.SqorzCommon;
   let pilotsIndex = null;
   let uciIndex = null; // index UCI (Mondiaux BMX Racing) — chargé en parallèle, optionnel
@@ -3839,10 +3838,6 @@
     const subNavHtml = rowTabsHtml(subNavBtns, `sub-row${subs.length > 1 ? '' : ' hidden'}`);
 
     html.push(`<div class="pilot-sticky-header">${pilotCardHtml}${partsNavHtml}${subNavHtml}</div>`);
-    // Disclaimer source UEC (garde typeof : CDN common.js peut être en retard).
-    if (activePart === 'uec' && typeof UEC_SOURCE_NOTE === 'string') {
-      html.push(`<div style="font-size:12px;color:var(--muted);padding:6px 18px 0">ⓘ ${escape(UEC_SOURCE_NOTE)}</div>`);
-    }
 
     for (const l of partsAvailable) {
       const sDefs = subTabsHtml[l.key];

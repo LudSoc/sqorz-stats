@@ -28,12 +28,6 @@ test('dégradation gracieuse si le CDN common.js est en retard (helpers absents)
   assert.ok(src.includes("typeof toggleFav !== 'function'"), 'toggleFav gardé au clic');
 });
 
-test('disclaimer UEC affiché sur la partie UEC (socle en retard toléré)', () => {
-  assert.ok(src.includes("activePart === 'uec'"), 'conditionné à la partie UEC');
-  assert.ok(src.includes("typeof UEC_SOURCE_NOTE === 'string'"), 'garde CDN');
-  assert.ok(src.includes('escape(UEC_SOURCE_NOTE)'), 'texte du socle échappé');
-});
-
 test('pied de page : Sqorz et JSTiming (données UEC utilisées ici)', () => {
   assert.ok(src.includes('>Sqorz</a> et <a href="https://www.jstiming.nl"'), 'double attribution');
 });
